@@ -4,6 +4,7 @@
 #include <string>
 #include <glad/gl.h>   // от GLAD 2
 
+#include "log/Logger.h"
 // В начале OpenGLContext.cpp, после #include <windows.h>
 // или лучше в отдельном заголовке, например src/gl/wglext_defs.h и include его
 

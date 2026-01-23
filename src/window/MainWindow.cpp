@@ -24,17 +24,7 @@ bool MainWindow::CreateMainWindow(const std::wstring& title, int width, int heig
 
 bool MainWindow::OnCreate()
 {
-    // Инициализируем OpenGL после создания окна (HDC уже есть)
-    m_glContext = OpenGLContext(::GetDC(GetHWND()));  // перезаписываем с правильным HDC
-
-    if (!m_glContext.Initialize(4, 6, true)) {  // true = debug контекст, если драйвер поддерживает
-        MessageBox(nullptr, L"Не удалось инициализировать OpenGL 4.6", L"Ошибка", MB_ICONERROR);
-        return false;
-    }
-
-    // Убираем GDI-рисование — теперь будет OpenGL
-    // (можно временно закомментировать OnPaint или оставить заглушку)
-
+    // OpenGL инициализируется в Engine::Initialize, здесь оставляем окно готовым
     RequestRedraw();
     return true;
 }

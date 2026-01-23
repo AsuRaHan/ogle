@@ -7,6 +7,13 @@ namespace ogle::input
     InputAxis::InputAxis(const std::string& name) 
         : m_name(name) 
     {
+        // Determine default axis index based on axis name
+        // Horizontal -> x (0), Vertical -> y (1)
+        if (!m_name.empty())
+        {
+            if (m_name.find("Vertical") != std::string::npos || m_name.find("Y") != std::string::npos)
+                ; // vertical axes handled per binding if needed
+        }
     }
     
     void InputAxis::AddKeyBinding(int negativeKey, int positiveKey)
@@ -15,6 +22,11 @@ namespace ogle::input
         binding.negativeKey = negativeKey;
         binding.positiveKey = positiveKey;
         binding.value = 0.0f;
+        // By default, infer axis index from axis name: Vertical affects Y component
+        if (m_name.find("Vertical") != std::string::npos || m_name.find("MoveVertical") != std::string::npos || m_name.find("LookVertical") != std::string::npos)
+            binding.axisIndex = 1;
+        else
+            binding.axisIndex = 0;
         m_keyBindings.push_back(binding);
     }
     
@@ -42,11 +54,17 @@ namespace ogle::input
         {
             bool negative = inputSystem.IsKeyDown(binding.negativeKey);
             bool positive = inputSystem.IsKeyDown(binding.positiveKey);
-            
-            if (negative && !positive) 
-                rawValue.x -= 1.0f;
-            if (positive && !negative) 
-                rawValue.x += 1.0f;
+
+            float delta = 0.0f;
+            if (negative && !positive)
+                delta = -1.0f;
+            if (positive && !negative)
+                delta = 1.0f;
+
+            if (binding.axisIndex == 0)
+                rawValue.x += delta;
+            else
+                rawValue.y += delta;
         }
         
         // Обработка мышиных биндингов

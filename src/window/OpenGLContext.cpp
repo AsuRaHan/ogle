@@ -26,7 +26,8 @@ bool OpenGLContext::Initialize(int major, int minor, bool debug)
     );
 
     if (!wglChoosePixelFormatARB || !wglCreateContextAttribsARB) {
-        std::cerr << "Не удалось загрузить WGL ARB функции" << std::endl;
+        // std::cerr << "Failed to load WGL ARB functions" << std::endl;
+        ogle::Logger::Error("Failed to load WGL ARB functions");
         Cleanup();
         return false;
     }
@@ -43,14 +44,17 @@ bool OpenGLContext::Initialize(int major, int minor, bool debug)
 
     // Шаг 3: Загружаем GLAD
     if (!gladLoaderLoadGL()) {
-        std::cerr << "gladLoaderLoadGL() провалился" << std::endl;
+        // std::cerr << "ERROR gladLoaderLoadGL() failed" << std::endl;
+        ogle::Logger::Error("gladLoaderLoadGL() failed");
         Cleanup();
         return false;
     }
-
-    std::cout << "OpenGL инициализирован: " << GetVersionString() << std::endl;
-
     m_initialized = true;
+    // keep simple cout here; higher-level logging used elsewhere
+    // std::cout << "OpenGL initialized: " << GetVersionString() << std::endl;
+    ogle::Logger::Info("OpenGL initialized: OK" + GetVersionString());
+
+    
     return true;
 }
 
@@ -97,14 +101,16 @@ bool OpenGLContext::UpgradeToModernContext(int major, int minor, bool debug)
     int pixelFormat;
     UINT numFormats;
     if (!wglChoosePixelFormatARB(m_hdc, pixelAttribs, nullptr, 1, &pixelFormat, &numFormats) || numFormats == 0) {
-        std::cerr << "wglChoosePixelFormatARB провалился" << std::endl;
+        // std::cerr << "wglChoosePixelFormatARB Failed" << std::endl;
+        ogle::Logger::Error("wglChoosePixelFormatARB Failed");
         return false;
     }
 
     PIXELFORMATDESCRIPTOR pfd;
     DescribePixelFormat(m_hdc, pixelFormat, sizeof(pfd), &pfd);
     if (!SetPixelFormat(m_hdc, pixelFormat, &pfd)) {
-        std::cerr << "SetPixelFormat для современного формата провалился" << std::endl;
+        // std::cerr << "SetPixelFormat for modern format failed" << std::endl;
+        ogle::Logger::Error("SetPixelFormat for modern format failed");
         return false;
     }
 
@@ -121,12 +127,14 @@ bool OpenGLContext::UpgradeToModernContext(int major, int minor, bool debug)
 
     m_hglrc = wglCreateContextAttribsARB(m_hdc, nullptr, contextAttribs);
     if (!m_hglrc) {
-        std::cerr << "wglCreateContextAttribsARB провалился" << std::endl;
+        // std::cerr << "wglCreateContextAttribsARB failed" << std::endl;
+        ogle::Logger::Error("wglCreateContextAttribsARB failed");
         return false;
     }
 
     if (!wglMakeCurrent(m_hdc, m_hglrc)) {
-        std::cerr << "wglMakeCurrent для нового контекста провалился" << std::endl;
+        // std::cerr << "wglMakeCurrent failed for new contecst" << std::endl;
+        ogle::Logger::Error("wglMakeCurrent failed for new contecst");
         wglDeleteContext(m_hglrc);
         m_hglrc = nullptr;
         return false;
@@ -137,9 +145,9 @@ bool OpenGLContext::UpgradeToModernContext(int major, int minor, bool debug)
 
 std::string OpenGLContext::GetVersionString() const
 {
-    if (!m_initialized) return "Не инициализировано";
+    if (!m_initialized) return "Not Init";
     const char* ver = reinterpret_cast<const char*>(glGetString(GL_VERSION));
-    return ver ? ver : "Неизвестно";
+    return ver ? ver : "neizvesno";
 }
 
 void OpenGLContext::MakeCurrent() const

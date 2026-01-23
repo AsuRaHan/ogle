@@ -28,6 +28,13 @@ namespace ogle::input
         
         // Привязка клавиш/кнопок
         void AddKeyBinding(int keyCode, ActionTrigger trigger = ActionTrigger::Pressed);
+        // Overload for char literals - normalize to uppercase/VK
+        void AddKeyBinding(char keyChar, ActionTrigger trigger = ActionTrigger::Pressed)
+        {
+            int kc = static_cast<int>(keyChar);
+            if (kc >= 'a' && kc <= 'z') kc = kc - ('a' - 'A');
+            AddKeyBinding(kc, trigger);
+        }
         void AddMouseBinding(int button, ActionTrigger trigger = ActionTrigger::Pressed);
         void AddGamepadBinding(int button, ActionTrigger trigger = ActionTrigger::Pressed);
         

@@ -9,6 +9,7 @@
 #include <unordered_map>
 #include "InputContext.h"
 #include "InputEvents.h"
+#include "KeyboardState.h"
 
 namespace ogle::input
 {
@@ -69,8 +70,8 @@ namespace ogle::input
         HWND m_hwnd = nullptr;
         
         // Низкоуровневые состояния
-        std::array<bool, 256> m_keys{};
-        std::array<bool, 256> m_prevKeys{};
+        // keyboard state
+        std::unique_ptr<KeyboardState> m_keyboardState;
         
         glm::vec2 m_mousePos{};
         glm::vec2 m_prevMousePos{};

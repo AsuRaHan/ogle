@@ -19,17 +19,13 @@ bool Engine::Initialize()
         return false;
     }
     
-    // Инициализируем новую систему ввода
+    // Инициализируем систему ввода
     auto& inputSystem = ogle::input::InputSystem::GetInstance();
     inputSystem.Initialize(m_window->GetHWND());
     
+    // Настраиваем callback'ы окна: все сообщения идут в HandleWindowMessage
     m_window->SetMessageCallback([this](UINT msg, WPARAM wParam, LPARAM lParam) {
         this->HandleWindowMessage(msg, wParam, lParam);
-    });
-
-    m_window->SetResizeCallback([this](int w, int h) {
-        m_aspectRatio = static_cast<float>(w) / h;
-        std::cout << "Окно ресайзнуто: новый aspect = " << m_aspectRatio << std::endl;
     });
 
     // Инициализируем изначальный aspect
@@ -62,152 +58,40 @@ bool Engine::Initialize()
     cube2->SetLocalScale(glm::vec3(0.5f));
     m_scene->GetRoot()->GetChildren()[0]->AddChild(std::move(cube2));
 
-    // 4. Настраиваем систему ввода
-    SetupInputBindings();
+    // 4. Настраиваем систему ввода через конфигуратор
+    m_inputConfigurator = std::make_unique<ogle::InputConfigurator>();
+    m_inputConfigurator->ConfigureCameraControls(
+        inputSystem, 
+        *m_camera, 
+        m_lastDeltaTime
+    );
 
     // Таймер для deltaTime
     QueryPerformanceFrequency(&m_frequency);
     QueryPerformanceCounter(&m_lastTime);
 
     m_running = true;
+    std::cout << "Engine initialized successfully" << std::endl;
     return true;
 }
 
-void Engine::SetupInputBindings()
-{
-    auto& inputSystem = ogle::input::InputSystem::GetInstance();
-    
-    // Создаем контекст геймплея
-    m_gameplayContext = inputSystem.CreateGameplayContext();
-    if (!m_gameplayContext) 
-    {
-        std::cerr << "Failed to create gameplay context!" << std::endl;
-        return;
-    }
-    
-    // Убедимся, что оси созданы
-    if (!m_gameplayContext->GetAxis("LookHorizontal") ||
-        !m_gameplayContext->GetAxis("LookVertical") ||
-        !m_gameplayContext->GetAxis("MoveHorizontal") ||
-        !m_gameplayContext->GetAxis("MoveVertical"))
-    {
-        std::cerr << "Some input axes are missing!" << std::endl;
-    }
-    
-    // Настраиваем оси для камеры - УВЕЛИЧИМ ЧУВСТВИТЕЛЬНОСТЬ
-    auto* lookHorizontal = m_gameplayContext->GetAxis("LookHorizontal");
-    if (lookHorizontal)
-    {
-        std::cout << "Setting up LookHorizontal axis" << std::endl;
-        lookHorizontal->SetCallback([this](const glm::vec2& value, float deltaTime) {
-            // Увеличим множитель для лучшей чувствительности
-            m_camera->Rotate(value.x * 200.0f * deltaTime, 0.0f);
-        });
-    }
-    
-    auto* lookVertical = m_gameplayContext->GetAxis("LookVertical");
-    if (lookVertical)
-    {
-        std::cout << "Setting up LookVertical axis" << std::endl;
-        lookVertical->SetCallback([this](const glm::vec2& value, float deltaTime) {
-            m_camera->Rotate(0.0f, value.y * 200.0f * deltaTime);
-        });
-    }
-    
-    // Оси движения камеры
-    auto* moveHorizontal = m_gameplayContext->GetAxis("MoveHorizontal");
-    if (moveHorizontal)
-    {
-        std::cout << "Setting up MoveHorizontal axis" << std::endl;
-        moveHorizontal->SetCallback([this](const glm::vec2& value, float deltaTime) {
-            float velocity = m_camera->GetMovementSpeed() * deltaTime;
-            m_camera->MoveRight(value.x * velocity);
-        });
-    }
-    
-    auto* moveVertical = m_gameplayContext->GetAxis("MoveVertical");
-    if (moveVertical)
-    {
-        std::cout << "Setting up MoveVertical axis" << std::endl;
-        moveVertical->SetCallback([this](const glm::vec2& value, float deltaTime) {
-            float velocity = m_camera->GetMovementSpeed() * deltaTime;
-            m_camera->MoveForward(value.y * velocity);
-        });
-    }
-    
-    // Действия для камеры - ИЗМЕНИМ НА Pressed вместо Held
-    auto* moveUp = m_gameplayContext->CreateAction("MoveUp");
-    if (moveUp)
-    {
-        moveUp->AddKeyBinding('Q', ogle::input::ActionTrigger::Held);
-        moveUp->AddKeyBinding(VK_SPACE, ogle::input::ActionTrigger::Held);
-        moveUp->SetCallback([this](const ogle::input::InputEvent& event, float value) {
-            // Для Held событий value будет 1.0
-            float velocity = m_camera->GetMovementSpeed() * m_lastDeltaTime;
-            m_camera->MoveUp(velocity);
-        });
-    }
-    
-    auto* moveDown = m_gameplayContext->CreateAction("MoveDown");
-    if (moveDown)
-    {
-        moveDown->AddKeyBinding('E', ogle::input::ActionTrigger::Held);
-        moveDown->AddKeyBinding(VK_CONTROL, ogle::input::ActionTrigger::Held);
-        moveDown->SetCallback([this](const ogle::input::InputEvent& event, float value) {
-            float velocity = m_camera->GetMovementSpeed() * m_lastDeltaTime;
-            m_camera->MoveUp(-velocity);
-        });
-    }
-    
-    // Действие для ускорения
-    auto* sprint = m_gameplayContext->CreateAction("Sprint");
-    if (sprint)
-    {
-        sprint->AddKeyBinding(VK_SHIFT, ogle::input::ActionTrigger::Pressed);
-        sprint->SetCallback([this](const ogle::input::InputEvent& event, float value) {
-            if (event.type == ogle::input::EventType::KeyPressed)
-            {
-                m_camera->SetMovementSpeed(15.0f);
-            }
-            else if (event.type == ogle::input::EventType::KeyReleased)
-            {
-                m_camera->SetMovementSpeed(5.0f);
-            }
-        });
-    }
-    
-    // Действие для захвата мыши - УПРОСТИМ
-    auto* toggleMouseCapture = m_gameplayContext->CreateAction("ToggleMouseCapture");
-    if (toggleMouseCapture)
-    {
-        toggleMouseCapture->AddMouseBinding(1, ogle::input::ActionTrigger::Pressed);
-        toggleMouseCapture->AddKeyBinding(VK_ESCAPE, ogle::input::ActionTrigger::Pressed);
-        
-        toggleMouseCapture->SetCallback([this](const ogle::input::InputEvent& event, float value) {
-            auto& inputSystem = ogle::input::InputSystem::GetInstance();
-            if (event.type == ogle::input::EventType::MouseButtonPressed)
-            {
-                std::cout << "Mouse capture ON" << std::endl;
-                inputSystem.SetMouseCapture(true);
-            }
-            else if (event.type == ogle::input::EventType::KeyPressed)
-            {
-                std::cout << "Mouse capture OFF" << std::endl;
-                inputSystem.SetMouseCapture(false);
-            }
-        });
-    }
-    
-    std::cout << "Input bindings configured successfully" << std::endl;
-}
-// УДАЛИТЕ ВСЁ ОТСЮДА ДО КОНЦА ФУНКЦИИ SetupInputBindings() 
-// (строки 169-267 из вашего файла)
-
 void Engine::HandleWindowMessage(UINT msg, WPARAM wParam, LPARAM lParam)
 {
-    // Передаем сообщения в новую систему ввода
+    // Передаем сообщения в систему ввода
     auto& inputSystem = ogle::input::InputSystem::GetInstance();
     inputSystem.ProcessWindowMessage(msg, wParam, lParam);
+    
+    // Обработка изменения размера: обновляем aspectRatio здесь вместо отдельного колбека
+    if (msg == WM_SIZE)
+    {
+        int width = LOWORD(lParam);
+        int height = HIWORD(lParam);
+        if (height != 0)
+        {
+            m_aspectRatio = static_cast<float>(width) / static_cast<float>(height);
+            std::cout << "Окно ресайзнуто: новый aspect = " << m_aspectRatio << std::endl;
+        }
+    }
 }
 
 int Engine::Run()
@@ -253,6 +137,9 @@ void Engine::Shutdown()
     
     m_glContext.reset();
     m_window.reset();
+    m_inputConfigurator.reset();
+    
+    std::cout << "Engine shutdown" << std::endl;
 }
 
 void Engine::Update(double deltaTime)
@@ -261,10 +148,16 @@ void Engine::Update(double deltaTime)
     auto& inputSystem = ogle::input::InputSystem::GetInstance();
     inputSystem.Update(static_cast<float>(deltaTime));
     
+    // Обновляем конфигуратор ввода (если нужно)
+    if (m_inputConfigurator)
+    {
+        m_inputConfigurator->Update(static_cast<float>(deltaTime));
+    }
+    
     // Обновляем сцену
     m_scene->Update(deltaTime);
     
-    // Обновляем камеру (если нужно)
+    // Обновляем камеру
     m_camera->Update();
 }
 
@@ -275,8 +168,7 @@ void Engine::Render()
     glClearColor(0.1f, 0.1f, 0.3f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    // Используем правильное соотношение сторон
-    // TODO: Передать m_aspectRatio в рендерер
+    // Рендерим сцену
     m_renderer->Render(*m_scene, *m_camera);
 
     m_glContext->SwapBuffers();

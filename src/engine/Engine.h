@@ -5,7 +5,8 @@
 #include "engine/Renderer.h"
 #include "engine/Scene.h"
 #include "engine/Camera.h"
-#include "engine/input/InputSystem.h"  // Используем новую систему ввода
+#include "engine/input/InputSystem.h"
+#include "engine/InputConfigurator.h"  // Добавляем
 #include <glad/gl.h>
 #include <glm/glm.hpp>
 #include <memory>
@@ -27,12 +28,12 @@ private:
     std::unique_ptr<Renderer> m_renderer;
     std::unique_ptr<Scene> m_scene;
     std::unique_ptr<Camera> m_camera;
-
-    // Контекст ввода для геймплея
-    ogle::input::InputContext* m_gameplayContext = nullptr;
+    
+    // Конфигуратор ввода вместо прямого управления
+    std::unique_ptr<ogle::InputConfigurator> m_inputConfigurator;
     
     float m_aspectRatio = 1.0f;
-    float m_lastDeltaTime = 0.0f;  // Для доступа в коллбеках
+    float m_lastDeltaTime = 0.0f;
 
     bool m_running { false };
     LARGE_INTEGER m_frequency {};
@@ -41,8 +42,4 @@ private:
     void HandleWindowMessage(UINT msg, WPARAM wParam, LPARAM lParam);
     void Update(double deltaTime);
     void Render();
-    
-    // Вспомогательные методы для настройки ввода
-    void SetupInputBindings();
-    void UpdateCameraFromInput(float deltaTime);
 };

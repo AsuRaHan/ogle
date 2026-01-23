@@ -1,6 +1,8 @@
 // InputSystem.cpp
 #include "InputSystem.h"
 #include <iostream>
+#include "log/Logger.h"
+#include "KeyboardState.h"
 
 namespace ogle::input
 {
@@ -22,8 +24,7 @@ namespace ogle::input
         if (m_initialized) return;
         
         m_hwnd = hwnd;
-        m_keys.fill(false);  // Используем fill для array
-        m_prevKeys.fill(false);
+        m_keyboardState = std::make_unique<KeyboardState>();
         
         // Инициализируем начальную позицию мыши
         if (m_hwnd)
@@ -37,7 +38,7 @@ namespace ogle::input
         }
         
         m_initialized = true;
-        std::cout << "InputSystem initialized" << std::endl;
+        ogle::Logger::Info("InputSystem initialized");
     }
     
     void InputSystem::Shutdown()
@@ -57,8 +58,8 @@ namespace ogle::input
     {
         if (!m_initialized) return;
         
-        // Обновляем предыдущие состояния
-        m_prevKeys = m_keys;  // Копируем весь array
+        // Обновляем предыдущие состояния клавиатуры
+        if (m_keyboardState) m_keyboardState->Update();
         for (int i = 0; i < 3; ++i)
         {
             m_prevMouseButtons[i] = m_mouseButtons[i];
@@ -66,28 +67,41 @@ namespace ogle::input
         
         m_prevMousePos = m_mousePos;
         
-        // Сбрасываем дельту мыши
-        m_mouseDelta = glm::vec2(0.0f);
-        m_mouseWheelDelta = 0.0f;
+        // Сбрасываем дельту мыши и прокрутку позже, после обработки очереди событий и обновления контекстов
         
         // Обновляем захват мыши
         if (m_mouseCaptured && m_hwnd)
         {
+            // When mouse is captured, compute delta directly from current cursor position
             RECT rect;
             GetClientRect(m_hwnd, &rect);
-            
+
             float centerX = (rect.right - rect.left) / 2.0f;
             float centerY = (rect.bottom - rect.top) / 2.0f;
-            
-            // Центрируем курсор
-            POINT center = { 
-                static_cast<LONG>(centerX), 
-                static_cast<LONG>(centerY) 
-            };
+
+            POINT pt;
+            GetCursorPos(&pt);
+            ScreenToClient(m_hwnd, &pt);
+
+            float curX = static_cast<float>(pt.x);
+            float curY = static_cast<float>(pt.y);
+
+            m_mouseDelta.x = curX - centerX;
+            m_mouseDelta.y = centerY - curY; // invert Y
+
+            // Create mouse move event from delta
+            auto moveEvent = std::make_unique<MouseMoveEvent>();
+            moveEvent->type = EventType::MouseMoved;
+            moveEvent->position = glm::vec2(centerX, centerY);
+            moveEvent->delta = m_mouseDelta;
+            m_eventQueue.push_back(std::move(moveEvent));
+
+            // Центрируем курсор (so next frame delta is relative to center)
+            POINT center = { static_cast<LONG>(centerX), static_cast<LONG>(centerY) };
             ClientToScreen(m_hwnd, &center);
             SetCursorPos(center.x, center.y);
-            
-            // Обновляем позицию мыши
+
+            // Update positions to center
             m_mousePos.x = centerX;
             m_mousePos.y = centerY;
         }
@@ -113,6 +127,10 @@ namespace ogle::input
                 context->Update(deltaTime);
             }
         }
+
+        // Теперь можно сбросить дельты мыши/колеса — они использованы при обработке событий
+        m_mouseDelta = glm::vec2(0.0f);
+        m_mouseWheelDelta = 0.0f;
     }
     
     void InputSystem::ProcessWindowMessage(UINT msg, WPARAM wParam, LPARAM lParam)
@@ -131,9 +149,13 @@ namespace ogle::input
             
         case WM_MOUSEMOVE:
         {
-            float x = static_cast<float>(LOWORD(lParam));
-            float y = static_cast<float>(HIWORD(lParam));
-            ProcessMouseMove(x, y);
+            // If mouse is captured, we handle movement in Update (delta from center)
+            if (!m_mouseCaptured)
+            {
+                float x = static_cast<float>(LOWORD(lParam));
+                float y = static_cast<float>(HIWORD(lParam));
+                ProcessMouseMove(x, y);
+            }
             break;
         }
             
@@ -165,7 +187,7 @@ namespace ogle::input
             
         case WM_KILLFOCUS:
             // При потере фокуса сбрасываем все состояния
-            m_keys.fill(false);  // Используем fill
+            if (m_keyboardState) m_keyboardState->Reset();
             for (int i = 0; i < 3; ++i)
             {
                 m_mouseButtons[i] = false;
@@ -181,8 +203,10 @@ namespace ogle::input
     void InputSystem::ProcessKeyEvent(int keyCode, bool pressed)
     {
         if (keyCode < 0 || keyCode >= 256) return;
-        
-        m_keys[keyCode] = pressed;  // Правильный доступ к элементу array
+        // Normalize ASCII letters to uppercase so bindings using VK_ are consistent
+        int normalized = keyCode;
+        if (keyCode >= 'a' && keyCode <= 'z') normalized = keyCode - ('a' - 'A');
+        if (m_keyboardState) m_keyboardState->SetKey(normalized, pressed);
         
         // Создаем событие клавиши
         auto event = std::make_unique<KeyEvent>();
@@ -252,38 +276,47 @@ namespace ogle::input
         }
     }
     
-    InputContext* InputSystem::CreateGameplayContext()
+InputContext* InputSystem::CreateGameplayContext()
+{
+    auto* context = CreateContext("Gameplay");
+    if (!context) return nullptr;
+    
+    ogle::Logger::Info("=== Creating Gameplay Context ===");
+    
+    // Оси движения
+    auto* moveHorizontal = context->CreateAxis("MoveHorizontal");
+    if (moveHorizontal)
     {
-        auto* context = CreateContext("Gameplay");
-        if (!context) return nullptr;
-        
-        // Создаем оси для плавного движения
-        auto* moveHorizontal = context->CreateAxis("MoveHorizontal");
-        if (moveHorizontal)
-        {
-            moveHorizontal->AddKeyBinding('A', 'D');
-        }
-        
-        auto* moveVertical = context->CreateAxis("MoveVertical");
-        if (moveVertical)
-        {
-            moveVertical->AddKeyBinding('S', 'W');
-        }
-        
-        auto* lookHorizontal = context->CreateAxis("LookHorizontal");
-        if (lookHorizontal)
-        {
-            lookHorizontal->AddMouseAxisBinding(true, 1.0f);  // X-ось мыши
-        }
-        
-        auto* lookVertical = context->CreateAxis("LookVertical");
-        if (lookVertical)
-        {
-            lookVertical->AddMouseAxisBinding(false, 1.0f);  // Y-ось мыши
-        }
-        
-        return context;
+        ogle::Logger::Info("Created MoveHorizontal axis (A/D)");
+        moveHorizontal->AddKeyBinding('A', 'D');
     }
+    
+    auto* moveVertical = context->CreateAxis("MoveVertical");
+    if (moveVertical)
+    {
+        ogle::Logger::Info("Created MoveVertical axis (W/S)");
+        // Use S as negative and W as positive so pressing W -> positive -> forward
+        moveVertical->AddKeyBinding('S', 'W');
+    }
+    
+    // Оси вращения
+    auto* lookHorizontal = context->CreateAxis("LookHorizontal");
+    if (lookHorizontal)
+    {
+        ogle::Logger::Info("Created LookHorizontal axis (Mouse X)");
+        lookHorizontal->AddMouseAxisBinding(true, 1.0f);
+    }
+    
+    auto* lookVertical = context->CreateAxis("LookVertical");
+    if (lookVertical)
+    {
+        ogle::Logger::Info("Created LookVertical axis (Mouse Y)");
+        lookVertical->AddMouseAxisBinding(false, 1.0f);
+    }
+    
+    ogle::Logger::Info("=== Gameplay Context Created ===");
+    return context;
+}
     
     InputContext* InputSystem::CreateContext(const std::string& name)
     {
@@ -310,23 +343,20 @@ namespace ogle::input
     
     bool InputSystem::IsKeyDown(int keyCode) const
     {
-        if (keyCode >= 0 && keyCode < 256)
-            return m_keys[keyCode];
-        return false;
+        if (!m_keyboardState) return false;
+        return m_keyboardState->IsDown(keyCode);
     }
     
     bool InputSystem::IsKeyPressed(int keyCode) const
     {
-        if (keyCode >= 0 && keyCode < 256)
-            return m_keys[keyCode] && !m_prevKeys[keyCode];
-        return false;
+        if (!m_keyboardState) return false;
+        return m_keyboardState->IsPressed(keyCode);
     }
     
     bool InputSystem::IsKeyReleased(int keyCode) const
     {
-        if (keyCode >= 0 && keyCode < 256)
-            return !m_keys[keyCode] && m_prevKeys[keyCode];
-        return false;
+        if (!m_keyboardState) return false;
+        return m_keyboardState->IsReleased(keyCode);
     }
     
     bool InputSystem::IsMouseButtonDown(int button) const
@@ -376,6 +406,14 @@ namespace ogle::input
             rect.bottom = bottomRight.y;
             
             ClipCursor(&rect);
+            // Recenter and reset previous mouse position so first delta is zero
+            POINT center = { static_cast<LONG>((rect.right - rect.left) / 2), static_cast<LONG>((rect.bottom - rect.top) / 2) };
+            ClientToScreen(m_hwnd, &center);
+            SetCursorPos(center.x, center.y);
+            m_mousePos.x = static_cast<float>((rect.right - rect.left) / 2);
+            m_mousePos.y = static_cast<float>((rect.bottom - rect.top) / 2);
+            m_prevMousePos = m_mousePos;
+            m_mouseDelta = glm::vec2(0.0f);
         }
         else
         {

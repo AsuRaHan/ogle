@@ -27,6 +27,7 @@ Shader::Shader(const char* vertexPath, const char* fragmentPath)
     catch (std::ifstream::failure& e)
     {
         std::cerr << "Ошибка чтения шейдера: " << e.what() << std::endl;
+        // ogle::Logger::Error("Some input axes are missing!");
     }
 
     const char* vShaderCode = vertexCode.c_str();

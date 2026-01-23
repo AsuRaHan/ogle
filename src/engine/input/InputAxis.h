@@ -19,6 +19,15 @@ namespace ogle::input
         
         // Привязка клавиш для оси (например, A/D для горизонтали)
         void AddKeyBinding(int negativeKey, int positiveKey);
+        // Helper overload accepting character literals like 'A','W'
+        void AddKeyBinding(char negativeKey, char positiveKey)
+        {
+            int nk = static_cast<int>(negativeKey);
+            int pk = static_cast<int>(positiveKey);
+            if (nk >= 'a' && nk <= 'z') nk = nk - ('a' - 'A');
+            if (pk >= 'a' && pk <= 'z') pk = pk - ('a' - 'A');
+            AddKeyBinding(nk, pk);
+        }
         
         // Привязка мыши/геймпада
         void AddMouseAxisBinding(bool isXAxis = true, float sensitivity = 1.0f);
@@ -49,6 +58,8 @@ namespace ogle::input
             int negativeKey;
             int positiveKey;
             float value;
+            // 0 -> x component, 1 -> y component
+            int axisIndex = 0;
         };
         
         struct MouseAxisBinding
