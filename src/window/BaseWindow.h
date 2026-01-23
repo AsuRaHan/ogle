@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include <windows.h>
 #include <functional>
@@ -30,12 +30,18 @@ public:
     void Show(int nCmdShow = SW_SHOW);
     int  RunMessageLoop();
 
+    void SetResizeCallback(const std::function<void(int width, int height)>& callback);
+
+    using WindowMessageCallback = std::function<void(UINT msg, WPARAM wParam, LPARAM lParam)>;
+    void SetMessageCallback(const WindowMessageCallback& callback) { m_onMessageCallback = callback; }
+
     HWND GetHWND()          const noexcept { return m_hwnd; }
     HDC  GetDrawingDC()     const noexcept { return m_hdc;  }
 
     int  GetClientWidth()   const { return m_clientWidth;  }
     int  GetClientHeight()  const { return m_clientHeight; }
-    void SetResizeCallback(const std::function<void(int width, int height)>& callback);
+    
+
     float GetAspectRatio() const noexcept;
 protected:
     virtual bool OnCreate()                     { return true; }
@@ -61,6 +67,8 @@ protected:
 private:
     static ATOM               s_classAtom;
     static const wchar_t*     s_className;
+
+    WindowMessageCallback m_onMessageCallback = nullptr;
 
     static LRESULT CALLBACK StaticWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
     static bool RegisterWindowClass(HINSTANCE hInst);

@@ -42,6 +42,8 @@ public:
     // Настройки
     void SetSensitivity(float newSensitivity) { sensitivity = newSensitivity; }
     float GetSensitivity() const { return sensitivity; }
+    float GetMovementSpeed() const { return movementSpeed; }
+    void SetMovementSpeed(float speed) { movementSpeed = speed; }
 
 private:
     glm::vec3 position;
@@ -54,6 +56,6 @@ private:
     float pitch;
 
     float sensitivity = 0.1f;  // для мыши, если добавишь
-
+    float movementSpeed = 5.0f;  // единиц в секунду
     void UpdateVectors();  // пересчёт front/right/up на основе yaw/pitch
 };

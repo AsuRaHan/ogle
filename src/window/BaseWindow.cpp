@@ -1,4 +1,4 @@
-﻿#include "BaseWindow.h"
+#include "BaseWindow.h"
 
 ATOM BaseWindow::s_classAtom = 0;
 const wchar_t* BaseWindow::s_className = L"OGLE_BaseWindowClass_2025";
@@ -138,6 +138,11 @@ int BaseWindow::RunMessageLoop()
 
 LRESULT BaseWindow::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam)
 {
+    if (m_onMessageCallback)
+    {
+        m_onMessageCallback(msg, wParam, lParam);
+    }
+
     switch (msg)
     {
     case WM_DESTROY:
@@ -149,14 +154,14 @@ LRESULT BaseWindow::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam)
         OnClose();
         return 0;
 
-    case WM_PAINT:
-    {
-        PAINTSTRUCT ps{};
-        HDC hdc = BeginPaint(m_hwnd, &ps);
-        OnPaint(hdc);
-        EndPaint(m_hwnd, &ps);
-        return 0;
-    }
+    //case WM_PAINT:
+    //{
+    //    PAINTSTRUCT ps{};
+    //    HDC hdc = BeginPaint(m_hwnd, &ps);
+    //    OnPaint(hdc);
+    //    EndPaint(m_hwnd, &ps);
+    //    return 0;
+    //}
 
     case WM_SIZE:
         OnResize(LOWORD(lParam), HIWORD(lParam));
