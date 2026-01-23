@@ -1,0 +1,2 @@
+// res/app.rc
+IDI_ICON1 ICON DISCARDABLE "icon.ico"

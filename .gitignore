@@ -1,0 +1,21 @@
+# Бинарные файлы
+ogle.exe
+build_debug.bat
+build_release.bat
+clean.bat
+
+# Сгенерированные файлы и каталоги
+*.o
+*.obj
+*.exe
+*.dll
+*.so
+*.dylib
+*.pdb
+
+# Временные файлы
+*.tmp
+*.log
+
+# VS Code настройки
+.vscode/
