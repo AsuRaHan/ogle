@@ -29,32 +29,35 @@
 #define WGL_CONTEXT_CORE_PROFILE_BIT_ARB          0x00000001
 #define WGL_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB 0x00000002
 
-class OpenGLContext
-{
-public:
-    explicit OpenGLContext(HDC hdc);
-    ~OpenGLContext();
+namespace ogle {
 
-    bool Initialize(int major = 4, int minor = 6, bool debug = false);
+	class OpenGLContext
+	{
+	public:
+		explicit OpenGLContext(HDC hdc);
+		~OpenGLContext();
 
-    std::string GetVersionString() const;
+		bool Initialize(int major = 4, int minor = 6, bool debug = false);
 
-    void MakeCurrent() const;
-    void SwapBuffers() const;
-    void Cleanup();
+		std::string GetVersionString() const;
 
-private:
-    HDC     m_hdc   { nullptr };
-    HGLRC   m_hglrc { nullptr };
-    bool    m_initialized { false };
+		void MakeCurrent() const;
+		void SwapBuffers() const;
+		void Cleanup();
 
-    bool CreateLegacyContext();
-    bool UpgradeToModernContext(int major, int minor, bool debug);
+	private:
+		HDC     m_hdc{ nullptr };
+		HGLRC   m_hglrc{ nullptr };
+		bool    m_initialized{ false };
 
-    // Типы функций WGL (загружаем вручную)
-    using PFNWGLCHOOSEPIXELFORMATARBPROC = BOOL (WINAPI *)(HDC, const int*, const FLOAT*, UINT, int*, UINT*);
-    using PFNWGLCREATECONTEXTATTRIBSARBPROC = HGLRC (WINAPI *)(HDC, HGLRC, const int*);
+		bool CreateLegacyContext();
+		bool UpgradeToModernContext(int major, int minor, bool debug);
 
-    PFNWGLCHOOSEPIXELFORMATARBPROC wglChoosePixelFormatARB { nullptr };
-    PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribsARB { nullptr };
-};
+		// Типы функций WGL (загружаем вручную)
+		using PFNWGLCHOOSEPIXELFORMATARBPROC = BOOL(WINAPI*)(HDC, const int*, const FLOAT*, UINT, int*, UINT*);
+		using PFNWGLCREATECONTEXTATTRIBSARBPROC = HGLRC(WINAPI*)(HDC, HGLRC, const int*);
+
+		PFNWGLCHOOSEPIXELFORMATARBPROC wglChoosePixelFormatARB{ nullptr };
+		PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribsARB{ nullptr };
+	};
+} // namespace ogle

@@ -1,75 +1,103 @@
-// InputAction.h
+// src/input/InputAction.h
 #pragma once
-#include <string>
-#include <vector>
+
+#include "InputTypes.h"
 #include <functional>
-#include "InputEvents.h"
+#include <vector>
+#include <string>
+#include <memory>
 
-namespace ogle::input
-{
-    // Режимы триггера действия
-    enum class ActionTrigger
-    {
-        Pressed,    // Только при нажатии
-        Released,   // Только при отпускании
-        Held,       // Пока удерживается
-        Toggle      // Переключатель
-    };
+namespace ogle {
 
-    // Класс действия (например, "Jump", "Fire", "Interact")
-    class InputAction
-    {
-    public:
-        using Callback = std::function<void(const InputEvent&, float)>;
-        
-        InputAction(const std::string& name);
-        
-        const std::string& GetName() const { return m_name; }
-        
-        // Привязка клавиш/кнопок
-        void AddKeyBinding(int keyCode, ActionTrigger trigger = ActionTrigger::Pressed);
-        // Overload for char literals - normalize to uppercase/VK
-        void AddKeyBinding(char keyChar, ActionTrigger trigger = ActionTrigger::Pressed)
-        {
-            int kc = static_cast<int>(keyChar);
-            if (kc >= 'a' && kc <= 'z') kc = kc - ('a' - 'A');
-            AddKeyBinding(kc, trigger);
-        }
-        void AddMouseBinding(int button, ActionTrigger trigger = ActionTrigger::Pressed);
-        void AddGamepadBinding(int button, ActionTrigger trigger = ActionTrigger::Pressed);
-        
-        // Установка коллбека
-        void SetCallback(const Callback& callback) { m_callback = callback; }
-        
-        // Обработка события
-        bool ProcessEvent(const InputEvent& event, float deltaTime);
-        
-        // Ручной триггер (для скриптов/UI)
-        void Trigger(float value = 1.0f);
-        
-        // Состояние
-        bool IsPressed() const { return m_isPressed; }
-        bool WasPressedThisFrame() const { return m_wasPressedThisFrame; }
-        float GetValue() const { return m_value; }
-        
-    private:
-        std::string m_name;
-        Callback m_callback;
-        
-        struct KeyBinding
-        {
-            int keyCode;
-            ActionTrigger trigger;
-        };
-        
-        std::vector<KeyBinding> m_keyBindings;
-        std::vector<KeyBinding> m_mouseBindings;
-        std::vector<KeyBinding> m_gamepadBindings;
-        
-        bool m_isPressed = false;
-        bool m_wasPressedThisFrame = false;
-        bool m_wasReleasedThisFrame = false;
-        float m_value = 0.0f;
-        float m_pressTime = 0.0f;
-    };
-}
+	// Состояние действия
+	struct ActionState {
+		bool active = false;
+		float value = 0.0f;
+		glm::vec2 vector2 = { 0.0f, 0.0f };
+		glm::vec3 vector3 = { 0.0f, 0.0f, 0.0f };
+
+		bool pressed = false;
+		bool released = false;
+		bool held = false;
+		float holdTime = 0.0f;
+
+		void ResetFrame() {
+			pressed = false;
+			released = false;
+		}
+	};
+
+	// Один биндинг
+	struct Binding {
+		enum class SourceType {
+			KeyboardKey,
+			MouseButton,
+			GamepadButton,
+			GamepadAxis
+		};
+
+		SourceType type;
+
+		union {
+			KeyCode key;
+			MouseButton mouseButton;
+			struct {
+				uint8_t player;
+				GamepadButton button;
+			} gamepadButton;
+			struct {
+				uint8_t player;
+				GamepadAxis axis;
+			} gamepadAxis;
+		};
+
+		Modifiers modifiers;
+		float scale = 1.0f;
+		float deadzone = 0.0f;
+		bool invert = false;
+		bool isPositive = true;
+	};
+
+	// Input Action
+	class InputAction {
+	public:
+		InputAction(std::string name, ActionType type);
+
+		// Биндинги
+		void AddKey(KeyCode key, Modifiers mods = {}, float scale = 1.0f);
+		void AddMouseButton(MouseButton button, Modifiers mods = {}, float scale = 1.0f);
+		void AddGamepadButton(int player, GamepadButton button, float scale = 1.0f);
+		void AddGamepadAxis(int player, GamepadAxis axis, float deadzone = 0.1f, float scale = 1.0f);
+
+		// Для составных осей
+		void AddAxisPair(KeyCode positive, KeyCode negative, Modifiers mods = {});
+
+		// Обновление
+		void Update(float deltaTime);
+		void ResetFrameState() { m_state.ResetFrame(); }
+
+		// Геттеры
+		const std::string& GetName() const { return m_name; }
+		ActionType GetType() const { return m_type; }
+		const ActionState& GetState() const { return m_state; }
+
+		// Коллбэки
+		using Callback = std::function<void(const ActionState&)>;
+		void OnPressed(Callback cb) { m_onPressed = std::move(cb); }
+		void OnReleased(Callback cb) { m_onReleased = std::move(cb); }
+		void OnHeld(Callback cb) { m_onHeld = std::move(cb); }
+
+	private:
+		friend class InputSystem;
+
+		std::string m_name;
+		ActionType m_type;
+		std::vector<Binding> m_bindings;
+		ActionState m_state;
+
+		Callback m_onPressed;
+		Callback m_onReleased;
+		Callback m_onHeld;
+	};
+
+} // namespace ogle::input

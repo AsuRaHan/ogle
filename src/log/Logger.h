@@ -1,18 +1,28 @@
-// Logger.h
+// src/log/Logger.h
 #pragma once
+
 #include <string>
 
-namespace ogle
-{
-    enum class Level { Info, Warn, Error, Debug };
+namespace ogle {
 
-    class Logger
-    {
-    public:
-        static void Log(Level level, const std::string& msg);
-        static void Info(const std::string& msg) { Log(Level::Info, msg); }
-        static void Warn(const std::string& msg) { Log(Level::Warn, msg); }
-        static void Error(const std::string& msg) { Log(Level::Error, msg); }
-        static void Debug(const std::string& msg) { Log(Level::Debug, msg); }
-    };
-}
+	enum class LogLevel {
+		Debug,
+		Info,
+		Warning,
+		Error,
+		Success
+	};
+
+	class Logger {
+	public:
+		static void Debug(const std::string& message);
+		static void Info(const std::string& message);
+		static void Warning(const std::string& message);
+		static void Error(const std::string& message);
+		static void Success(const std::string& message);
+
+		// Универсальный метод
+		static void Log(LogLevel level, const std::string& message);
+	};
+
+} // namespace ogle

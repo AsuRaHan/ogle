@@ -1,104 +1,218 @@
+// src/render/Camera.cpp
 #include "Camera.h"
+#include <algorithm>
 
-Camera::Camera(const glm::vec3& pos, float y, float p)
-    : position(pos), yaw(y), pitch(p)
-{
-    UpdateVectors();
-}
+namespace ogle {
 
-void Camera::SetPosition(const glm::vec3& pos)
-{
-    position = pos;
-}
+	Camera::Camera(const std::string& name)
+		: m_name(name) {
+		SetPerspective(45.0f, 16.0f / 9.0f, 0.1f, 1000.0f);
+		UpdateCameraVectors();
+	}
 
-glm::vec3 Camera::GetPosition() const
-{
-    return position;
-}
+	void Camera::Update(float deltaTime) {
+		// Обновление орбитальной камеры
+		if (m_mode == Mode::Orbit) {
+			float horizontalRad = glm::radians(m_orbitHorizontal);
+			float verticalRad = glm::radians(m_orbitVertical);
 
-void Camera::SetFront(const glm::vec3& frontDir)
-{
-    front = glm::normalize(frontDir);
-    UpdateVectors();  // пересчитываем right/up
-}
+			m_position.x = m_orbitTarget.x + m_orbitDistance * cosf(verticalRad) * sinf(horizontalRad);
+			m_position.y = m_orbitTarget.y + m_orbitDistance * sinf(verticalRad);
+			m_position.z = m_orbitTarget.z + m_orbitDistance * cosf(verticalRad) * cosf(horizontalRad);
 
-glm::vec3 Camera::GetFront() const
-{
-    return front;
-}
+			LookAt(m_orbitTarget);
+		}
 
-void Camera::SetRotation(float newYaw, float newPitch)
-{
-    yaw = newYaw;
-    pitch = glm::clamp(newPitch, -89.0f, 89.0f);  // ограничиваем, чтобы не переворачиваться
-    UpdateVectors();
-}
+		// Обновление матриц при необходимости
+		if (m_viewDirty) {
+			UpdateViewMatrix();
+		}
 
-glm::vec2 Camera::GetRotation() const
-{
-    return glm::vec2(yaw, pitch);
-}
+		if (m_projectionDirty) {
+			UpdateProjectionMatrix();
+		}
+	}
 
-void Camera::LookAt(const glm::vec3& target)
-{
-    front = glm::normalize(target - position);
-    pitch = glm::degrees(glm::asin(front.y));
-    yaw = glm::degrees(glm::atan(front.x, front.z));
-    UpdateVectors();
-}
+	void Camera::SetPerspective(float fovDegrees, float aspectRatio, float nearClip, float farClip) {
+		m_type = Type::Perspective;
+		m_projectionParams.perspective.fov = fovDegrees;
+		m_projectionParams.perspective.aspectRatio = aspectRatio;
+		m_projectionParams.perspective.nearClip = nearClip;
+		m_projectionParams.perspective.farClip = farClip;
+		m_projectionDirty = true;
+	}
 
-void Camera::Move(const glm::vec3& delta)
-{
-    position += delta;
-}
+	void Camera::SetOrthographic(float size, float aspectRatio, float nearClip, float farClip) {
+		m_type = Type::Orthographic;
+		float halfHeight = size * 0.5f;
+		float halfWidth = halfHeight * aspectRatio;
 
-void Camera::MoveForward(float distance)
-{
-    position += front * distance;
-}
+		m_projectionParams.orthographic.size = size;
+		m_projectionParams.orthographic.aspectRatio = aspectRatio;
+		m_projectionParams.orthographic.nearClip = nearClip;
+		m_projectionParams.orthographic.farClip = farClip;
+		m_projectionDirty = true;
+	}
 
-void Camera::MoveRight(float distance)
-{
-    position += right * distance;
-}
+	void Camera::SetOrthographic(float left, float right, float bottom, float top,
+		float nearClip, float farClip) {
+		m_type = Type::Orthographic;
+		m_projectionDirty = true;
+	}
 
-void Camera::MoveUp(float distance)
-{
-    position += up * distance;  // локальный up
-    // или position += worldUp * distance; для глобального
-}
+	void Camera::SetPosition(const glm::vec3& position) {
+		m_position = position;
+		m_viewDirty = true;
+	}
 
-void Camera::Rotate(float yawDelta, float pitchDelta)
-{
-    yaw += yawDelta * sensitivity;
-    pitch += pitchDelta * sensitivity;
-    pitch = glm::clamp(pitch, -89.0f, 89.0f);
-    UpdateVectors();
-}
+	void Camera::SetRotation(const glm::quat& rotation) {
+		m_rotation = rotation;
+		// Извлекаем углы Эйлера из кватерниона
+		glm::vec3 euler = glm::eulerAngles(rotation);
+		m_yaw = glm::degrees(euler.y);
+		m_pitch = glm::degrees(euler.x);
+		m_roll = glm::degrees(euler.z);
+		UpdateCameraVectors();
+	}
 
-glm::mat4 Camera::GetViewMatrix() const
-{
-    return glm::lookAt(position, position + front, up);
-}
+	void Camera::SetRotation(float yawDegrees, float pitchDegrees, float rollDegrees) {
+		m_yaw = yawDegrees;
+		m_pitch = pitchDegrees;
+		m_roll = rollDegrees;
 
-glm::mat4 Camera::GetProjectionMatrix(float aspectRatio, float fov, float nearPlane, float farPlane) const
-{
-    return glm::perspective(glm::radians(fov), aspectRatio, nearPlane, farPlane);
-}
+		// Создаем кватернион из углов Эйлера
+		glm::quat qYaw = glm::angleAxis(glm::radians(m_yaw), glm::vec3(0.0f, 1.0f, 0.0f));
+		glm::quat qPitch = glm::angleAxis(glm::radians(m_pitch), glm::vec3(1.0f, 0.0f, 0.0f));
+		glm::quat qRoll = glm::angleAxis(glm::radians(m_roll), glm::vec3(0.0f, 0.0f, 1.0f));
 
-void Camera::Update()
-{
-    UpdateVectors();
-}
+		m_rotation = qYaw * qPitch * qRoll;
+		UpdateCameraVectors();
+	}
 
-void Camera::UpdateVectors()
-{
-    glm::vec3 newFront;
-    newFront.x = glm::cos(glm::radians(yaw)) * glm::cos(glm::radians(pitch));
-    newFront.y = glm::sin(glm::radians(pitch));
-    newFront.z = glm::sin(glm::radians(yaw)) * glm::cos(glm::radians(pitch));
-    front = glm::normalize(newFront);
+	void Camera::Translate(const glm::vec3& translation) {
+		m_position += translation;
+		m_viewDirty = true;
+	}
 
-    right = glm::normalize(glm::cross(front, worldUp));
-    up = glm::normalize(glm::cross(right, front));
-}
+	void Camera::Rotate(float yawDelta, float pitchDelta, float rollDelta) {
+		m_yaw += yawDelta * m_rotationSpeed;
+		m_pitch += pitchDelta * m_rotationSpeed;
+		m_roll += rollDelta * m_rotationSpeed;
+
+		// Ограничиваем pitch, чтобы не переворачивать камеру
+		m_pitch = std::clamp(m_pitch, -89.0f, 89.0f);
+
+		SetRotation(m_yaw, m_pitch, m_roll);
+	}
+
+	void Camera::LookAt(const glm::vec3& target, const glm::vec3& up) {
+		m_viewMatrix = glm::lookAt(m_position, target, up);
+
+		// Извлекаем фронт из матрицы
+		m_front = glm::normalize(target - m_position);
+		m_right = glm::normalize(glm::cross(m_front, up));
+		m_up = glm::normalize(glm::cross(m_right, m_front));
+
+		// Обновляем углы
+		m_pitch = glm::degrees(asin(m_front.y));
+		m_yaw = glm::degrees(atan2(m_front.x, m_front.z));
+
+		m_viewDirty = false;
+	}
+
+	void Camera::MoveForward(float distance) {
+		m_position += m_front * distance;
+		m_viewDirty = true;
+	}
+
+	void Camera::MoveRight(float distance) {
+		m_position += m_right * distance;
+		m_viewDirty = true;
+	}
+
+	void Camera::MoveUp(float distance) {
+		m_position += m_up * distance;
+		m_viewDirty = true;
+	}
+
+	void Camera::SetOrbitTarget(const glm::vec3& target) {
+		m_orbitTarget = target;
+		m_mode = Mode::Orbit;
+	}
+
+	void Camera::SetOrbitDistance(float distance) {
+		m_orbitDistance = std::max(1.0f, distance);
+	}
+
+	void Camera::Orbit(float horizontalAngle, float verticalAngle) {
+		m_orbitHorizontal += horizontalAngle * m_rotationSpeed;
+		m_orbitVertical = std::clamp(m_orbitVertical + verticalAngle * m_rotationSpeed, -89.0f, 89.0f);
+	}
+
+	void Camera::ProcessMouseMovement(float xoffset, float yoffset, bool constrainPitch) {
+		if (m_mode == Mode::Free || m_mode == Mode::FirstPerson) {
+			Rotate(xoffset * m_mouseSensitivity, yoffset * m_mouseSensitivity);
+		}
+		else if (m_mode == Mode::Orbit) {
+			Orbit(xoffset * m_mouseSensitivity, -yoffset * m_mouseSensitivity);
+		}
+	}
+
+	void Camera::ProcessMouseScroll(float yoffset) {
+		if (m_type == Type::Perspective) {
+			m_projectionParams.perspective.fov = std::clamp(
+				m_projectionParams.perspective.fov - yoffset,
+				1.0f, 120.0f
+			);
+			m_projectionDirty = true;
+		}
+		else if (m_mode == Mode::Orbit) {
+			SetOrbitDistance(m_orbitDistance - yoffset);
+		}
+	}
+
+	void Camera::UpdateCameraVectors() {
+		// Вычисляем новые векторы из углов Эйлера
+		glm::vec3 newFront;
+		newFront.x = cos(glm::radians(m_yaw)) * cos(glm::radians(m_pitch));
+		newFront.y = sin(glm::radians(m_pitch));
+		newFront.z = sin(glm::radians(m_yaw)) * cos(glm::radians(m_pitch));
+
+		m_front = glm::normalize(newFront);
+		m_right = glm::normalize(glm::cross(m_front, m_worldUp));
+		m_up = glm::normalize(glm::cross(m_right, m_front));
+
+		m_viewDirty = true;
+	}
+
+	void Camera::UpdateViewMatrix() {
+		if (m_mode != Mode::Orbit) { // Орбитальная обновляется в Update
+			m_viewMatrix = glm::lookAt(m_position, m_position + m_front, m_up);
+		}
+		m_viewDirty = false;
+	}
+
+	void Camera::UpdateProjectionMatrix() {
+		if (m_type == Type::Perspective) {
+			m_projectionMatrix = glm::perspective(
+				glm::radians(m_projectionParams.perspective.fov),
+				m_projectionParams.perspective.aspectRatio,
+				m_projectionParams.perspective.nearClip,
+				m_projectionParams.perspective.farClip
+			);
+		}
+		else {
+			float halfHeight = m_projectionParams.orthographic.size * 0.5f;
+			float halfWidth = halfHeight * m_projectionParams.orthographic.aspectRatio;
+
+			m_projectionMatrix = glm::ortho(
+				-halfWidth, halfWidth,
+				-halfHeight, halfHeight,
+				m_projectionParams.orthographic.nearClip,
+				m_projectionParams.orthographic.farClip
+			);
+		}
+		m_projectionDirty = false;
+	}
+
+} // namespace ogle
