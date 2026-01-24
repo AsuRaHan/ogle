@@ -1,46 +1,66 @@
-// Engine.h
+// src/core/Engine.h
 #pragma once
-#include <glad/gl.h>
-#include <glm/glm.hpp>
+
 #include <memory>
+#include <vector>
+#include <windows.h>
 
-#include "window/OpenGLContext.h"
-#include "render/Renderer.h"
-#include "render/Camera.h"
-#include "scene/Scene.h"
-#include "input/InputSystem.h"
-#include "input/InputConfigurator.h"
+#include "ISystem.h"
+#include "log/Logger.h"
+#include "systems/WindowSystem.h"
+#include "systems/RenderSystem.h"
 
+namespace ogle {
 
-class Engine
-{
+class Engine {
 public:
-    Engine(HINSTANCE hInstance);
+    explicit Engine(HINSTANCE hInstance);
     ~Engine();
 
     bool Initialize();
     int Run();
     void Shutdown();
 
+    template<typename T, typename... Args>
+    T* RegisterSystem(Args&&... args);
+
+    template<typename T>
+    T* GetSystem() const;
+
+    float GetDeltaTime() const { return m_deltaTime; }
+
 private:
     HINSTANCE m_hInstance;
-    std::unique_ptr<MainWindow> m_window;
-    std::unique_ptr<OpenGLContext> m_glContext;
-    std::unique_ptr<Renderer> m_renderer;
-    std::unique_ptr<Scene> m_scene;
-    std::unique_ptr<Camera> m_camera;
-    
-    // Конфигуратор ввода вместо прямого управления
-    std::unique_ptr<ogle::InputConfigurator> m_inputConfigurator;
-    
-    float m_aspectRatio = 1.0f;
-    float m_lastDeltaTime = 0.0f;
 
-    bool m_running { false };
-    LARGE_INTEGER m_frequency {};
-    LARGE_INTEGER m_lastTime {};
+    std::vector<std::unique_ptr<ISystem>> m_systems;
 
-    void HandleWindowMessage(UINT msg, WPARAM wParam, LPARAM lParam);
-    void Update(double deltaTime);
-    void Render();
+    LARGE_INTEGER m_frequency{};
+    LARGE_INTEGER m_lastTime{};
+    float m_deltaTime = 0.0f;
+    bool m_running = false;
+
+    void ProcessMessages();
+    void UpdateSystems();
+    void RenderSystems();
 };
+
+template<typename T, typename... Args>
+T* Engine::RegisterSystem(Args&&... args) {
+    auto system = std::make_unique<T>(std::forward<Args>(args)...);
+    T* ptr = system.get();
+    m_systems.push_back(std::move(system));
+    Logger::Info("Registered system: " + ptr->GetName());
+    return ptr;
+}
+
+template<typename T>
+T* Engine::GetSystem() const {
+    for (const auto& sys : m_systems) {
+        if (auto* casted = dynamic_cast<T*>(sys.get())) {
+            return casted;
+        }
+    }
+    return nullptr;
+}
+
+} // namespace ogle

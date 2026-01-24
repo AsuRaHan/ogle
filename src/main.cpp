@@ -15,12 +15,12 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
     ogle::Logger::Info("Debug console activate");
     // #endif
 
-    Engine engine(hInstance);
+    ogle::Engine engine(hInstance);
 
     if (!engine.Initialize())
     {
         return 1;
     }
-    FreeConsole();
+    //FreeConsole();
     return engine.Run();
 }
