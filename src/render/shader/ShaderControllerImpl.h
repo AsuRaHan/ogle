@@ -15,6 +15,17 @@
 
 namespace ogle {
 
+	struct ShaderProgramInfo {
+		std::shared_ptr<ShaderProgram> program;
+		std::string vertexPath;
+		std::string fragmentPath;
+		std::string geometryPath;
+		std::string vertexSource;
+		std::string fragmentSource;
+		std::string geometrySource;
+		std::filesystem::file_time_type lastModified;
+	};
+
 	// Приватная реализация ShaderController
 	class ShaderControllerImpl {
 	public:
@@ -88,6 +99,11 @@ namespace ogle {
 
 		Statistics m_stats;
 		bool m_watchFiles = false;
+
+		std::unordered_map<std::string, ShaderProgramInfo> m_programInfos;
+		bool m_watchEnabled = true;
+		float m_checkInterval = 1.0f; // Проверять каждую секунду
+		float m_timeSinceLastCheck = 0.0f;
 	};
 
 } // namespace ogle

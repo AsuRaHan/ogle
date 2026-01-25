@@ -12,6 +12,8 @@
 #include "systems/InputSystem.h"
 #include "systems/GuiSystem.h"
 
+#include "ui/UIController.h"
+
 namespace ogle {
 
 	class Engine {

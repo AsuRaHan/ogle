@@ -11,6 +11,9 @@
 #include "test/TestCube.h"
 #include "render/Camera.h"
 #include "systems/GuiSystem.h"
+#include "scene/Scene.h"
+
+//#include "ui/UIController.h"
 
 namespace ogle {
 
@@ -30,7 +33,7 @@ public:
     void Shutdown() override;
 
     void OnResize(int width, int height) override;
-    void SetClearColor(float r, float g, float b, float a = 1.0f);
+    //void SetClearColor(float r, float g, float b, float a = 1.0f);
 
     // === Управление рендерерами ===
     void AddRenderer(ISystem* system);
@@ -50,7 +53,9 @@ private:
     float m_time = 0.0f;
     
     Camera* m_camera = nullptr;
-    
+
+    std::unique_ptr<Scene> m_scene;
+
     // Список рендереров
     std::vector<ISystem*> m_renderers;
     

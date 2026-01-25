@@ -30,7 +30,9 @@ namespace ogle {
 		void SetVec4(const std::string& name, const glm::vec4& value);
 		void SetMat3(const std::string& name, const glm::mat3& value);
 		void SetMat4(const std::string& name, const glm::mat4& value);
-
+		void SetBool(const std::string& name, bool value) {
+			SetInt(name, value ? 1 : 0); // В GLSL bool передается как int
+		}
 		// Установка MVP матриц за один вызов
 		void SetMVP(const glm::mat4& model,
 			const glm::mat4& view,

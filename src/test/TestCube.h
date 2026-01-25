@@ -6,6 +6,16 @@
 #include <memory>
 #include <string>
 #include "render/shader/ShaderProgram.h"
+#include "render/MaterialController.h"
+#include "render/TextureController.h"
+
+#include "test/TestCubeUI.h"
+
+namespace ogle {
+    class Material;  // <-- ДОБАВИТЬ
+    class Texture;   // <-- ДОБАВИТЬ
+    enum class MaterialType; // <-- ДОБАВИТЬ
+}
 
 namespace ogle {
 
@@ -44,6 +54,15 @@ public:
     // Управление камерой
     void SetCameraControlEnabled(bool enabled) { m_cameraControlEnabled = enabled; }
     bool IsCameraControlEnabled() const { return m_cameraControlEnabled; }
+
+    void SetupMaterials();
+    void SwitchToNextMaterial();
+    void ToggleWireframe();
+
+    // Новые поля
+    Material* GetCurrentMaterial() const { return m_currentMaterial; }
+    size_t GetMaterialIndex() const { return m_materialIndex; }
+    const std::vector<std::string>& GetMaterialNames() const { return m_materialNames; }
     
 private:
     GLuint m_vao = 0;
@@ -68,6 +87,22 @@ private:
     
     // Статистика для отладки
     mutable float m_axisLogTimer = 0.0f;
+	TestCubeUI m_ui;
+
+    // Новые поля для материалов
+    Material* m_currentMaterial = nullptr;
+    std::vector<std::string> m_materialNames;
+    size_t m_materialIndex = 0;
+    bool m_wireframeMode = false;
+
+    // Режимы отображения
+    enum class RenderMode {
+        BasicColor,
+        Textured,
+        MultipleMaterials,
+        Wireframe
+    };
+    RenderMode m_renderMode = RenderMode::BasicColor;
 };
 
 } // namespace ogle

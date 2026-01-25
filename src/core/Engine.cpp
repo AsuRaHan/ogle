@@ -65,6 +65,7 @@ namespace ogle {
 	}
 
 	void Engine::UpdateSystems() {
+		//UIController::Get().Update(m_deltaTime);
 		for (auto& sys : m_systems) {
 			sys->Update(m_deltaTime);
 		}

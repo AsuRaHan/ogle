@@ -4,6 +4,7 @@
 #define NOMINMAX
 #include <algorithm>
 #include "core/ISystem.h"
+#include "ui/UIController.h"
 
 struct ImGuiContext;
 

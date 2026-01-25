@@ -102,6 +102,8 @@ void GuiSystem::RenderUI() {
     ImGui_ImplWin32_NewFrame();
     ImGui::NewFrame();
 
+    UIController::Get().Render();
+
     // Рисуем UI
     DrawTestUI();
 
