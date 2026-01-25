@@ -1,32 +1,37 @@
+// src/managers/InputManager.h
 #pragma once
-#include <windows.h>
-#include "log/Logger.h"
+
+#include <glm/glm.hpp>
+#include <array>
 
 namespace ogle {
 
-	class InputManager {
-	public:
-		static InputManager& Get() {
-			static InputManager instance;
-			return instance;
-		}
+class Camera;  // Предварительное объявление
 
-		// Простая заглушка: обработка клавиши Esc
-		void ProcessKey(int keyCode) {
-			if (keyCode == VK_ESCAPE) {
-				// Выход из приложения
-				PostQuitMessage(0);
-				Logger::Info("Escape pressed - quitting application");
-			}
-		}
+class InputManager {
+public:
+    static InputManager& Get();
 
-		// Пустые методы для будущего
-		void Update() {}
-		void Initialize() {}
+    // Обработка клавиши
+    void ProcessKey(int keyCode);
 
-	private:
-		InputManager() = default;
-		~InputManager() = default;
-	};
+    // Обновление с передачей состояния ввода
+    void Update(float deltaTime,
+                const std::array<bool, 256>& keyStates,
+                const glm::vec2& mouseDelta,
+                float mouseWheelDelta,
+                bool rightMouseDown);
+
+    // Инициализация
+    void Initialize();
+
+private:
+    InputManager() = default;
+    ~InputManager() = default;
+
+    // Запрет копирования
+    InputManager(const InputManager&) = delete;
+    InputManager& operator=(const InputManager&) = delete;
+};
 
 } // namespace ogle

@@ -3,40 +3,43 @@
 
 #include <glad/gl.h>
 #include <memory>
-
 #include "core/ISystem.h"
 #include "log/Logger.h"
 #include "window/OpenGLContext.h"
 #include "test/TestCube.h"
+#include "managers/CameraManager.h"  // Добавляем
+#include "render/Camera.h"           // Добавляем
 
 namespace ogle {
 
-	class RenderSystem final : public ISystem {
-	public:
-		explicit RenderSystem(HDC hdc);
-		~RenderSystem() override;
+class RenderSystem final : public ISystem {
+public:
+    explicit RenderSystem(HDC hdc);
+    ~RenderSystem() override;
 
-		const std::string& GetName() const override {
-			static std::string n = "RenderSystem";
-			return n;
-		}
+    const std::string& GetName() const override {
+        static std::string n = "RenderSystem";
+        return n;
+    }
 
-		bool Initialize() override;
-		void Update(float deltaTime) override {}
-		void Render() override;
-		void Shutdown() override;
+    bool Initialize() override;
+    void Update(float deltaTime) override;  // Добавляем дельту времени
+    void Render() override;
+    void Shutdown() override;
 
-		void OnResize(int width, int height) override;
-		void SetClearColor(float r, float g, float b, float a = 1.0f);
+    void OnResize(int width, int height) override;
+    void SetClearColor(float r, float g, float b, float a = 1.0f);
 
-	private:
-		HDC m_hdc;
-		std::unique_ptr<OpenGLContext> m_context;
-		float m_clearColor[4] = { 0.1f, 0.1f, 0.3f, 1.0f };
+private:
+    HDC m_hdc;
+    std::unique_ptr<OpenGLContext> m_context;
+    float m_clearColor[4] = { 0.1f, 0.1f, 0.3f, 1.0f };
 
-		///////////////////
-		TestCube m_testCube;
-		float m_time = 0.0f;
-	};
+    TestCube m_testCube;
+    float m_time = 0.0f;
+    
+    // ДОБАВЛЯЕМ: Член-класса Camera
+    Camera* m_camera = nullptr;  // Указатель на камеру из менеджера
+};
 
 } // namespace ogle

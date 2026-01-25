@@ -22,32 +22,32 @@ bool TestCube::Initialize() {
 
     auto& shaderCtrl = ShaderController::Get();
     
-    //m_shaderProgram = shaderCtrl.CreateProgram("ColorfulCube",
-    //    R"(#version 460 core
-    //       layout(location = 0) in vec3 aPos;
-    //       layout(location = 1) in vec3 aColor;
-    //       
-    //       uniform mat4 uModel;
-    //       uniform mat4 uView;
-    //       uniform mat4 uProjection;
-    //       
-    //       out vec3 vColor;
-    //       
-    //       void main() {
-    //           vColor = aColor;
-    //           gl_Position = uProjection * uView * uModel * vec4(aPos, 1.0);
-    //       })",
-    //    
-    //    R"(#version 460 core
-    //       in vec3 vColor;
-    //       out vec4 FragColor;
-    //       
-    //       void main() {
-    //           FragColor = vec4(vColor, 1.0);
-    //       })"
-    //);
+    m_shaderProgram = shaderCtrl.CreateProgram("ColorfulCube",
+        R"(#version 460 core
+           layout(location = 0) in vec3 aPos;
+           layout(location = 1) in vec3 aColor;
+           
+           uniform mat4 uModel;
+           uniform mat4 uView;
+           uniform mat4 uProjection;
+           
+           out vec3 vColor;
+           
+           void main() {
+               vColor = aColor;
+               gl_Position = uProjection * uView * uModel * vec4(aPos, 1.0);
+           })",
+        
+        R"(#version 460 core
+           in vec3 vColor;
+           out vec4 FragColor;
+           
+           void main() {
+               FragColor = vec4(vColor, 1.0);
+           })"
+    );
     
-    m_shaderProgram = shaderCtrl.GetBuiltin(ShaderController::Builtin::BasicColor);
+    //m_shaderProgram = shaderCtrl.GetBuiltin(ShaderController::Builtin::BasicColor);
 
     if (!m_shaderProgram) {
         Logger::Error("Failed to create shader");
@@ -234,7 +234,7 @@ void TestCube::CreateGeometry() {
     glBindVertexArray(0);
 }
 
-void TestCube::Render(float time) {
+void TestCube::Render(float time, const glm::mat4& view, const glm::mat4& projection) {
     if (!m_shaderProgram || m_vao == 0) return;
 
     m_shaderProgram->Bind();
@@ -242,18 +242,6 @@ void TestCube::Render(float time) {
     glm::mat4 model = glm::mat4(1.0f);
     model = glm::rotate(model, time, glm::vec3(0.5f, 1.0f, 0.0f));
 
-    glm::mat4 view = glm::lookAt(
-        glm::vec3(2.0f, 2.0f, 3.0f),
-        glm::vec3(0.0f, 0.0f, 0.0f),
-        glm::vec3(0.0f, 1.0f, 0.0f)
-    );
-
-    glm::mat4 projection = glm::perspective(
-        glm::radians(45.0f),
-        1280.0f / 720.0f,
-        0.1f,
-        100.0f
-    );
 
     // Общие uniform для всех шейдеров
     m_shaderProgram->SetMat4("uModel", model);
@@ -296,37 +284,5 @@ void TestCube::Render(float time) {
     glBindVertexArray(0);
     m_shaderProgram->Unbind();
 }
-
-//void TestCube::Render(float time) {
-//    if (!m_shaderProgram || m_vao == 0) return;
-//    
-//    m_shaderProgram->Bind();
-//    
-//    glm::mat4 model = glm::mat4(1.0f);
-//    model = glm::rotate(model, time, glm::vec3(0.5f, 1.0f, 0.0f));
-//    
-//    glm::mat4 view = glm::lookAt(
-//        glm::vec3(2.0f, 2.0f, 3.0f),
-//        glm::vec3(0.0f, 0.0f, 0.0f),
-//        glm::vec3(0.0f, 1.0f, 0.0f)
-//    );
-//    
-//    glm::mat4 projection = glm::perspective(
-//        glm::radians(45.0f),
-//        1280.0f / 720.0f,
-//        0.1f,
-//        100.0f
-//    );
-//    
-//    m_shaderProgram->SetMat4("uModel", model);
-//    m_shaderProgram->SetMat4("uView", view);
-//    m_shaderProgram->SetMat4("uProjection", projection);
-//    
-//    glBindVertexArray(m_vao);
-//    glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
-//    glBindVertexArray(0);
-//    
-//    m_shaderProgram->Unbind();
-//}
 
 } // namespace ogle

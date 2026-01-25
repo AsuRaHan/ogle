@@ -149,6 +149,17 @@ namespace ogle {
 		m_orbitVertical = std::clamp(m_orbitVertical + verticalAngle * m_rotationSpeed, -89.0f, 89.0f);
 	}
 
+	void Camera::SetAspectRatio(float aspectRatio) {
+		if (m_type == Type::Perspective) {
+			m_projectionParams.perspective.aspectRatio = aspectRatio;
+			m_projectionDirty = true;
+		}
+		else {
+			m_projectionParams.orthographic.aspectRatio = aspectRatio;
+			m_projectionDirty = true;
+		}
+	}
+
 	void Camera::ProcessMouseMovement(float xoffset, float yoffset, bool constrainPitch) {
 		if (m_mode == Mode::Free || m_mode == Mode::FirstPerson) {
 			Rotate(xoffset * m_mouseSensitivity, yoffset * m_mouseSensitivity);

@@ -58,6 +58,8 @@ namespace ogle {
 		void SetOrbitDistance(float distance);
 		void Orbit(float horizontalAngle, float verticalAngle);
 
+		void SetAspectRatio(float aspectRatio);
+
 		// === Геттеры ===
 		const glm::vec3& GetPosition() const { return m_position; }
 		const glm::vec3& GetFront() const { return m_front; }
@@ -70,7 +72,11 @@ namespace ogle {
 		float GetRoll() const { return m_roll; }
 
 		Type GetType() const { return m_type; }
+		void SetType(Type type) { m_type = type; }
+
 		Mode GetMode() const { return m_mode; }
+		void SetMode(Mode mode) { m_mode = mode; }
+
 		const std::string& GetName() const { return m_name; }
 
 		// === Настройки ===

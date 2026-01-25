@@ -19,3 +19,4 @@ clean.bat
 
 # VS Code настройки
 .vscode/
+build
