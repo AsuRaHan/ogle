@@ -78,6 +78,23 @@ target_compile_definitions(imgui PRIVATE
     IMGUI_IMPL_OPENGL_LOADER_GLAD2  # Используем GLAD2
 )
 
+# Добавляем stb_image (stb) для загрузки текстур
+FetchContent_Declare(
+    stb
+    GIT_REPOSITORY https://github.com/nothings/stb.git
+    GIT_TAG        master  # конкретный коммит для стабильности
+    GIT_PROGRESS   TRUE
+)
+
+FetchContent_MakeAvailable(stb)
+
+# Создаем интерфейсную библиотеку для stb
+add_library(stb_interface INTERFACE)
+target_include_directories(stb_interface INTERFACE 
+    ${stb_SOURCE_DIR}
+)
+
+
 # Для Win32 бэкенда
 if(WIN32)
     target_link_libraries(imgui PRIVATE imm32)
@@ -99,6 +116,7 @@ add_executable(ogle WIN32
 # В target_link_libraries добавь imgui:
 target_link_libraries(ogle PRIVATE
     glad_gl_core_46
+    stb_interface
     glm::glm
     imgui                    # ← Добавляем ImGui
     opengl32
@@ -110,23 +128,12 @@ target_link_libraries(ogle PRIVATE
 # Добавляем include директории
 target_include_directories(ogle PRIVATE 
     src
+    ${stb_SOURCE_DIR}            # ← Добавляем
     ${entt_SOURCE_DIR}/single_include
     ${imgui_SOURCE_DIR}           # ← Добавляем
     ${imgui_SOURCE_DIR}/backends  # ← Добавляем
 )
 
-# target_include_directories(ogle PRIVATE 
-#     src
-#     ${entt_SOURCE_DIR}/single_include  # Основной хедер EnTT здесь (entt.hpp)
-# )
-
-# target_link_libraries(ogle PRIVATE
-#     glad_gl_core_46
-#     glm::glm
-#     opengl32          # системная библиотека OpenGL
-#     user32
-#     gdi32
-# )
 
 set_target_properties(ogle PROPERTIES
     WIN32_EXECUTABLE            TRUE

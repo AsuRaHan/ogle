@@ -90,6 +90,11 @@ public:
     
     bool IsValid() const { return m_id != 0; }
     
+    // Новые методы
+    virtual bool LoadFromFile(const std::string& filepath) = 0;
+    virtual bool LoadFromMemory(const void* data, int width, int height, int channels) = 0;
+    virtual void Update(const void* data, int x, int y, int width, int height) = 0;
+    
 protected:
     Texture(TextureType type, const std::string& name = "");
     
@@ -101,6 +106,10 @@ protected:
     int m_height = 0;
     int m_depth = 0;
     TextureFormat m_format = TextureFormat::RGBA8;
+    
+    // Вспомогательные методы
+    static void GetGLFormat(int channels, TextureFormat textureFormat, 
+                           GLenum& outFormat, GLenum& outInternalFormat, GLenum& outType);
 };
 
 // 2D текстура
@@ -109,24 +118,21 @@ public:
     Texture2D(const std::string& name = "");
     ~Texture2D() override;
     
-    // Создание
-    bool Create(int width, int height, TextureFormat format = TextureFormat::RGBA8);
-    bool LoadFromFile(const std::string& filepath);
-    bool LoadFromMemory(const unsigned char* data, int width, int height, int channels);
-    
-    // Обновление данных
-    void Update(const void* data, int x = 0, int y = 0, int width = 0, int height = 0);
-    
-    // Методы Texture
+    // Реализация Texture
+    bool LoadFromFile(const std::string& filepath) override;
+    bool LoadFromMemory(const void* data, int width, int height, int channels) override;
+    void Update(const void* data, int x = 0, int y = 0, int width = 0, int height = 0) override;
     void Bind(GLuint unit = 0) override;
     void Unbind() override;
     void SetSettings(const TextureSettings& settings) override;
     
-    // Утилиты
+    // Специфичные методы
+    bool Create(int width, int height, TextureFormat format = TextureFormat::RGBA8);
     bool SaveToFile(const std::string& filepath);
     
 private:
     TextureSettings m_settings;
+    std::string m_filepath; // Для hot-reload
 };
 
 // Кубическая текстура (для skybox)
@@ -135,17 +141,20 @@ public:
     TextureCube(const std::string& name = "");
     ~TextureCube() override;
     
-    // Загрузка 6 граней
-    bool LoadFromFiles(const std::string& front, const std::string& back,
-                      const std::string& left, const std::string& right,
-                      const std::string& top, const std::string& bottom);
-    
-    bool LoadFromSingleFile(const std::string& filepath); // Загрузка HDR/кубической карты
-    
-    // Методы Texture
+    // Реализация Texture
+    bool LoadFromFile(const std::string& filepath) override;
+    bool LoadFromMemory(const void* data, int width, int height, int channels) override;
+    void Update(const void* data, int x = 0, int y = 0, int width = 0, int height = 0) override;
     void Bind(GLuint unit = 0) override;
     void Unbind() override;
     void SetSettings(const TextureSettings& settings) override;
+    
+    // Специфичные методы
+    bool LoadFromFiles(const std::string& front, const std::string& back,
+                      const std::string& left, const std::string& right,
+                      const std::string& top, const std::string& bottom);
+    bool LoadFromSingleFile(const std::string& filepath);
+    bool Create(int size, TextureFormat format = TextureFormat::RGBA8);
     
 private:
     TextureSettings m_settings;

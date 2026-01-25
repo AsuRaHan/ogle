@@ -5,8 +5,11 @@
 #include <string>
 #include <memory>
 #include <unordered_map>
+#include <glad/gl.h>   // от GLAD 2
 #include "log/Logger.h"
+#include "render/ShaderController.h"
 #include "render/shader/ShaderProgram.h"
+#include "render/texture/Texture.h"
 
 // Предварительное объявление
 namespace ogle {
@@ -72,11 +75,13 @@ public:
     void SetFloat(const std::string& name, float value);
     void SetVec3(const std::string& name, const glm::vec3& value);
     void SetVec4(const std::string& name, const glm::vec4& value);
+    void SetInt(const std::string& name, int value);
     void SetTexture(const std::string& name, Texture* texture);
     
     float GetFloat(const std::string& name, float defaultValue = 0.0f) const;
     glm::vec3 GetVec3(const std::string& name, const glm::vec3& defaultValue = glm::vec3(0)) const;
     glm::vec4 GetVec4(const std::string& name, const glm::vec4& defaultValue = glm::vec4(0)) const;
+    int GetInt(const std::string& name, int defaultValue = 0) const;
     Texture* GetTexture(const std::string& name) const;
     
     // Применение всех параметров к шейдеру
@@ -91,7 +96,11 @@ protected:
     std::unordered_map<std::string, float> m_floatParams;
     std::unordered_map<std::string, glm::vec3> m_vec3Params;
     std::unordered_map<std::string, glm::vec4> m_vec4Params;
+    std::unordered_map<std::string, int> m_intParams;
     std::unordered_map<std::string, Texture*> m_textureParams;
+    
+    // Какие texture units использовать для каких текстур
+    std::unordered_map<std::string, GLuint> m_textureUnits;
 };
 
 // Конкретные типы материалов
@@ -104,16 +113,18 @@ public:
     void BindTextures() override;
     std::unique_ptr<Material> Clone() const override;
     
-    // Специфичные свойства
+    // Специфичные свойства (удобные обертки)
     void SetColor(const glm::vec4& color);
     glm::vec4 GetColor() const;
     
     void SetTexture(Texture* texture);
     Texture* GetTexture() const;
     
+    void SetUseLighting(bool use);
+    bool GetUseLighting() const;
+    
 private:
-    glm::vec4 m_color = {1.0f, 1.0f, 1.0f, 1.0f};
-    Texture* m_texture = nullptr;
+    // НЕТ дублирования данных! Все хранится в базовых m_*Params
 };
 
 class PBRMaterial : public Material {
@@ -125,7 +136,7 @@ public:
     void BindTextures() override;
     std::unique_ptr<Material> Clone() const override;
     
-    // PBR свойства
+    // PBR свойства (удобные обертки)
     void SetAlbedo(const glm::vec4& albedo);
     void SetMetallic(float metallic);
     void SetRoughness(float roughness);
@@ -152,14 +163,7 @@ public:
     Texture* GetEmissionMap() const;
     
 private:
-    // Значения по умолчанию
-    glm::vec4 m_albedo = {0.8f, 0.8f, 0.8f, 1.0f};
-    float m_metallic = 0.0f;
-    float m_roughness = 0.5f;
-    float m_ao = 1.0f;
-    glm::vec3 m_emission = {0.0f, 0.0f, 0.0f};
-    
-    // Текстуры
+    // Только указатели на текстуры (данные в m_textureParams)
     Texture* m_albedoMap = nullptr;
     Texture* m_normalMap = nullptr;
     Texture* m_metallicRoughnessMap = nullptr;
@@ -170,7 +174,7 @@ private:
 // Material Instance (для переопределения параметров)
 class MaterialInstance : public Material {
 public:
-    MaterialInstance(Material* baseMaterial);
+    MaterialInstance(Material* baseMaterial = nullptr);
     ~MaterialInstance() override = default;
     
     void Apply(ShaderProgram* shader) override;
@@ -178,30 +182,17 @@ public:
     std::unique_ptr<Material> Clone() const override;
     
     // Переопределение параметров
+    void OverrideFloat(const std::string& name, float value);
+    void OverrideVec3(const std::string& name, const glm::vec3& value);
+    void OverrideVec4(const std::string& name, const glm::vec4& value);
+    void OverrideTexture(const std::string& name, Texture* texture);
+    
+    // Управление базовым материалом
     void SetBaseMaterial(Material* material);
     Material* GetBaseMaterial() const;
     
-    // Проверка, переопределен ли параметр
-    bool IsFloatOverridden(const std::string& name) const;
-    bool IsVec3Overridden(const std::string& name) const;
-    bool IsVec4Overridden(const std::string& name) const;
-    bool IsTextureOverridden(const std::string& name) const;
-    
-    // Сброс переопределений
-    void ClearFloatOverride(const std::string& name);
-    void ClearVec3Override(const std::string& name);
-    void ClearVec4Override(const std::string& name);
-    void ClearTextureOverride(const std::string& name);
-    void ClearAllOverrides();
-    
 private:
     Material* m_baseMaterial = nullptr;
-    
-    // Только переопределенные значения
-    std::unordered_map<std::string, float> m_floatOverrides;
-    std::unordered_map<std::string, glm::vec3> m_vec3Overrides;
-    std::unordered_map<std::string, glm::vec4> m_vec4Overrides;
-    std::unordered_map<std::string, Texture*> m_textureOverrides;
 };
 
 } // namespace ogle

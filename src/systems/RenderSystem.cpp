@@ -94,7 +94,7 @@ namespace ogle {
 			if (renderer) renderer->Render();
 		}
 
-		m_testCube.Render(m_time, m_camera->GetViewMatrix(), m_camera->GetProjectionMatrix());
+		m_testCube.Render(m_time, m_camera);
 
 		//m_scene->Render(m_time, m_camera);
 

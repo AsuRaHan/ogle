@@ -4,105 +4,49 @@
 #include <glad/gl.h>
 #include <glm/glm.hpp>
 #include <memory>
-#include <string>
-#include "render/shader/ShaderProgram.h"
-#include "render/MaterialController.h"
-#include "render/TextureController.h"
+#include "render/Camera.h"
 
-#include "test/TestCubeUI.h"
+// В начале TestCube.cpp добавьте:
+#include "render/shader/ShaderProgram.h"      // Для ShaderProgram
+#include "render/texture/Texture.h"           // Для Texture
+#include "render/ShaderController.h"          // Для ShaderController
+#include "render/TextureController.h"         // Для TextureController
+#include "log/Logger.h"
 
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 namespace ogle {
-    class Material;  // <-- ДОБАВИТЬ
-    class Texture;   // <-- ДОБАВИТЬ
-    enum class MaterialType; // <-- ДОБАВИТЬ
-}
 
-namespace ogle {
+// Предварительные объявления
+class ShaderProgram;
+class Texture;
 
 class TestCube {
 public:
-    enum class ShaderMode {
-        Colorful,      // наш кастомный разноцветный
-        BasicColor,    // builtin BasicColor
-        BasicTexture,  // builtin BasicTexture (без текстуры)
-        Unlit,         // builtin Unlit
-        Wireframe      // builtin Wireframe
-    };
-
-    void SetShaderMode(ShaderMode mode);
-
     TestCube();
     ~TestCube();
     
     bool Initialize();
     void Shutdown();
     
-    // Обновление (для обработки ввода и логики)
     void Update(float deltaTime);
+    void Render(float time, Camera* camera);
     
-    // Рендер с камерой
-    void Render(float time, const glm::mat4& view, const glm::mat4& projection);
-    // Fallback рендер (без камеры)
-    void Render(float time);
-    
-    // Тестирование builtin шейдеров
-    bool TestBuiltinShaders();
-
-    // Настройка системы ввода
-    void SetupInputActions();
-    
-    // Управление камерой
-    void SetCameraControlEnabled(bool enabled) { m_cameraControlEnabled = enabled; }
-    bool IsCameraControlEnabled() const { return m_cameraControlEnabled; }
-
-    void SetupMaterials();
-    void SwitchToNextMaterial();
-    void ToggleWireframe();
-
-    // Новые поля
-    Material* GetCurrentMaterial() const { return m_currentMaterial; }
-    size_t GetMaterialIndex() const { return m_materialIndex; }
-    const std::vector<std::string>& GetMaterialNames() const { return m_materialNames; }
+    // Только для теста текстур
+    void TestTextureLoading();
     
 private:
     GLuint m_vao = 0;
     GLuint m_vbo = 0;
     GLuint m_ebo = 0;
     
-    std::shared_ptr<ShaderProgram> m_shaderProgram;
+    std::shared_ptr<ShaderProgram> m_shader;
+    Texture* m_currentTexture = nullptr;
     
-    // Для управления камерой
-    bool m_cameraControlEnabled = false;
-    glm::vec2 m_lastMousePos = {0.0f, 0.0f};
-    bool m_rightMouseDown = false;
+    float m_rotationAngle = 0.0f;
     
-    // Для тестирования осей
-    float m_testRotationSpeed = 1.0f;
-    float m_testZoom = 1.0f;
-    
-    // Вспомогательные методы
     void CreateGeometry();
-    void ProcessCameraInput(float deltaTime);
-    void CycleShader();
-    
-    // Статистика для отладки
-    mutable float m_axisLogTimer = 0.0f;
-	TestCubeUI m_ui;
-
-    // Новые поля для материалов
-    Material* m_currentMaterial = nullptr;
-    std::vector<std::string> m_materialNames;
-    size_t m_materialIndex = 0;
-    bool m_wireframeMode = false;
-
-    // Режимы отображения
-    enum class RenderMode {
-        BasicColor,
-        Textured,
-        MultipleMaterials,
-        Wireframe
-    };
-    RenderMode m_renderMode = RenderMode::BasicColor;
+    void CreateSimpleShader();
 };
 
 } // namespace ogle
