@@ -26,6 +26,7 @@ public:
     void Shutdown();
     void Render(float time, const glm::mat4& view, const glm::mat4& projection);
     bool TestBuiltinShaders();
+    void SetupInputActions();
 
 private:
     GLuint m_vao = 0;

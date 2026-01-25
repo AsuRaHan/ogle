@@ -6,6 +6,8 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include "input/InputController.h"  // Для доступа к состоянию ввода
+
 namespace ogle {
 
 TestCube::TestCube() = default;
@@ -284,5 +286,34 @@ void TestCube::Render(float time, const glm::mat4& view, const glm::mat4& projec
     glBindVertexArray(0);
     m_shaderProgram->Unbind();
 }
+
+
+void TestCube::SetupInputActions() {
+    auto& input = InputController::Get();
+
+    // Создаем действие "SwitchShader"
+    auto* switchAction = input.CreateAction("SwitchShader", ActionType::Button);
+    switchAction->AddKey('F');  // Клавиша F
+
+    // Подписываемся на событие
+    switchAction->OnPressed([](const ActionState& state) {
+        Logger::Info("F pressed - switching shader!");
+
+        // Здесь можно переключать шейдеры
+        // Например: SwitchToNextShader();
+        });
+
+    // Создаем действие "RotateSpeed"
+    auto* speedAction = input.CreateAction("RotateSpeed", ActionType::Axis);
+    speedAction->AddAxisPair('N', 'M');  // N - медленнее, M - быстрее
+    speedAction->AddGamepadAxis(0, GamepadAxis::RightTrigger, 0.1f, 2.0f);
+
+    // Или более сложное действие
+    auto* zoomAction = input.CreateAction("Zoom", ActionType::Axis);
+    zoomAction->AddGamepadAxis(0, GamepadAxis::RightStickY, 0.1f, 0.5f);
+
+    Logger::Info("Input actions setup complete");
+}
+
 
 } // namespace ogle

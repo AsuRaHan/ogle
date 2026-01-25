@@ -216,6 +216,10 @@ void InputController::UpdateModifiers(const Modifiers& modifiers) {
 }
 
 void InputController::UpdateActions(float deltaTime) {
+    // Обновляем модификаторы (если еще не обновлены)
+    // m_currentModifiers уже должен быть обновлен InputSystem
+
+    // Обновляем все действия
     for (auto& pair : m_actions) {
         pair.second->Update(deltaTime);
     }

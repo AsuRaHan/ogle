@@ -1,13 +1,19 @@
 // src/input/InputAction.h
 #pragma once
 
-#include "InputTypes.h"
+#include <algorithm>
+#include <windows.h>
 #include <functional>
 #include <vector>
 #include <string>
 #include <memory>
 
+//#include "InputController.h"  // Для доступа к состоянию ввода
+#include "InputTypes.h"
+
 namespace ogle {
+
+	class InputController;
 
 	// Состояние действия
 	struct ActionState {
@@ -73,22 +79,43 @@ namespace ogle {
 		void AddAxisPair(KeyCode positive, KeyCode negative, Modifiers mods = {});
 
 		// Обновление
+		//void Update(float deltaTime);
+		//void ResetFrameState() { m_state.ResetFrame(); }
+
+		//// Геттеры
+		//const std::string& GetName() const { return m_name; }
+		//ActionType GetType() const { return m_type; }
+		//const ActionState& GetState() const { return m_state; }
+
+		//// Коллбэки
+		//using Callback = std::function<void(const ActionState&)>;
+		//void OnPressed(Callback cb) { m_onPressed = std::move(cb); }
+		//void OnReleased(Callback cb) { m_onReleased = std::move(cb); }
+		//void OnHeld(Callback cb) { m_onHeld = std::move(cb); }
+
+		// Обновление (будет вызываться InputController)
 		void Update(float deltaTime);
 		void ResetFrameState() { m_state.ResetFrame(); }
+
+		// Проверка биндингов (публичная для отладки)
+		float Evaluate() const;
 
 		// Геттеры
 		const std::string& GetName() const { return m_name; }
 		ActionType GetType() const { return m_type; }
 		const ActionState& GetState() const { return m_state; }
 
-		// Коллбэки
+		// Колбэки
 		using Callback = std::function<void(const ActionState&)>;
 		void OnPressed(Callback cb) { m_onPressed = std::move(cb); }
 		void OnReleased(Callback cb) { m_onReleased = std::move(cb); }
 		void OnHeld(Callback cb) { m_onHeld = std::move(cb); }
 
+		// Для InputController (дружественный доступ к состоянию)
+		void UpdateFromController(const InputController* controller);
+
 	private:
-		friend class InputSystem;
+		friend class InputController;  // Даем доступ контроллеру
 
 		std::string m_name;
 		ActionType m_type;
@@ -98,6 +125,12 @@ namespace ogle {
 		Callback m_onPressed;
 		Callback m_onReleased;
 		Callback m_onHeld;
+
+		// Вспомогательные методы для оценки биндингов
+		float EvaluateBinding(const Binding& binding, const InputController* controller) const;
+		bool CheckModifiers(const Modifiers& required, const Modifiers& current) const;
+
+		friend class InputSystem;
 	};
 
 } // namespace ogle::input
