@@ -1,12 +1,15 @@
+// src/test/TestCube.cpp
 #include "TestCube.h"
 #include "log/Logger.h"
 #include "render/ShaderController.h"
+#include "input/InputController.h"
+#include "managers/CameraManager.h"
+#include "render/Camera.h"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-
-#include "input/InputController.h"  // Для доступа к состоянию ввода
+#include <algorithm>
 
 namespace ogle {
 
@@ -24,32 +27,7 @@ bool TestCube::Initialize() {
 
     auto& shaderCtrl = ShaderController::Get();
     
-    m_shaderProgram = shaderCtrl.CreateProgram("ColorfulCube",
-        R"(#version 460 core
-           layout(location = 0) in vec3 aPos;
-           layout(location = 1) in vec3 aColor;
-           
-           uniform mat4 uModel;
-           uniform mat4 uView;
-           uniform mat4 uProjection;
-           
-           out vec3 vColor;
-           
-           void main() {
-               vColor = aColor;
-               gl_Position = uProjection * uView * uModel * vec4(aPos, 1.0);
-           })",
-        
-        R"(#version 460 core
-           in vec3 vColor;
-           out vec4 FragColor;
-           
-           void main() {
-               FragColor = vec4(vColor, 1.0);
-           })"
-    );
-    
-    //m_shaderProgram = shaderCtrl.GetBuiltin(ShaderController::Builtin::BasicColor);
+    m_shaderProgram = shaderCtrl.GetBuiltin(ShaderController::Builtin::BasicColor);
 
     if (!m_shaderProgram) {
         Logger::Error("Failed to create shader");
@@ -57,6 +35,10 @@ bool TestCube::Initialize() {
     }
     
     CreateGeometry();
+    
+    // Настройка системы ввода!
+    SetupInputActions();
+    
     Logger::Info("TestCube initialized");
     return true;
 }
@@ -241,11 +223,11 @@ void TestCube::Render(float time, const glm::mat4& view, const glm::mat4& projec
 
     m_shaderProgram->Bind();
 
+    // Модельная матрица (вращение куба)
     glm::mat4 model = glm::mat4(1.0f);
-    model = glm::rotate(model, time, glm::vec3(0.5f, 1.0f, 0.0f));
+    model = glm::rotate(model, time * m_testRotationSpeed, glm::vec3(0.5f, 1.0f, 0.0f));
 
-
-    // Общие uniform для всех шейдеров
+    // Используем переданные матрицы камеры
     m_shaderProgram->SetMat4("uModel", model);
     m_shaderProgram->SetMat4("uView", view);
     m_shaderProgram->SetMat4("uProjection", projection);
@@ -272,7 +254,7 @@ void TestCube::Render(float time, const glm::mat4& view, const glm::mat4& projec
 
     // Рисуем
     glBindVertexArray(m_vao);
-
+    
     // Для Wireframe рисуем линиями
     if (m_shaderProgram->GetName().find("Wireframe") != std::string::npos) {
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -287,33 +269,226 @@ void TestCube::Render(float time, const glm::mat4& view, const glm::mat4& projec
     m_shaderProgram->Unbind();
 }
 
+void TestCube::Render(float time) {
+    // Fallback на статические матрицы если нужно
+    glm::mat4 view = glm::lookAt(
+        glm::vec3(2.0f, 2.0f, 3.0f),
+        glm::vec3(0.0f, 0.0f, 0.0f),
+        glm::vec3(0.0f, 1.0f, 0.0f)
+    );
+    
+    glm::mat4 projection = glm::perspective(
+        glm::radians(45.0f),
+        1280.0f / 720.0f,
+        0.1f,
+        100.0f
+    );
+    
+    Render(time, view, projection);
+}
 
 void TestCube::SetupInputActions() {
     auto& input = InputController::Get();
-
-    // Создаем действие "SwitchShader"
+    
+    Logger::Info("=== Setting up Input Actions ===");
+    
+    // 1. ДЕЙСТВИЕ: Переключение шейдеров
     auto* switchAction = input.CreateAction("SwitchShader", ActionType::Button);
     switchAction->AddKey('F');  // Клавиша F
-
-    // Подписываемся на событие
-    switchAction->OnPressed([](const ActionState& state) {
-        Logger::Info("F pressed - switching shader!");
-
-        // Здесь можно переключать шейдеры
-        // Например: SwitchToNextShader();
-        });
-
-    // Создаем действие "RotateSpeed"
-    auto* speedAction = input.CreateAction("RotateSpeed", ActionType::Axis);
-    speedAction->AddAxisPair('N', 'M');  // N - медленнее, M - быстрее
-    speedAction->AddGamepadAxis(0, GamepadAxis::RightTrigger, 0.1f, 2.0f);
-
-    // Или более сложное действие
-    auto* zoomAction = input.CreateAction("Zoom", ActionType::Axis);
-    zoomAction->AddGamepadAxis(0, GamepadAxis::RightStickY, 0.1f, 0.5f);
-
+    switchAction->AddKey(VK_TAB);  // Или Tab
+    
+    switchAction->OnPressed([this](const ActionState& state) {
+        Logger::Info("SwitchShader action pressed!");
+        CycleShader();
+    });
+    
+    // 2. ДЕЙСТВИЕ: Включение/выключение управления камерой
+    auto* cameraToggleAction = input.CreateAction("ToggleCameraControl", ActionType::Button);
+    cameraToggleAction->AddKey(VK_SPACE);  // Пробел
+    
+    cameraToggleAction->OnPressed([this](const ActionState& state) {
+        m_cameraControlEnabled = !m_cameraControlEnabled;
+        Logger::Info(m_cameraControlEnabled ? 
+            "Camera control ENABLED" : "Camera control DISABLED");
+    });
+    
+    // 3. ДЕЙСТВИЕ: Сброс камеры
+    auto* resetCameraAction = input.CreateAction("ResetCamera", ActionType::Button);
+    resetCameraAction->AddKey('R');
+    
+    resetCameraAction->OnPressed([](const ActionState& state) {
+        Logger::Info("ResetCamera action pressed!");
+        auto& cameraMgr = CameraManager::Get();
+        Camera* camera = cameraMgr.GetMainCamera();
+        if (camera) {
+            camera->SetPosition({ 2.0f, 2.0f, 3.0f });
+            camera->LookAt({ 0.0f, 0.0f, 0.0f });
+            camera->SetMode(Camera::Mode::Free);
+        }
+    });
+    
+    // 4. ДЕЙСТВИЕ: Изменение скорости вращения (ось)
+    auto* rotationSpeedAction = input.CreateAction("RotationSpeed", ActionType::Axis);
+    rotationSpeedAction->AddAxisPair('N', 'M');  // N - медленнее, M - быстрее
+    
+    rotationSpeedAction->OnHeld([this](const ActionState& state) {
+        float speedDelta = state.value * 0.1f; // Меньше изменения
+        m_testRotationSpeed += speedDelta;
+        // Ограничиваем диапазон
+        if (m_testRotationSpeed < 0.1f) m_testRotationSpeed = 0.1f;
+        if (m_testRotationSpeed > 5.0f) m_testRotationSpeed = 5.0f;
+    });
+    
+    // 5. ДЕЙСТВИЕ: Вращение куба стрелками
+    auto* rotateCubeAction = input.CreateAction("RotateCube", ActionType::Vector2);
+    // Используем стрелки для вращения
+    rotateCubeAction->AddKey(VK_LEFT, Modifiers{}, -1.0f);  // Влево
+    rotateCubeAction->AddKey(VK_RIGHT, Modifiers{}, 1.0f);  // Вправо
+    rotateCubeAction->AddKey(VK_UP, Modifiers{}, 1.0f);     // Вверх
+    rotateCubeAction->AddKey(VK_DOWN, Modifiers{}, -1.0f);  // Вниз
+    
     Logger::Info("Input actions setup complete");
 }
 
+void TestCube::Update(float deltaTime) {
+    auto& input = InputController::Get();
+    // ПРЯМАЯ ПРОВЕРКА КЛАВИШ
+    if (input.IsKeyPressed(VK_SPACE)) {
+        Logger::Info("=== SPACE pressed directly! ===");
+    }
+
+    if (input.IsKeyPressed('R')) {
+        Logger::Info("=== R pressed directly! ===");
+    }
+
+    if (input.IsKeyPressed('N')) {
+        Logger::Info("=== N pressed directly! ===");
+    }
+
+    if (input.IsKeyPressed('M')) {
+        Logger::Info("=== M pressed directly! ===");
+    }
+    // === ТЕСТИРОВАНИЕ ОСЕЙ ===
+    
+    // 1. Получаем значения стандартных осей
+    float horizontal = input.GetAxis("Horizontal");
+    float vertical = input.GetAxis("Vertical");
+    float mouseX = input.GetAxis("MouseX");
+    float mouseY = input.GetAxis("MouseY");
+    
+    // Логируем значения осей (для отладки)
+    m_axisLogTimer += deltaTime;
+    //if (m_axisLogTimer > 2.0f) {  // Каждые 2 секунды
+    //    Logger::Debug("Axes - H: " + std::to_string(horizontal) + 
+    //                 " V: " + std::to_string(vertical) +
+    //                 " MX: " + std::to_string(mouseX) +
+    //                 " MY: " + std::to_string(mouseY));
+    //    m_axisLogTimer = 0.0f;
+    //}
+    
+    // 2. Тестируем кастомные действия
+    auto* rotationSpeedAction = input.GetAction("RotationSpeed");
+    if (rotationSpeedAction) {
+        float speedDelta = rotationSpeedAction->GetState().value * deltaTime * 0.5f;
+        m_testRotationSpeed += speedDelta;
+        // Ограничиваем
+        if (m_testRotationSpeed < 0.1f) m_testRotationSpeed = 0.1f;
+        if (m_testRotationSpeed > 5.0f) m_testRotationSpeed = 5.0f;
+    }
+    
+    // 3. Управление камерой (если включено)
+    if (m_cameraControlEnabled) {
+        ProcessCameraInput(deltaTime);
+    }
+    
+    // 4. Проверка клавиш напрямую (для сравнения)
+    if (input.IsKeyPressed('T')) {
+        Logger::Info("T key pressed directly!");
+    }
+}
+
+void TestCube::ProcessCameraInput(float deltaTime) {
+    auto& input = InputController::Get();
+    auto& cameraMgr = CameraManager::Get();
+    Camera* camera = cameraMgr.GetMainCamera();
+    
+    if (!camera) return;
+    
+
+    // ДОБАВЬ ОТЛАДКУ
+    //Logger::Debug("Camera control: " + std::string(m_cameraControlEnabled ? "ENABLED" : "DISABLED"));
+    //Logger::Debug("Right mouse: " + std::string(input.IsMouseButtonDown(1) ? "DOWN" : "UP"));
+    //Logger::Debug("Mouse delta: " +
+    //    std::to_string(input.GetMouseDelta().x) + ", " +
+    //    std::to_string(input.GetMouseDelta().y));
+
+
+    // 1. Движение через оси
+    float moveHorizontal = input.GetAxis("Horizontal");
+    float moveVertical = input.GetAxis("Vertical");
+    
+    // Q/E или Space/Ctrl для движения вверх/вниз
+    float moveUp = 0.0f;
+    if (input.IsKeyDown('Q') || input.IsKeyDown(VK_SPACE)) moveUp += 1.0f;
+    if (input.IsKeyDown('E') || input.IsKeyDown(VK_CONTROL)) moveUp -= 1.0f;
+    
+    // Применяем движение
+    float moveSpeed = 5.0f;
+    camera->MoveRight(moveHorizontal * moveSpeed * deltaTime);
+    camera->MoveForward(moveVertical * moveSpeed * deltaTime);
+    camera->MoveUp(moveUp * moveSpeed * deltaTime);
+    
+    // 2. Вращение через мышь (при зажатой правой кнопке)
+    bool rightMouseDown = input.IsMouseButtonDown(1);
+    
+    if (rightMouseDown && !m_rightMouseDown) {
+        // Запоминаем позицию мыши
+        m_lastMousePos = input.GetMousePosition();
+    }
+    m_rightMouseDown = rightMouseDown;
+    
+    if (rightMouseDown) {
+        // Получаем дельту через оси мыши
+        float mouseX = input.GetAxis("MouseX");
+        float mouseY = input.GetAxis("MouseY");
+        
+        if (std::abs(mouseX) > 0.01f || std::abs(mouseY) > 0.01f) {
+            camera->ProcessMouseMovement(mouseX * 0.5f, mouseY * 0.5f);
+        }
+    }
+    
+    // 3. Zoom через колесико
+    float mouseWheel = input.GetMouseWheelDelta();
+    if (std::abs(mouseWheel) > 0.01f) {
+        camera->ProcessMouseScroll(mouseWheel);
+    }
+}
+
+void TestCube::CycleShader() {
+    auto& shaderCtrl = ShaderController::Get();
+
+    static int currentShader = 0;
+    currentShader = (currentShader + 1) % 4; // Только 4 шейдера для куба!
+
+    switch (currentShader) {
+    case 0:
+        m_shaderProgram = shaderCtrl.GetBuiltin(ShaderController::Builtin::BasicColor);
+        Logger::Info("Switched to: BasicColor shader");
+        break;
+    case 1:
+        m_shaderProgram = shaderCtrl.GetBuiltin(ShaderController::Builtin::BasicTexture);
+        Logger::Info("Switched to: BasicTexture shader");
+        break;
+    case 2:
+        m_shaderProgram = shaderCtrl.GetBuiltin(ShaderController::Builtin::Unlit);
+        Logger::Info("Switched to: Unlit shader");
+        break;
+    case 3:
+        m_shaderProgram = shaderCtrl.GetBuiltin(ShaderController::Builtin::Wireframe);
+        Logger::Info("Switched to: Wireframe shader");
+        break;
+        // Skybox убран - он не для кубов!
+    }
+}
 
 } // namespace ogle

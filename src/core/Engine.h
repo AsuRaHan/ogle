@@ -10,6 +10,7 @@
 #include "systems/WindowSystem.h"
 #include "systems/RenderSystem.h"
 #include "systems/InputSystem.h"
+#include "systems/GuiSystem.h"
 
 namespace ogle {
 
@@ -43,6 +44,21 @@ namespace ogle {
 		void ProcessMessages();
 		void UpdateSystems();
 		void RenderSystems();
+
+		GuiSystem* m_guiSystem = nullptr;
+
+		WindowSystem* GetWindowSystem() const {
+			return GetSystem<WindowSystem>();
+		}
+		RenderSystem* GetRenderSystem() const {
+			return GetSystem<RenderSystem>();
+		}
+		InputSystem* GetInputSystem() const {
+			return GetSystem<InputSystem>();
+		}
+		GuiSystem* GetGuiSystem() const {
+			return m_guiSystem;
+		}
 	};
 
 	template<typename T, typename... Args>

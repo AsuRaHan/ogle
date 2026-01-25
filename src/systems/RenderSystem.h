@@ -3,12 +3,14 @@
 
 #include <glad/gl.h>
 #include <memory>
+#include <vector>
+#include <functional>
 #include "core/ISystem.h"
 #include "log/Logger.h"
 #include "window/OpenGLContext.h"
 #include "test/TestCube.h"
-#include "managers/CameraManager.h"  // Добавляем
-#include "render/Camera.h"           // Добавляем
+#include "render/Camera.h"
+#include "systems/GuiSystem.h"
 
 namespace ogle {
 
@@ -23,12 +25,21 @@ public:
     }
 
     bool Initialize() override;
-    void Update(float deltaTime) override;  // Добавляем дельту времени
+    void Update(float deltaTime) override;
     void Render() override;
     void Shutdown() override;
 
     void OnResize(int width, int height) override;
     void SetClearColor(float r, float g, float b, float a = 1.0f);
+
+    // === Управление рендерерами ===
+    void AddRenderer(ISystem* system);
+    void RemoveRenderer(ISystem* system);
+    void ClearRenderers();
+    
+    // === GUI ===
+    void SetGuiSystem(GuiSystem* guiSystem);
+    void EnableGUI(bool enable) { m_guiEnabled = enable; }
 
 private:
     HDC m_hdc;
@@ -38,8 +49,14 @@ private:
     TestCube m_testCube;
     float m_time = 0.0f;
     
-    // ДОБАВЛЯЕМ: Член-класса Camera
-    Camera* m_camera = nullptr;  // Указатель на камеру из менеджера
+    Camera* m_camera = nullptr;
+    
+    // Список рендереров
+    std::vector<ISystem*> m_renderers;
+    
+    // GUI система
+    GuiSystem* m_guiSystem = nullptr;
+    bool m_guiEnabled = true;
 };
 
 } // namespace ogle

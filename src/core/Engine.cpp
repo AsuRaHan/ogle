@@ -9,12 +9,11 @@ namespace ogle {
 		Shutdown();
 	}
 
-
-
-
 	bool Engine::Initialize() {
 		QueryPerformanceFrequency(&m_frequency);
 		QueryPerformanceCounter(&m_lastTime);
+
+		Logger::Info("Engine initializing...");
 
 		// 1. Окно
 		auto* window = RegisterSystem<WindowSystem>(m_hInstance, L"OGLE 3D Engine", 1280, 720);
@@ -26,50 +25,76 @@ namespace ogle {
 		// 2. Ввод
 		auto* input = RegisterSystem<InputSystem>();
 		input->SetWindowHandle(window->GetHWND());
+		if (!input->Initialize()) {
+			Logger::Error("InputSystem initialization failed");
+			return false;
+		}
 
 		// 3. Рендер
 		auto* render = RegisterSystem<RenderSystem>(window->GetHDC());
-		if (!render) {
-			Logger::Error("RenderSystem registration failed");
+		if (!render->Initialize()) {
+			Logger::Error("RenderSystem initialization failed");
 			return false;
 		}
+
+		// 4. GUI
+		m_guiSystem = RegisterSystem<GuiSystem>();
+		m_guiSystem->SetWindowHandle(window->GetHWND(), window->GetHDC());
+		if (!m_guiSystem->Initialize()) {
+			Logger::Error("GuiSystem initialization failed");
+			return false;
+		}
+
+		// 5. Регистрируем GUI в RenderSystem
+		render->SetGuiSystem(m_guiSystem);
+
+		// 6. Регистрируем другие системы как рендереры (если нужно)
+		// Пример: render->AddRenderer(someOtherSystem);
+
+		// 7. Показываем окно
+		window->Show(SW_SHOW);
 
 		// Подписка на ресайз
 		window->AddResizeListener([render](int w, int h) {
 			render->OnResize(w, h);
 			});
 
-		// Инициализация всех систем
-		for (auto& sys : m_systems) {
-			if (!sys->Initialize()) {
-				Logger::Error("Initialize failed for " + sys->GetName());
-				return false;
-			}
-		}
-
 		m_running = true;
-		Logger::Info("Engine initialized successfully");
+		Logger::Success("Engine initialized successfully");
 		return true;
 	}
 
+	void Engine::UpdateSystems() {
+		for (auto& sys : m_systems) {
+			sys->Update(m_deltaTime);
+		}
+	}
 
+	void Engine::RenderSystems() {
+		// Только RenderSystem рендерит
+		auto* renderSystem = GetSystem<RenderSystem>();
+		if (renderSystem) {
+			renderSystem->Render();
+		}
+	}
 
+	void Engine::Shutdown() {
+		// Shutdown в обратном порядке
+		for (auto it = m_systems.rbegin(); it != m_systems.rend(); ++it) {
+			(*it)->Shutdown();
+		}
+		m_systems.clear();
 
+		// Очищаем GUI pointer
+		m_guiSystem = nullptr;
+
+		Logger::Info("Engine shutdown");
+	}
 
 	int Engine::Run() {
-		auto* window = GetSystem<WindowSystem>();
-		if (window) {
-			window->Show(SW_SHOW);
-		}
-		else {
-			Logger::Error("No WindowSystem found");
-			return 1;
-		}
-
 		MSG msg{};
 		while (m_running) {
 			ProcessMessages();
-
 			if (!m_running) break;
 
 			LARGE_INTEGER now;
@@ -91,37 +116,31 @@ namespace ogle {
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
 
-			// Рассылаем сообщение всем системам
-			for (auto& sys : m_systems) {
-				sys->OnWindowMessage(msg.message, msg.wParam, msg.lParam);
+			// Передаем сообщения в GUI
+			if (m_guiSystem && m_guiSystem->IsInitialized()) {
+				m_guiSystem->OnWindowMessage(msg.message, msg.wParam, msg.lParam);
 			}
 
-			// Engine сам реагирует на WM_QUIT
+			// Проверяем, хочет ли GUI захватить ввод
+			bool guiWantsInput = false;
+			if (m_guiSystem && m_guiSystem->IsInitialized()) {
+				guiWantsInput = m_guiSystem->WantCaptureMouse() ||
+					m_guiSystem->WantCaptureKeyboard();
+			}
+
+			// Если GUI не захватил ввод - передаем остальным
+			if (!guiWantsInput) {
+				for (auto& sys : m_systems) {
+					if (sys.get() != m_guiSystem) {
+						sys->OnWindowMessage(msg.message, msg.wParam, msg.lParam);
+					}
+				}
+			}
+
 			if (msg.message == WM_QUIT) {
 				m_running = false;
 			}
 		}
-	}
-
-	void Engine::UpdateSystems() {
-		for (auto& sys : m_systems) {
-			sys->Update(m_deltaTime);
-		}
-	}
-
-	void Engine::RenderSystems() {
-		for (auto& sys : m_systems) {
-			sys->Render();
-		}
-	}
-
-	void Engine::Shutdown() {
-		// Shutdown в обратном порядке
-		for (auto it = m_systems.rbegin(); it != m_systems.rend(); ++it) {
-			(*it)->Shutdown();
-		}
-		m_systems.clear();
-		Logger::Info("Engine shutdown");
 	}
 
 } // namespace ogle

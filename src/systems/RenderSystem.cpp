@@ -1,6 +1,7 @@
 // src/systems/RenderSystem.cpp
 #include "RenderSystem.h"
-#include "managers/CameraManager.h"  // Добавляем
+#include "managers/CameraManager.h"
+#include <algorithm>
 
 namespace ogle {
 
@@ -30,47 +31,37 @@ bool RenderSystem::Initialize() {
     // Начальный viewport
     OnResize(1280, 720);
 
-    Logger::Info("RenderSystem initialized: " + m_context->GetVersionString());
-
     // Инициализация тестового куба
     if (!m_testCube.Initialize()) {
         Logger::Error("Failed to initialize TestCube");
         return false;
     }
     
-    // ======== ВОТ ТУТ СОЗДАЕМ/ПОЛУЧАЕМ КАМЕРУ ========
+    // Камера
     auto& cameraMgr = CameraManager::Get();
-    
-    // Получаем основную камеру
     m_camera = cameraMgr.GetMainCamera();
     
-    // Если камеры нет - создаем
     if (!m_camera) {
         m_camera = cameraMgr.CreateCamera("MainCamera");
-        Logger::Info("Main camera created");
     }
     
-    // Настраиваем камеру
     if (m_camera) {
         m_camera->SetPosition({ 2.0f, 2.0f, 3.0f });
         m_camera->LookAt({ 0.0f, 0.0f, 0.0f });
         m_camera->SetMode(Camera::Mode::Free);
         m_camera->SetPerspective(45.0f, 1280.0f/720.0f, 0.1f, 100.0f);
-        
-        Logger::Info("Camera configured");
-    } else {
-        Logger::Error("Failed to get or create camera");
-        return false;
     }
     
+    Logger::Info("RenderSystem initialized: " + m_context->GetVersionString());
     return true;
 }
 
 void RenderSystem::Update(float deltaTime) {
-    // Сохраняем deltaTime для обновления времени анимации
+    // Обновляем тестовый куб
+    m_testCube.Update(deltaTime);
     m_time += deltaTime;
-    
-    // Обновляем камеру (если она анимирована или управляется)
+
+    // Обновляем камеру
     if (m_camera) {
         m_camera->Update(deltaTime);
     }
@@ -78,16 +69,23 @@ void RenderSystem::Update(float deltaTime) {
 
 void RenderSystem::Render() {
     if (!m_context || !m_camera) return;
-    
+
     m_context->MakeCurrent();
+
+    // 1. Очистка
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    // Рендерим куб с матрицами из нашей камеры
-    m_testCube.Render(
-        m_time, 
-        m_camera->GetViewMatrix(), 
-        m_camera->GetProjectionMatrix()
-    );
+    // 2. Рендерим 3D сцену
+    for (auto* renderer : m_renderers) {
+        if (renderer) renderer->Render();
+    }
+
+    m_testCube.Render(m_time, m_camera->GetViewMatrix(), m_camera->GetProjectionMatrix());
+
+    // 3. Рендерим GUI поверх всего
+    if (m_guiEnabled && m_guiSystem) {
+        m_guiSystem->RenderUI();  // ВСЁ в одном методе!
+    }
 
     m_context->SwapBuffers();
 }
@@ -98,16 +96,8 @@ void RenderSystem::OnResize(int width, int height) {
     m_context->MakeCurrent();
     glViewport(0, 0, width, height);
     
-    // Обновляем аспектное соотношение камеры
     if (m_camera && m_camera->GetType() == Camera::Type::Perspective) {
-
-        
         m_camera->SetAspectRatio(static_cast<float>(width) / height);
-        
-        
-        // Пока просто логируем
-        Logger::Debug("Camera aspect ratio should be updated to: " + 
-            std::to_string(static_cast<float>(width) / height));
     }
     
     Logger::Debug("Viewport resized: " + 
@@ -116,15 +106,44 @@ void RenderSystem::OnResize(int width, int height) {
 
 void RenderSystem::Shutdown() {
     m_context.reset();
-    m_camera = nullptr;  // Не удаляем, менеджер сам управляет
+    m_camera = nullptr;
+    m_renderers.clear();
+    m_guiSystem = nullptr;
     Logger::Info("RenderSystem shutdown");
 }
 
-void RenderSystem::SetClearColor(float r, float g, float b, float a) {
-    m_clearColor[0] = r;
-    m_clearColor[1] = g;
-    m_clearColor[2] = b;
-    m_clearColor[3] = a;
+// === Управление рендерерами ===
+
+void RenderSystem::AddRenderer(ISystem* system) {
+    if (!system) return;
+    
+    // Проверяем, нет ли уже такой системы
+    auto it = std::find(m_renderers.begin(), m_renderers.end(), system);
+    if (it == m_renderers.end()) {
+        m_renderers.push_back(system);
+        Logger::Debug("Renderer added: " + system->GetName());
+    }
+}
+
+void RenderSystem::RemoveRenderer(ISystem* system) {
+    auto it = std::find(m_renderers.begin(), m_renderers.end(), system);
+    if (it != m_renderers.end()) {
+        m_renderers.erase(it);
+        Logger::Debug("Renderer removed: " + system->GetName());
+    }
+}
+
+void RenderSystem::ClearRenderers() {
+    m_renderers.clear();
+    Logger::Debug("All renderers cleared");
+}
+
+// === GUI ===
+
+void RenderSystem::SetGuiSystem(GuiSystem* guiSystem) {
+    m_guiSystem = guiSystem;
+    Logger::Debug("GUI system set: " + 
+        std::string(guiSystem ? guiSystem->GetName() : "nullptr"));
 }
 
 } // namespace ogle

@@ -39,6 +39,50 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(glm)
 
+# Добавляем EnTT (header-only библиотека для ECS)
+FetchContent_Declare(
+    entt
+    GIT_REPOSITORY https://github.com/skypjack/entt.git
+    GIT_TAG        v3.16.0          # свежая версия на момент написания; проверь на GitHub
+    GIT_PROGRESS   TRUE
+)
+
+FetchContent_MakeAvailable(entt)
+
+# Добавляем ImGui
+FetchContent_Declare(
+    imgui
+    GIT_REPOSITORY https://github.com/ocornut/imgui.git
+    GIT_TAG        docking  # Ветка с поддержкой докинга
+    GIT_PROGRESS   TRUE
+)
+
+FetchContent_MakeAvailable(imgui)
+
+# Создаем библиотеку ImGui
+add_library(imgui STATIC
+    ${imgui_SOURCE_DIR}/imgui.cpp
+    ${imgui_SOURCE_DIR}/imgui_draw.cpp
+    ${imgui_SOURCE_DIR}/imgui_tables.cpp
+    ${imgui_SOURCE_DIR}/imgui_widgets.cpp
+    ${imgui_SOURCE_DIR}/backends/imgui_impl_win32.cpp
+    ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
+)
+
+target_include_directories(imgui PUBLIC
+    ${imgui_SOURCE_DIR}
+    ${imgui_SOURCE_DIR}/backends
+)
+
+target_compile_definitions(imgui PRIVATE
+    IMGUI_IMPL_OPENGL_LOADER_GLAD2  # Используем GLAD2
+)
+
+# Для Win32 бэкенда
+if(WIN32)
+    target_link_libraries(imgui PRIVATE imm32)
+endif()
+
 # Автоматический сбор всех .cpp и .h файлов из src/
 file(GLOB_RECURSE SOURCES
     "src/*.cpp"
@@ -51,15 +95,38 @@ add_executable(ogle WIN32
     ${APP_ICON_RESOURCE}
 )
 
-target_include_directories(ogle PRIVATE src)
 
+# В target_link_libraries добавь imgui:
 target_link_libraries(ogle PRIVATE
     glad_gl_core_46
     glm::glm
-    opengl32          # системная библиотека OpenGL
+    imgui                    # ← Добавляем ImGui
+    opengl32
     user32
     gdi32
+    imm32                    # Для Win32 input (может потребоваться)
 )
+
+# Добавляем include директории
+target_include_directories(ogle PRIVATE 
+    src
+    ${entt_SOURCE_DIR}/single_include
+    ${imgui_SOURCE_DIR}           # ← Добавляем
+    ${imgui_SOURCE_DIR}/backends  # ← Добавляем
+)
+
+# target_include_directories(ogle PRIVATE 
+#     src
+#     ${entt_SOURCE_DIR}/single_include  # Основной хедер EnTT здесь (entt.hpp)
+# )
+
+# target_link_libraries(ogle PRIVATE
+#     glad_gl_core_46
+#     glm::glm
+#     opengl32          # системная библиотека OpenGL
+#     user32
+#     gdi32
+# )
 
 set_target_properties(ogle PROPERTIES
     WIN32_EXECUTABLE            TRUE

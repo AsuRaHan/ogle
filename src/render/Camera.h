@@ -6,6 +6,8 @@
 #include <glm/gtc/quaternion.hpp>
 #include <string>
 
+#include "log/Logger.h"
+
 namespace ogle {
 
 	class Camera {
@@ -141,8 +143,8 @@ namespace ogle {
 
 		// Настройки управления
 		float m_movementSpeed = 5.0f;
-		float m_rotationSpeed = 0.1f;
-		float m_mouseSensitivity = 0.1f;
+		float m_rotationSpeed = 1.0f;
+		float m_mouseSensitivity = 1.0f;
 		float m_zoom = 45.0f;       // FOV для зума
 
 		// Для орбитальной камеры

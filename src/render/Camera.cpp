@@ -31,6 +31,21 @@ namespace ogle {
 		if (m_projectionDirty) {
 			UpdateProjectionMatrix();
 		}
+
+		//static float logTimer = 0.0f;
+		//logTimer += deltaTime;
+		//if (logTimer > 1.0f) {
+		//	Logger::Debug("Camera - Pos: " +
+		//		std::to_string(m_position.x) + ", " +
+		//		std::to_string(m_position.y) + ", " +
+		//		std::to_string(m_position.z) +
+		//		" Front: " + std::to_string(m_front.x) + ", " +
+		//		std::to_string(m_front.y) + ", " +
+		//		std::to_string(m_front.z) +
+		//		" Yaw/Pitch: " + std::to_string(m_yaw) + ", " +
+		//		std::to_string(m_pitch));
+		//	logTimer = 0.0f;
+		//}
 	}
 
 	void Camera::SetPerspective(float fovDegrees, float aspectRatio, float nearClip, float farClip) {
@@ -95,6 +110,11 @@ namespace ogle {
 	}
 
 	void Camera::Rotate(float yawDelta, float pitchDelta, float rollDelta) {
+		//Logger::Debug("Camera::Rotate - Delta: " +
+		//	std::to_string(yawDelta) + ", " +
+		//	std::to_string(pitchDelta) +
+		//	" Current: " + std::to_string(m_yaw) + ", " +
+		//	std::to_string(m_pitch));
 		m_yaw += yawDelta * m_rotationSpeed;
 		m_pitch += pitchDelta * m_rotationSpeed;
 		m_roll += rollDelta * m_rotationSpeed;
@@ -188,6 +208,11 @@ namespace ogle {
 		newFront.x = cos(glm::radians(m_yaw)) * cos(glm::radians(m_pitch));
 		newFront.y = sin(glm::radians(m_pitch));
 		newFront.z = sin(glm::radians(m_yaw)) * cos(glm::radians(m_pitch));
+
+		//Logger::Debug("UpdateCameraVectors - Front: " +
+		//	std::to_string(newFront.x) + ", " +
+		//	std::to_string(newFront.y) + ", " +
+		//	std::to_string(newFront.z));
 
 		m_front = glm::normalize(newFront);
 		m_right = glm::normalize(glm::cross(m_front, m_worldUp));

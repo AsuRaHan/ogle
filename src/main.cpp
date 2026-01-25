@@ -19,6 +19,8 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
 
     if (!engine.Initialize())
     {
+        ogle::Logger::Error("Engine initialization failed!");
+        MessageBox(nullptr, L"Engine initialization failed!", L"Error", MB_ICONERROR);
         return 1;
     }
     //FreeConsole();
