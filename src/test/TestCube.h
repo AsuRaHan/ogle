@@ -17,36 +17,48 @@
 #include <glm/gtc/type_ptr.hpp>
 namespace ogle {
 
-// Предварительные объявления
-class ShaderProgram;
-class Texture;
+    // Предварительные объявления
+    class ShaderProgram;
+    class Texture;
+    class Material;
+    class Camera;
 
-class TestCube {
-public:
-    TestCube();
-    ~TestCube();
-    
-    bool Initialize();
-    void Shutdown();
-    
-    void Update(float deltaTime);
-    void Render(float time, Camera* camera);
-    
-    // Только для теста текстур
-    void TestTextureLoading();
-    
-private:
-    GLuint m_vao = 0;
-    GLuint m_vbo = 0;
-    GLuint m_ebo = 0;
-    
-    std::shared_ptr<ShaderProgram> m_shader;
-    Texture* m_currentTexture = nullptr;
-    
-    float m_rotationAngle = 0.0f;
-    
-    void CreateGeometry();
-    void CreateSimpleShader();
-};
+    class TestCube {
+    public:
+        TestCube();
+        ~TestCube();
+
+        bool Initialize();
+        void Shutdown();
+
+        void Update(float deltaTime);
+        void Render(float time, Camera* camera);
+
+        // Тесты
+        void TestTextureSystem();
+        void TestMaterialSystem();
+
+        // Управление материалами
+        void SwitchToNextMaterial();
+
+    private:
+        // OpenGL объекты
+        GLuint m_vao = 0;
+        GLuint m_vbo = 0;
+        GLuint m_ebo = 0;
+
+        // Тестовые материалы
+        std::vector<Material*> m_materials;
+        Material* m_currentMaterial = nullptr;
+        size_t m_currentMaterialIndex = 0;
+
+        // Параметры
+        float m_rotationAngle = 0.0f;
+
+        // Вспомогательные методы
+        void CreateGeometry();
+        void CreateTestMaterials();
+        void LogMaterialInfo(Material* material);
+    };
 
 } // namespace ogle

@@ -88,15 +88,15 @@ namespace ogle {
 
 		// 1. Очистка
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
+		m_camera->Update(m_time); // Обновляем матрицы камеры перед рендером
 		// 2. Рендерим 3D сцену
-		for (auto* renderer : m_renderers) {
-			if (renderer) renderer->Render();
-		}
+		//for (auto* renderer : m_renderers) {
+		//	if (renderer) renderer->Render();
+		//}
 
 		m_testCube.Render(m_time, m_camera);
 
-		//m_scene->Render(m_time, m_camera);
+		m_scene->Render(m_time, m_camera);
 
 		// 3. Рендерим GUI поверх всего
 		if (m_guiEnabled && m_guiSystem) {

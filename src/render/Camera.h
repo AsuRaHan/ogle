@@ -94,6 +94,8 @@ namespace ogle {
 		void ProcessMouseMovement(float xoffset, float yoffset, bool constrainPitch = true);
 		void ProcessMouseScroll(float yoffset);
 
+		bool IsInFrustum(const glm::vec3& position, float radius) const;
+
 	private:
 		void UpdateCameraVectors();
 		void UpdateViewMatrix();
@@ -156,6 +158,10 @@ namespace ogle {
 		// Флаги
 		bool m_viewDirty = true;
 		bool m_projectionDirty = true;
+
+		glm::vec4 m_frustumPlanes[6];  // 0: left, 1: right, 2: bottom, 3: top, 4: near, 5: far
+
+		void ExtractFrustumPlanes();  // Приватный метод для извлечения плоскостей
 	};
 
 } // namespace ogle

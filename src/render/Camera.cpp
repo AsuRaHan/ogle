@@ -32,20 +32,9 @@ namespace ogle {
 			UpdateProjectionMatrix();
 		}
 
-		//static float logTimer = 0.0f;
-		//logTimer += deltaTime;
-		//if (logTimer > 1.0f) {
-		//	Logger::Debug("Camera - Pos: " +
-		//		std::to_string(m_position.x) + ", " +
-		//		std::to_string(m_position.y) + ", " +
-		//		std::to_string(m_position.z) +
-		//		" Front: " + std::to_string(m_front.x) + ", " +
-		//		std::to_string(m_front.y) + ", " +
-		//		std::to_string(m_front.z) +
-		//		" Yaw/Pitch: " + std::to_string(m_yaw) + ", " +
-		//		std::to_string(m_pitch));
-		//	logTimer = 0.0f;
-		//}
+		if (m_viewDirty || m_projectionDirty) {
+			ExtractFrustumPlanes();
+		}
 	}
 
 	void Camera::SetPerspective(float fovDegrees, float aspectRatio, float nearClip, float farClip) {
@@ -251,4 +240,70 @@ namespace ogle {
 		m_projectionDirty = false;
 	}
 
+	bool Camera::IsInFrustum(const glm::vec3& position, float radius) const {
+		// Проверяем сферу против 6 плоскостей
+		for (int i = 0; i < 6; ++i) {
+			const glm::vec4& plane = m_frustumPlanes[i];
+			float distance = glm::dot(glm::vec3(plane), position) + plane.w;
+
+			if (distance < -radius) {
+				return false;  // Сфера полностью за плоскостью
+			}
+		}
+		return true;  // Сфера внутри или пересекает frustum
+	}
+
+	void Camera::ExtractFrustumPlanes() {
+		// Комбинированная матрица clip = projection * view
+		glm::mat4 clip = m_projectionMatrix * m_viewMatrix;
+
+		// Извлекаем плоскости (нормализованные)
+		// Left
+		m_frustumPlanes[0] = glm::normalize(glm::vec4(
+			clip[0][3] + clip[0][0],
+			clip[1][3] + clip[1][0],
+			clip[2][3] + clip[2][0],
+			clip[3][3] + clip[3][0]
+		));
+
+		// Right
+		m_frustumPlanes[1] = glm::normalize(glm::vec4(
+			clip[0][3] - clip[0][0],
+			clip[1][3] - clip[1][0],
+			clip[2][3] - clip[2][0],
+			clip[3][3] - clip[3][0]
+		));
+
+		// Bottom
+		m_frustumPlanes[2] = glm::normalize(glm::vec4(
+			clip[0][3] + clip[0][1],
+			clip[1][3] + clip[1][1],
+			clip[2][3] + clip[2][1],
+			clip[3][3] + clip[3][1]
+		));
+
+		// Top
+		m_frustumPlanes[3] = glm::normalize(glm::vec4(
+			clip[0][3] - clip[0][1],
+			clip[1][3] - clip[1][1],
+			clip[2][3] - clip[2][1],
+			clip[3][3] - clip[3][1]
+		));
+
+		// Near
+		m_frustumPlanes[4] = glm::normalize(glm::vec4(
+			clip[0][3] + clip[0][2],
+			clip[1][3] + clip[1][2],
+			clip[2][3] + clip[2][2],
+			clip[3][3] + clip[3][2]
+		));
+
+		// Far
+		m_frustumPlanes[5] = glm::normalize(glm::vec4(
+			clip[0][3] - clip[0][2],
+			clip[1][3] - clip[1][2],
+			clip[2][3] - clip[2][2],
+			clip[3][3] - clip[3][2]
+		));
+	}
 } // namespace ogle

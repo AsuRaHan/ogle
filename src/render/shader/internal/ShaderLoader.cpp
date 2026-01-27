@@ -65,11 +65,18 @@ in vec2 vTexCoord;
 uniform vec3 uColor;
 uniform vec3 uLightDir;
 uniform bool uUseLighting;
+uniform bool uUseTexture;
+uniform sampler2D uTexture;
 
 out vec4 FragColor;
 
 void main() {
     vec3 color = uColor;
+    
+    // Если есть текстура - используем её
+    if (uUseTexture) {
+        color = texture(uTexture, vTexCoord).rgb;
+    }
     
     if (uUseLighting) {
         float light = max(dot(normalize(vNormal), normalize(uLightDir)), 0.2);
@@ -112,18 +119,26 @@ in vec2 vTexCoord;
 uniform sampler2D uTexture;
 uniform vec3 uLightDir;
 uniform bool uUseLighting;
+uniform vec3 uColor;           // Добавляем поддержку цвета
+uniform bool uUseColor;        // Флаг: использовать цвет вместо текстуры
 
 out vec4 FragColor;
 
 void main() {
-    vec4 texColor = texture(uTexture, vTexCoord);
+    vec3 color;
+    
+    if (uUseColor) {
+        color = uColor;
+    } else {
+        color = texture(uTexture, vTexCoord).rgb;
+    }
     
     if (uUseLighting) {
         float light = max(dot(normalize(vNormal), normalize(uLightDir)), 0.2);
-        texColor.rgb *= light;
+        color *= light;
     }
     
-    FragColor = texColor;
+    FragColor = vec4(color, 1.0);
 })";
         }
 
