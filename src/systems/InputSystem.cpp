@@ -69,11 +69,11 @@ void InputSystem::Update(float deltaTime) {
     }
 
     // Управление камерой через InputManager
-    //InputManager::Get().Update(deltaTime,
-    //    keyStatesArray,  // std::array
-    //    m_mouseDelta,
-    //    m_mouseWheelDelta,
-    //    m_mouseButtonStates[1]);  // Правая кнопка мыши
+    InputManager::Get().Update(deltaTime,
+        keyStatesArray,  // std::array
+        m_mouseDelta,
+        m_mouseWheelDelta,
+        m_mouseButtonStates[1]);  // Правая кнопка мыши
 
     ResetFrameState();
 }

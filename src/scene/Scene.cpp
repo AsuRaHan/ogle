@@ -197,13 +197,13 @@ namespace ogle {
 
     void Scene::UpdatePhysics(float dt) {
         auto physView = registry.view<Transform, PhysicsBody>();
-        for (auto e : physView) {
-            if (!registry.valid(e)) continue;
-            auto& tr = physView.get<Transform>(e);  // Safe, view гарантирует наличие
-            auto& phys = physView.get<PhysicsBody>(e);
-            tr.position += phys.velocity * dt;
-            tr.MarkDirty();
-        }
+        //for (auto e : physView) {
+        //    if (!registry.valid(e)) continue;
+        //    auto& tr = physView.get<Transform>(e);  // Safe, view гарантирует наличие
+        //    auto& phys = physView.get<PhysicsBody>(e);
+        //    tr.position += phys.velocity * dt;
+        //    tr.MarkDirty();
+        //}
     }
 
 } // namespace ogle
