@@ -3,6 +3,9 @@
 
 #include <glad/gl.h>
 #include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
 #include <memory>
 #include "render/Camera.h"
 
@@ -13,8 +16,11 @@
 #include "render/TextureController.h"         // Для TextureController
 #include "log/Logger.h"
 
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
+#include "render/MaterialController.h"
+#include "render/material/Material.h"
+#include "input/InputController.h"
+
+
 namespace ogle {
 
     // Предварительные объявления

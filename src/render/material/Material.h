@@ -189,11 +189,13 @@ namespace ogle {
 
         // ==================== ПЕРЕОПРЕДЕЛЕННЫЕ ВИРТУАЛЬНЫЕ МЕТОДЫ ====================
         void SetColor(const glm::vec4& color) override {
-            SetVec4("uColor", color);
+            SetVec3("uColor", glm::vec3(color));
         }
 
         glm::vec4 GetColor() const override {
-            return GetVec4("uColor", glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+            // Возвращаем vec4, добавляя альфа=1.0
+            glm::vec3 colorVec3 = GetVec3("uColor", glm::vec3(1.0f, 1.0f, 1.0f));
+            return glm::vec4(colorVec3, 1.0f);
         }
 
         void SetUseLighting(bool use) override {
@@ -355,9 +357,7 @@ namespace ogle {
         }
 
         // Текстура (удобная версия без имени)
-        void SetTexture(Texture* texture) override {
-            Material::SetTexture("uTexture", texture); // Вызываем базовую версию
-        }
+        using Material::SetTexture;
 
         Texture* GetTexture() const override {
             // Если переопределен - берем наш, иначе из базового материала
@@ -401,10 +401,6 @@ namespace ogle {
             return m_baseMaterial ? m_baseMaterial->GetRoughness() : 0.5f;
         }
         // ==================== КОНЕЦ ПЕРЕОПРЕДЕЛЕННЫХ МЕТОДОВ ====================
-
-        // ВАЖНО: Наследуем базовые методы SetTexture с именем параметра
-        using Material::SetTexture; // Это решает проблему!
-
         // Переопределение параметров
         void OverrideFloat(const std::string& name, float value);
         void OverrideVec3(const std::string& name, const glm::vec3& value);

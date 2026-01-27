@@ -1,16 +1,5 @@
 // src/test/TestCube.cpp
 #include "TestCube.h"
-#include "log/Logger.h"
-#include "render/ShaderController.h"
-#include "render/TextureController.h"
-#include "render/MaterialController.h"
-#include "render/material/Material.h"
-#include "render/Camera.h"
-#include "input/InputController.h"
-
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
 
 namespace ogle {
 
@@ -27,10 +16,10 @@ namespace ogle {
         CreateGeometry();
 
         // 2. Тестируем текстуры
-        TestTextureSystem();
+        //TestTextureSystem();
 
         // 3. Тестируем материалы
-        TestMaterialSystem();
+        //TestMaterialSystem();
 
         // 4. Создаем тестовые материалы
         CreateTestMaterials();
@@ -40,29 +29,54 @@ namespace ogle {
     }
 
     void TestCube::CreateGeometry() {
-        // Простой куб с позициями и нормалями
+        // Позиция (3) + Нормаль (3) + Текстурные координаты (2) = 8 floats на вершину
         float vertices[] = {
-            // Позиция X,Y,Z, Нормаль X,Y,Z
+            // Позиция X,Y,Z, Нормаль X,Y,Z, Текстурные координаты U,V
             // Передняя грань
-            -0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 1.0f,
-             0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 1.0f,
-             0.5f,  0.5f,  0.5f,  0.0f, 0.0f, 1.0f,
-            -0.5f,  0.5f,  0.5f,  0.0f, 0.0f, 1.0f,
+            -0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 1.0f,  0.0f, 0.0f,
+             0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 1.0f,  1.0f, 0.0f,
+             0.5f,  0.5f,  0.5f,  0.0f, 0.0f, 1.0f,  1.0f, 1.0f,
+            -0.5f,  0.5f,  0.5f,  0.0f, 0.0f, 1.0f,  0.0f, 1.0f,
 
             // Задняя грань  
-            -0.5f, -0.5f, -0.5f,  0.0f, 0.0f, -1.0f,
-             0.5f, -0.5f, -0.5f,  0.0f, 0.0f, -1.0f,
-             0.5f,  0.5f, -0.5f,  0.0f, 0.0f, -1.0f,
-            -0.5f,  0.5f, -0.5f,  0.0f, 0.0f, -1.0f,
+            -0.5f, -0.5f, -0.5f,  0.0f, 0.0f, -1.0f, 1.0f, 0.0f,
+             0.5f, -0.5f, -0.5f,  0.0f, 0.0f, -1.0f, 0.0f, 0.0f,
+             0.5f,  0.5f, -0.5f,  0.0f, 0.0f, -1.0f, 0.0f, 1.0f,
+            -0.5f,  0.5f, -0.5f,  0.0f, 0.0f, -1.0f, 1.0f, 1.0f,
+
+            // Верхняя грань
+            -0.5f,  0.5f,  0.5f,  0.0f, 1.0f, 0.0f,  0.0f, 1.0f,
+             0.5f,  0.5f,  0.5f,  0.0f, 1.0f, 0.0f,  1.0f, 1.0f,
+             0.5f,  0.5f, -0.5f,  0.0f, 1.0f, 0.0f,  1.0f, 0.0f,
+            -0.5f,  0.5f, -0.5f,  0.0f, 1.0f, 0.0f,  0.0f, 0.0f,
+
+            // Нижняя грань
+            -0.5f, -0.5f,  0.5f,  0.0f, -1.0f, 0.0f, 1.0f, 1.0f,
+             0.5f, -0.5f,  0.5f,  0.0f, -1.0f, 0.0f, 0.0f, 1.0f,
+             0.5f, -0.5f, -0.5f,  0.0f, -1.0f, 0.0f, 0.0f, 0.0f,
+            -0.5f, -0.5f, -0.5f,  0.0f, -1.0f, 0.0f, 1.0f, 0.0f,
+
+            // Правая грань
+             0.5f, -0.5f,  0.5f,  1.0f, 0.0f, 0.0f,  1.0f, 0.0f,
+             0.5f, -0.5f, -0.5f,  1.0f, 0.0f, 0.0f,  0.0f, 0.0f,
+             0.5f,  0.5f, -0.5f,  1.0f, 0.0f, 0.0f,  0.0f, 1.0f,
+             0.5f,  0.5f,  0.5f,  1.0f, 0.0f, 0.0f,  1.0f, 1.0f,
+
+             // Левая грань
+             -0.5f, -0.5f,  0.5f,  -1.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+             -0.5f, -0.5f, -0.5f,  -1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
+             -0.5f,  0.5f, -0.5f,  -1.0f, 0.0f, 0.0f, 1.0f, 1.0f,
+             -0.5f,  0.5f,  0.5f,  -1.0f, 0.0f, 0.0f, 0.0f, 1.0f,
         };
 
+        // Индексы те же
         unsigned int indices[] = {
             0,1,2,2,3,0,     // перед
             4,5,6,6,7,4,     // зад
-            3,2,6,6,7,3,     // верх
-            0,1,5,5,4,0,     // низ
-            1,5,6,6,2,1,     // право
-            0,4,7,7,3,0      // лево
+            8,9,10,10,11,8,  // верх
+            12,13,14,14,15,12,// низ
+            16,17,18,18,19,16,// право
+            20,21,22,22,23,20 // лево
         };
 
         glGenVertexArrays(1, &m_vao);
@@ -78,17 +92,21 @@ namespace ogle {
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
         // Атрибут 0: Позиция (3 float)
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
         glEnableVertexAttribArray(0);
 
         // Атрибут 1: Нормаль (3 float)
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
         glEnableVertexAttribArray(1);
+
+        // Атрибут 2: Текстурные координаты (2 float)
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+        glEnableVertexAttribArray(2);
 
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         glBindVertexArray(0);
 
-        Logger::Debug("Cube geometry created");
+        Logger::Debug("Cube geometry with normals and UVs created");
     }
 
     void TestCube::TestTextureSystem() {
@@ -121,7 +139,7 @@ void TestCube::TestMaterialSystem() {
                 Logger::Success("✓ Material parameters work");
             }
         }
-        
+
         // Очищаем тестовый материал
         matCtrl.RemoveMaterial("SystemTest");
     }
@@ -137,13 +155,13 @@ void TestCube::CreateTestMaterials() {
     // 1. Красный материал
     auto* redMat = matCtrl.CreateMaterial("TestRed", MaterialType::Basic);
     if (redMat) {
-        redMat->SetColor(glm::vec4(1.0f, 0.0f, 0.0f, 1.0f));
-        // ВАЖНО: BasicColor шейдер для цветных материалов
         redMat->SetShader(shaderCtrl.GetBuiltin(ShaderController::Builtin::BasicColor).get());
+        redMat->SetColor(glm::vec4(1.0f, 0.0f, 0.0f, 1.0f));
         redMat->SetUseLighting(true);
-        redMat->SetInt("uUseTexture", 0); // Явно отключаем текстуру
+        redMat->SetInt("uUseTexture", 0);  // ← ТОЛЬКО для BasicColor!
+        redMat->SetVec3("uLightDir", glm::vec3(0.5f, 1.0f, 0.5f));
         m_materials.push_back(redMat);
-        Logger::Info("Created: Red material");
+        Logger::Info("TestCube Created: Red material");
     }
 
     // 2. Зеленый материал
@@ -152,9 +170,10 @@ void TestCube::CreateTestMaterials() {
         greenMat->SetColor(glm::vec4(0.0f, 1.0f, 0.0f, 1.0f));
         greenMat->SetShader(shaderCtrl.GetBuiltin(ShaderController::Builtin::BasicColor).get());
         greenMat->SetUseLighting(true);
+        greenMat->SetVec3("uLightDir", glm::vec3(0.5f, 1.0f, 0.5f));
         greenMat->SetInt("uUseTexture", 0);
         m_materials.push_back(greenMat);
-        Logger::Info("Created: Green material");
+        Logger::Info("TestCube Created: Green material");
     }
 
     // 3. Синий материал
@@ -163,21 +182,34 @@ void TestCube::CreateTestMaterials() {
         blueMat->SetColor(glm::vec4(0.0f, 0.0f, 1.0f, 1.0f));
         blueMat->SetShader(shaderCtrl.GetBuiltin(ShaderController::Builtin::BasicColor).get());
         blueMat->SetUseLighting(true);
+        blueMat->SetVec3("uLightDir", glm::vec3(0.5f, 1.0f, 0.5f));
         blueMat->SetInt("uUseTexture", 0);
         m_materials.push_back(blueMat);
-        Logger::Info("Created: Blue material");
+        Logger::Info("TestCube Created: Blue material");
     }
 
-    // 4. Текстурированный материал - ВАЖНО: используем BasicTexture шейдер!
+    // 4. Текстурированный материал
+// 4. Текстурированный материал - используем BasicTexture шейдер!
     auto* texMat = matCtrl.CreateMaterial("TestTextured", MaterialType::Basic);
     if (texMat) {
         Texture* checker = texCtrl.GetBuiltin(TextureController::Builtin::Checkerboard);
-        texMat->SetColor(glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
-        texMat->SetTexture(checker);
-        // BasicTexture шейдер для текстурированных материалов
+
+        // 1. Сначала устанавливаем шейдер
         texMat->SetShader(shaderCtrl.GetBuiltin(ShaderController::Builtin::BasicTexture).get());
-        texMat->SetUseLighting(true);
-        texMat->SetInt("uUseColor", 0); // Используем текстуру, не цвет
+
+        // 2. Устанавливаем цвет (белый)
+        texMat->SetColor(glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+
+        // 3. Устанавливаем текстуру (ВАЖНО: в BasicTexture шейдере SetTexture должен установить uUseColor = 0)
+        texMat->SetTexture(checker);
+
+        // 4. Дополнительные параметры
+        texMat->SetInt("uUseLighting", 1);
+        texMat->SetVec3("uLightDir", glm::vec3(0.5f, 1.0f, 0.5f));
+
+        // 5. ЯВНО указываем что использовать текстуру, а не цвет
+        texMat->SetInt("uUseColor", 0);  // ← 0 = использовать текстуру, 1 = использовать цвет
+
         m_materials.push_back(texMat);
         Logger::Info("Created: Textured material");
     }
@@ -185,15 +217,17 @@ void TestCube::CreateTestMaterials() {
     // 5. Wireframe материал
     auto* wireMat = matCtrl.CreateMaterial("TestWireframe", MaterialType::Basic);
     if (wireMat) {
-        wireMat->SetColor(glm::vec4(0.0f, 1.0f, 1.0f, 1.0f));
         wireMat->SetShader(shaderCtrl.GetBuiltin(ShaderController::Builtin::BasicColor).get());
-        wireMat->SetUseLighting(false);
+        wireMat->SetColor(glm::vec4(0.0f, 1.0f, 1.0f, 1.0f));
+        wireMat->SetUseLighting(false);  // Wireframe обычно без освещения
         wireMat->SetInt("uUseTexture", 0);
+        wireMat->SetVec3("uLightDir", glm::vec3(0.5f, 1.0f, 0.5f));
         wireMat->GetRenderState().wireframe = true;
         wireMat->GetRenderState().lineWidth = 2.0f;
         m_materials.push_back(wireMat);
-        Logger::Info("Created: Wireframe material");
+        Logger::Info("TestCube Created: Wireframe material");
     }
+
     // Устанавливаем первый материал как текущий
     if (!m_materials.empty()) {
         m_currentMaterial = m_materials[0];
@@ -259,28 +293,26 @@ void TestCube::CreateTestMaterials() {
         if (m_vao == 0 || !camera) return;
 
         // Если есть текущий материал - используем его
-    // Если есть текущий материал - используем его
-    if (m_currentMaterial && m_currentMaterial->GetShader()) {
-        auto* shader = m_currentMaterial->GetShader();
-        shader->Bind();
+        if (m_currentMaterial && m_currentMaterial->GetShader()) {
+            auto* shader = m_currentMaterial->GetShader();
+            shader->Bind();
 
-        // Устанавливаем матрицы
-        glm::mat4 model = glm::rotate(glm::mat4(1.0f), m_rotationAngle,
-            glm::vec3(0.5f, 1.0f, 0.0f));
-        shader->SetMat4("uModel", model);
-        shader->SetMat4("uView", camera->GetViewMatrix());
-        shader->SetMat4("uProjection", camera->GetProjectionMatrix());
-        
-        // ВАЖНО: Устанавливаем направление света
-        shader->SetVec3("uLightDir", glm::vec3(0.5f, 1.0f, 0.5f));
+            // 1. Устанавливаем матрицы
+            glm::mat4 model = glm::rotate(glm::mat4(1.0f), m_rotationAngle,
+                glm::vec3(0.5f, 1.0f, 0.0f));
+            shader->SetMat4("uModel", model);
+            shader->SetMat4("uView", camera->GetViewMatrix());
+            shader->SetMat4("uProjection", camera->GetProjectionMatrix());
 
-        // Применяем материал
-        m_currentMaterial->Apply(shader);
+            // 2. Устанавливаем направление света В МАТЕРИАЛ, а не напрямую в шейдер!
+            m_currentMaterial->SetVec3("uLightDir", glm::vec3(0.5f, 1.0f, 0.5f));
 
-        // Применяем состояние рендеринга
-        m_currentMaterial->GetRenderState().Apply();
+            // 3. Применяем материал (он установит все uniform'ы включая uLightDir)
+            m_currentMaterial->Apply(shader);
 
-    }
+            // 4. Применяем состояние рендеринга
+            m_currentMaterial->GetRenderState().Apply();
+        }
         else {
             // Fallback: используем BasicColor шейдер
             auto& shaderCtrl = ShaderController::Get();
@@ -308,12 +340,6 @@ void TestCube::CreateTestMaterials() {
         if (m_currentMaterial && m_currentMaterial->GetShader()) {
             m_currentMaterial->GetShader()->Unbind();
         }
-        else {
-            ShaderController::Get().GetCurrentProgram()->Unbind();
-        }
-
-        // Восстанавливаем режим полигонов
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     }
 
     void TestCube::SwitchToNextMaterial() {

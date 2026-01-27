@@ -6,6 +6,9 @@ namespace ogle {
 
 	Camera::Camera(const std::string& name)
 		: m_name(name) {
+		// Инициализируем union нулями
+		m_projectionParams = {};
+
 		SetPerspective(45.0f, 16.0f / 9.0f, 0.1f, 1000.0f);
 		UpdateCameraVectors();
 	}
@@ -48,19 +51,37 @@ namespace ogle {
 
 	void Camera::SetOrthographic(float size, float aspectRatio, float nearClip, float farClip) {
 		m_type = Type::Orthographic;
-		float halfHeight = size * 0.5f;
-		float halfWidth = halfHeight * aspectRatio;
 
+		// Сохраняем основные параметры
 		m_projectionParams.orthographic.size = size;
 		m_projectionParams.orthographic.aspectRatio = aspectRatio;
 		m_projectionParams.orthographic.nearClip = nearClip;
 		m_projectionParams.orthographic.farClip = farClip;
+
+		// Сбрасываем явные границы
+		m_projectionParams.orthographic.left = m_projectionParams.orthographic.right = 0.0f;
+		m_projectionParams.orthographic.bottom = m_projectionParams.orthographic.top = 0.0f;
+
 		m_projectionDirty = true;
 	}
 
-	void Camera::SetOrthographic(float left, float right, float bottom, float top,
-		float nearClip, float farClip) {
+	void Camera::SetOrthographic(float left, float right, float bottom, float top, float nearClip, float farClip) {
 		m_type = Type::Orthographic;
+
+		// Сохраняем все параметры
+		m_projectionParams.orthographic.left = left;
+		m_projectionParams.orthographic.right = right;
+		m_projectionParams.orthographic.bottom = bottom;
+		m_projectionParams.orthographic.top = top;
+		m_projectionParams.orthographic.nearClip = nearClip;
+		m_projectionParams.orthographic.farClip = farClip;
+
+		// Рассчитываем производные параметры для обратной совместимости
+		float width = right - left;
+		float height = top - bottom;
+		m_projectionParams.orthographic.size = height;
+		m_projectionParams.orthographic.aspectRatio = (height != 0.0f) ? (width / height) : 1.0f;
+
 		m_projectionDirty = true;
 	}
 
@@ -198,11 +219,6 @@ namespace ogle {
 		newFront.y = sin(glm::radians(m_pitch));
 		newFront.z = sin(glm::radians(m_yaw)) * cos(glm::radians(m_pitch));
 
-		//Logger::Debug("UpdateCameraVectors - Front: " +
-		//	std::to_string(newFront.x) + ", " +
-		//	std::to_string(newFront.y) + ", " +
-		//	std::to_string(newFront.z));
-
 		m_front = glm::normalize(newFront);
 		m_right = glm::normalize(glm::cross(m_front, m_worldUp));
 		m_up = glm::normalize(glm::cross(m_right, m_front));
@@ -227,15 +243,30 @@ namespace ogle {
 			);
 		}
 		else {
-			float halfHeight = m_projectionParams.orthographic.size * 0.5f;
-			float halfWidth = halfHeight * m_projectionParams.orthographic.aspectRatio;
+			// Проверяем, заданы ли явные границы (левый != правый значит заданы)
+			if (std::abs(m_projectionParams.orthographic.right - m_projectionParams.orthographic.left) > 0.001f) {
+				// Используем явные границы из 6-параметровой версии
+				m_projectionMatrix = glm::ortho(
+					m_projectionParams.orthographic.left,
+					m_projectionParams.orthographic.right,
+					m_projectionParams.orthographic.bottom,
+					m_projectionParams.orthographic.top,
+					m_projectionParams.orthographic.nearClip,
+					m_projectionParams.orthographic.farClip
+				);
+			}
+			else {
+				// Используем size + aspectRatio (версия с 4 параметрами)
+				float halfHeight = m_projectionParams.orthographic.size * 0.5f;
+				float halfWidth = halfHeight * m_projectionParams.orthographic.aspectRatio;
 
-			m_projectionMatrix = glm::ortho(
-				-halfWidth, halfWidth,
-				-halfHeight, halfHeight,
-				m_projectionParams.orthographic.nearClip,
-				m_projectionParams.orthographic.farClip
-			);
+				m_projectionMatrix = glm::ortho(
+					-halfWidth, halfWidth,
+					-halfHeight, halfHeight,
+					m_projectionParams.orthographic.nearClip,
+					m_projectionParams.orthographic.farClip
+				);
+			}
 		}
 		m_projectionDirty = false;
 	}

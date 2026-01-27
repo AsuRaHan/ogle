@@ -140,8 +140,12 @@ namespace ogle {
 				float aspectRatio;
 				float nearClip;
 				float farClip;
+				float left;         // Добавляем для 6-параметровой версии
+				float right;
+				float bottom;
+				float top;
 			} orthographic;
-		} m_projectionParams;
+		} m_projectionParams = {};  // Инициализируем нулями
 
 		// Настройки управления
 		float m_movementSpeed = 5.0f;

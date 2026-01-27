@@ -35,7 +35,8 @@ namespace ogle {
     std::string ShaderLoader::GetBuiltinSource(const std::string& shaderName) {
         // ==================== BASIC COLOR ====================
         if (shaderName == "BasicColor.vert") {
-            return R"(#version 460 core
+            return R"(
+#version 460 core
 layout(location = 0) in vec3 aPosition;
 layout(location = 1) in vec3 aNormal;
 layout(location = 2) in vec2 aTexCoord;
@@ -45,22 +46,24 @@ uniform mat4 uView;
 uniform mat4 uProjection;
 
 out vec3 vPosition;
-out vec3 vNormal;
-out vec2 vTexCoord;
+out vec3 vNormal;      // ← ВЫХОДИТ из вершинного шейдера
+out vec2 vTexCoord;    // ← ВЫХОДИТ из вершинного шейдера
 
 void main() {
     vPosition = vec3(uModel * vec4(aPosition, 1.0));
     vNormal = mat3(transpose(inverse(uModel))) * aNormal;
     vTexCoord = aTexCoord;
     gl_Position = uProjection * uView * uModel * vec4(aPosition, 1.0);
-})";
+}
+)";
         }
 
         if (shaderName == "BasicColor.frag") {
-            return R"(#version 460 core
-in vec3 vPosition;
-in vec3 vNormal;
-in vec2 vTexCoord;
+            return R"(
+#version 460 core
+in vec3 vPosition;     // ← ЕСТЬ
+in vec3 vNormal;       // ← ЕСТЬ
+in vec2 vTexCoord;     // ← ЕСТЬ
 
 uniform vec3 uColor;
 uniform vec3 uLightDir;
@@ -68,7 +71,7 @@ uniform bool uUseLighting;
 uniform bool uUseTexture;
 uniform sampler2D uTexture;
 
-out vec4 FragColor;
+out vec4 FragColor;    // ← ЕСТЬ
 
 void main() {
     vec3 color = uColor;
@@ -84,12 +87,14 @@ void main() {
     }
     
     FragColor = vec4(color, 1.0);
-})";
+}
+)";
         }
 
         // ==================== BASIC TEXTURE ====================
         if (shaderName == "BasicTexture.vert") {
-            return R"(#version 460 core
+            return R"(
+#version 460 core
 layout(location = 0) in vec3 aPosition;
 layout(location = 1) in vec3 aNormal;
 layout(location = 2) in vec2 aTexCoord;
@@ -107,22 +112,24 @@ void main() {
     vNormal = mat3(transpose(inverse(uModel))) * aNormal;
     vTexCoord = aTexCoord;
     gl_Position = uProjection * uView * uModel * vec4(aPosition, 1.0);
-})";
+}
+)";
         }
 
         if (shaderName == "BasicTexture.frag") {
-            return R"(#version 460 core
-in vec3 vPosition;
-in vec3 vNormal;
-in vec2 vTexCoord;
+            return R"(
+#version 460 core
+in vec3 vPosition;          // ← ЭТО ДОЛЖНО БЫТЬ
+in vec3 vNormal;            // ← ЭТО ДОЛЖНО БЫТЬ  
+in vec2 vTexCoord;          // ← ЭТО ДОЛЖНО БЫТЬ
 
 uniform sampler2D uTexture;
 uniform vec3 uLightDir;
 uniform bool uUseLighting;
-uniform vec3 uColor;           // Добавляем поддержку цвета
-uniform bool uUseColor;        // Флаг: использовать цвет вместо текстуры
+uniform vec3 uColor;
+uniform bool uUseColor;
 
-out vec4 FragColor;
+out vec4 FragColor;         // ← ЭТО ДОЛЖНО БЫТЬ
 
 void main() {
     vec3 color;
@@ -130,16 +137,17 @@ void main() {
     if (uUseColor) {
         color = uColor;
     } else {
-        color = texture(uTexture, vTexCoord).rgb;
+        color = texture(uTexture, vTexCoord).rgb;  // ← использует vTexCoord
     }
     
     if (uUseLighting) {
-        float light = max(dot(normalize(vNormal), normalize(uLightDir)), 0.2);
+        float light = max(dot(normalize(vNormal), normalize(uLightDir)), 0.2);  // ← использует vNormal
         color *= light;
     }
     
     FragColor = vec4(color, 1.0);
-})";
+}
+)";
         }
 
         // ==================== SKYBOX ====================

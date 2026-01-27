@@ -61,7 +61,7 @@ namespace ogle {
 
 	void RenderSystem::Update(float deltaTime) {
 		// Обновляем тестовый куб
-		//m_testCube.Update(deltaTime);
+		m_testCube.Update(deltaTime);
 		m_time += deltaTime;
 		// Обновляем сцену
 		if (m_scene) {
