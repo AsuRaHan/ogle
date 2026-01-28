@@ -24,6 +24,9 @@ namespace ogle {
         // 4. Создаем тестовые материалы
         CreateTestMaterials();
 
+		// 5. Запускаем тест сериализации материалов
+        //TestMaterialSerialization();
+
         Logger::Success("TestCube initialized");
         return true;
     }

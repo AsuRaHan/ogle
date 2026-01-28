@@ -6,16 +6,13 @@
 #include <vector>
 #include <functional>
 #include "log/Logger.h"
-#include "Material.h"
+#include "render/material/Material.h"
+#include "render/material/JsonMaterialSerializer.h"
+#include "render/ShaderController.h"
+#include <sstream>
+#include <iomanip>
 
 namespace ogle {
-
-//enum class MaterialType {
-//    Basic,
-//    PBR,
-//    Unlit,
-//    Custom
-//};
 
 // Встроенные материалы
 enum class BuiltinMaterial {

@@ -94,6 +94,16 @@ target_include_directories(stb_interface INTERFACE
     ${stb_SOURCE_DIR}
 )
 
+# Добавляем nlohmann/json
+FetchContent_Declare(
+    nlohmann_json
+    GIT_REPOSITORY https://github.com/nlohmann/json.git
+    GIT_TAG        v3.12.0
+    GIT_PROGRESS   TRUE
+)
+
+FetchContent_MakeAvailable(nlohmann_json)
+
 
 # Для Win32 бэкенда
 if(WIN32)
@@ -118,7 +128,8 @@ target_link_libraries(ogle PRIVATE
     glad_gl_core_46
     stb_interface
     glm::glm
-    imgui                    # ← Добавляем ImGui
+    imgui
+    nlohmann_json::nlohmann_json
     opengl32
     user32
     gdi32

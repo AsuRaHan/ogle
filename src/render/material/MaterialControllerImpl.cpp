@@ -1,9 +1,5 @@
 // src/render/material/MaterialControllerImpl.cpp
-#include "MaterialControllerImpl.h"
-#include "Material.h"
-#include "render/ShaderController.h"
-#include <sstream>
-#include <iomanip>
+#include "render/material/MaterialControllerImpl.h"
 
 namespace ogle {
 
@@ -360,17 +356,69 @@ void MaterialControllerImpl::PrintDebugInfo() const {
     }
 }
 
+//bool MaterialControllerImpl::SaveMaterialToFile(const std::string& name, const std::string& filepath) {
+//    // TODO: Реализовать сохранение в JSON
+//    Logger::Warning("SaveMaterialToFile not implemented yet");
+//    return false;
+//}
+//
+//Material* MaterialControllerImpl::LoadMaterialFromFile(const std::string& filepath, 
+//                                                      const std::string& materialName) {
+//    // TODO: Реализовать загрузку из JSON
+//    Logger::Warning("LoadMaterialFromFile not implemented yet");
+//    return nullptr;
+//}
+
 bool MaterialControllerImpl::SaveMaterialToFile(const std::string& name, const std::string& filepath) {
-    // TODO: Реализовать сохранение в JSON
-    Logger::Warning("SaveMaterialToFile not implemented yet");
-    return false;
+    auto* material = GetMaterial(name);
+    if (!material) {
+        Logger::Error("Material not found: " + name);
+        return false;
+    }
+
+    return JsonMaterialSerializer::SaveToFile(*material, filepath);
 }
 
-Material* MaterialControllerImpl::LoadMaterialFromFile(const std::string& filepath, 
-                                                      const std::string& materialName) {
-    // TODO: Реализовать загрузку из JSON
-    Logger::Warning("LoadMaterialFromFile not implemented yet");
-    return nullptr;
+Material* MaterialControllerImpl::LoadMaterialFromFile(const std::string& filepath,
+    const std::string& materialName) {
+    auto material = JsonMaterialSerializer::LoadFromFile(filepath);
+    if (!material) {
+        return nullptr;
+    }
+
+    // Используем переданное имя или берем из файла
+    std::string name = materialName;
+    if (name.empty()) {
+        name = material->GetName();
+    }
+    else {
+        material->SetName(name);
+    }
+
+    // Генерируем уникальное имя если нужно
+    name = GenerateUniqueName(name);
+    material->SetName(name);
+
+    // Добавляем в хранилище
+    Material* ptr = material.get();
+    m_materials[name] = std::move(material);
+
+    // Обновляем статистику
+    m_stats.totalMaterials++;
+    auto* matPtr = m_materials[name].get();
+
+    if (dynamic_cast<BasicMaterial*>(matPtr)) {
+        m_stats.basicMaterials++;
+    }
+    else if (dynamic_cast<PBRMaterial*>(matPtr)) {
+        m_stats.pbrMaterials++;
+    }
+    else if (dynamic_cast<MaterialInstance*>(matPtr)) {
+        m_stats.materialInstances++;
+    }
+
+    Logger::Info("Material loaded from file: " + name);
+    return ptr;
 }
 
 } // namespace ogle

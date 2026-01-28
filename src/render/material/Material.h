@@ -160,6 +160,53 @@ namespace ogle {
         // Применение всех параметров к шейдеру
         virtual void ApplyParameters(ShaderProgram* shader) const;
 
+        // эти методы для сериализации:
+    // Добавь эти методы для сериализации (VIRTUAL для возможности переопределения):
+        virtual std::vector<std::string> GetFloatParamNames() const {
+            std::vector<std::string> names;
+            names.reserve(m_floatParams.size());
+            for (const auto& pair : m_floatParams) {
+                names.push_back(pair.first);
+            }
+            return names;
+        }
+
+        virtual std::vector<std::string> GetIntParamNames() const {
+            std::vector<std::string> names;
+            names.reserve(m_intParams.size());
+            for (const auto& pair : m_intParams) {
+                names.push_back(pair.first);
+            }
+            return names;
+        }
+
+        virtual std::vector<std::string> GetVec3ParamNames() const {
+            std::vector<std::string> names;
+            names.reserve(m_vec3Params.size());
+            for (const auto& pair : m_vec3Params) {
+                names.push_back(pair.first);
+            }
+            return names;
+        }
+
+        virtual std::vector<std::string> GetVec4ParamNames() const {
+            std::vector<std::string> names;
+            names.reserve(m_vec4Params.size());
+            for (const auto& pair : m_vec4Params) {
+                names.push_back(pair.first);
+            }
+            return names;
+        }
+
+        virtual std::vector<std::string> GetTextureParamNames() const {
+            std::vector<std::string> names;
+            names.reserve(m_textureParams.size());
+            for (const auto& pair : m_textureParams) {
+                names.push_back(pair.first);
+            }
+            return names;
+        }
+
     protected:
         std::string m_name = "UnnamedMaterial";
         ShaderProgram* m_shader = nullptr;
@@ -218,7 +265,6 @@ namespace ogle {
             return Material::GetTexture("uTexture");
         }
         // ==================== КОНЕЦ ПЕРЕОПРЕДЕЛЕННЫХ МЕТОДОВ ====================
-
         // Специфичные свойства (удобные обертки - оставляем для обратной совместимости)
         // Эти методы теперь просто вызывают переопределенные виртуальные методы
         void SetColorWrapped(const glm::vec4& color) { SetColor(color); }
@@ -308,6 +354,35 @@ namespace ogle {
         Texture* GetMetallicRoughnessMap() const;
         Texture* GetAOMap() const;
         Texture* GetEmissionMap() const;
+
+        // Переопределяем для включения специфичных текстур
+        Texture* GetTexture(const std::string& name) const override {
+            // Сначала проверяем обычные текстуры (из m_textureParams)
+            Texture* tex = Material::GetTexture(name);
+            if (tex) return tex;
+
+            // Затем проверяем PBR-specific текстуры
+            if (name == "uAlbedoMap") return m_albedoMap;
+            if (name == "uNormalMap") return m_normalMap;
+            if (name == "uMetallicRoughnessMap") return m_metallicRoughnessMap;
+            if (name == "uAOMap") return m_aoMap;
+            if (name == "uEmissionMap") return m_emissionMap;
+
+            return nullptr;
+        }
+        // Переопределяем GetTextureParamNames для включения PBR-specific текстур
+        std::vector<std::string> GetTextureParamNames() const override {
+            std::vector<std::string> names = Material::GetTextureParamNames();
+
+            // Добавляем PBR-specific текстуры, если они есть
+            if (m_albedoMap) names.push_back("uAlbedoMap");
+            if (m_normalMap) names.push_back("uNormalMap");
+            if (m_metallicRoughnessMap) names.push_back("uMetallicRoughnessMap");
+            if (m_aoMap) names.push_back("uAOMap");
+            if (m_emissionMap) names.push_back("uEmissionMap");
+
+            return names;
+        }
 
     private:
         Texture* m_albedoMap = nullptr;

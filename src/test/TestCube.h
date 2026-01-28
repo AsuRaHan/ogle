@@ -20,6 +20,7 @@
 #include "render/material/Material.h"
 #include "input/InputController.h"
 
+//#include "test/test_serialization_material.h"
 
 namespace ogle {
 
