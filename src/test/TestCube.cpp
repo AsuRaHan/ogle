@@ -16,10 +16,10 @@ namespace ogle {
         CreateGeometry();
 
         // 2. Тестируем текстуры
-        //TestTextureSystem();
+        TestTextureSystem();
 
         // 3. Тестируем материалы
-        //TestMaterialSystem();
+        TestMaterialSystem();
 
         // 4. Создаем тестовые материалы
         CreateTestMaterials();
@@ -118,6 +118,25 @@ namespace ogle {
         auto& texCtrl = TextureController::Get();
         texCtrl.PrintDebugInfo();
 
+        // Example: load a real texture from file (adjust path as needed)
+        std::string texturePath = "../res/koshka-1.png"; // example path, change to your file
+        auto* loaded = texCtrl.LoadTexture2D(texturePath, "Test_Koshka");
+        if (loaded) {
+            Logger::Success("✓ Texture loaded: " + loaded->GetName());
+        } else {
+            Logger::Warning("Texture not loaded from: " + texturePath + " (check path)");
+        }
+
+        // Test builtin textures
+        auto* white = texCtrl.GetBuiltin(TextureController::Builtin::White1x1);
+        if (white) Logger::Success("✓ Builtin white texture available: " + white->GetName());
+
+        // Enable watching for hot-reload (optional)
+        texCtrl.WatchTextureFiles(true);
+        texCtrl.CheckForUpdates();
+
+        texCtrl.PrintDebugInfo();
+
         Logger::Info("Texture test completed");
     }
 
@@ -126,6 +145,9 @@ void TestCube::TestMaterialSystem() {
     Logger::Info("=== Testing Material System ===");
 
     auto& matCtrl = MaterialController::Get();
+
+    auto& texCtrl = TextureController::Get();
+    auto& shaderCtrl = ShaderController::Get();
 
     // Простой тест: создаем и сразу удаляем материал
     auto* testMat = matCtrl.CreateMaterial("SystemTest", MaterialType::Basic);
@@ -145,6 +167,41 @@ void TestCube::TestMaterialSystem() {
 
         // Очищаем тестовый материал
         matCtrl.RemoveMaterial("SystemTest");
+    }
+
+    // Дополнительная проверка: создание материалла с текстурой и шейдером
+    std::string texturePath = "../res/koshka-1.png"; // example path
+    Texture* tstTex = texCtrl.LoadTexture2D(texturePath, "MatTestTexture");
+
+    auto* mat = matCtrl.CreateMaterial("MatTest", MaterialType::Basic);
+    if (mat) {
+        // Use BasicTexture shader for textured materials
+        auto shader = shaderCtrl.GetBuiltin(ShaderController::Builtin::BasicTexture);
+        if (shader) mat->SetShader(shader.get());
+
+        if (tstTex) {
+            mat->SetTexture(tstTex);
+            mat->SetInt("uUseColor", 0); // use texture
+            Logger::Success("✓ Material assigned texture: " + tstTex->GetName());
+        }
+
+        mat->SetColor(glm::vec4(1.0f));
+        mat->SetVec3("uLightDir", glm::vec3(0.5f, 1.0f, 0.5f));
+
+        // Create instance
+        auto* instance = matCtrl.CreateInstance(mat, "MatTest_Instance");
+        if (instance) Logger::Success("✓ Material instance created: " + instance->GetName());
+
+        // Save and load material to test serialization (paths are examples)
+        std::string savePath = "../res/test_material.json";
+        if (matCtrl.SaveMaterialToFile(mat->GetName(), savePath)) {
+            Logger::Success("✓ Material saved to: " + savePath);
+            auto* loaded = matCtrl.LoadMaterialFromFile(savePath, "LoadedMatTest");
+            if (loaded) Logger::Success("✓ Material loaded from file: " + loaded->GetName());
+            else Logger::Warning("Material load failed from: " + savePath);
+        } else {
+            Logger::Warning("Material save failed: " + savePath);
+        }
     }
 }
 
