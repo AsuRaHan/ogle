@@ -72,31 +72,60 @@ namespace ogle {
     }
 
     void Mesh::CreateCube() {
-        // Вершины куба с tangent/bitangent (упрощённо; для каждой грани рассчитай реальные, если нужно)
+        // Куб [-0.5, 0.5]^3: 24 вершины (4 на грань), нормали/UV/tangent/bitangent для каждой грани
+        const glm::vec3 white(1.0f, 1.0f, 1.0f);
         std::vector<Vertex> vertices = {
-            // Передняя грань (z=0.5)
-            {{-0.5f, -0.5f,  0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f, 0.0f}},
-            {{ 0.5f, -0.5f,  0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 1.0f, 0.0f}},
-            {{ 0.5f,  0.5f,  0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}},
-            {{-0.5f,  0.5f,  0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 1.0f, 0.0f}},
-            // ... (добавь остальные грани аналогично, с правильными normal/tangent/bitangent)
-            // Для примера сократил; полный куб — 24 вершины (по 4 на грань) или 8 с индексами
+            // Передняя грань (Z+), normal (0,0,1), tangent (1,0,0), bitangent (0,1,0)
+            {{-0.5f, -0.5f,  0.5f}, { 0.0f,  0.0f,  1.0f}, {0.0f, 0.0f}, { 1.0f,  0.0f,  0.0f}, {0.0f, 1.0f, 0.0f}, white},
+            {{ 0.5f, -0.5f,  0.5f}, { 0.0f,  0.0f,  1.0f}, {1.0f, 0.0f}, { 1.0f,  0.0f,  0.0f}, {0.0f, 1.0f, 0.0f}, white},
+            {{ 0.5f,  0.5f,  0.5f}, { 0.0f,  0.0f,  1.0f}, {1.0f, 1.0f}, { 1.0f,  0.0f,  0.0f}, {0.0f, 1.0f, 0.0f}, white},
+            {{-0.5f,  0.5f,  0.5f}, { 0.0f,  0.0f,  1.0f}, {0.0f, 1.0f}, { 1.0f,  0.0f,  0.0f}, {0.0f, 1.0f, 0.0f}, white},
+            // Задняя грань (Z-), normal (0,0,-1), tangent (-1,0,0), bitangent (0,1,0)
+            {{ 0.5f, -0.5f, -0.5f}, { 0.0f,  0.0f, -1.0f}, {0.0f, 0.0f}, {-1.0f,  0.0f,  0.0f}, {0.0f, 1.0f, 0.0f}, white},
+            {{-0.5f, -0.5f, -0.5f}, { 0.0f,  0.0f, -1.0f}, {1.0f, 0.0f}, {-1.0f,  0.0f,  0.0f}, {0.0f, 1.0f, 0.0f}, white},
+            {{-0.5f,  0.5f, -0.5f}, { 0.0f,  0.0f, -1.0f}, {1.0f, 1.0f}, {-1.0f,  0.0f,  0.0f}, {0.0f, 1.0f, 0.0f}, white},
+            {{ 0.5f,  0.5f, -0.5f}, { 0.0f,  0.0f, -1.0f}, {0.0f, 1.0f}, {-1.0f,  0.0f,  0.0f}, {0.0f, 1.0f, 0.0f}, white},
+            // Правая грань (X+), normal (1,0,0), tangent (0,0,-1), bitangent (0,1,0)
+            {{ 0.5f, -0.5f,  0.5f}, { 1.0f,  0.0f,  0.0f}, {0.0f, 0.0f}, { 0.0f,  0.0f, -1.0f}, {0.0f, 1.0f, 0.0f}, white},
+            {{ 0.5f, -0.5f, -0.5f}, { 1.0f,  0.0f,  0.0f}, {1.0f, 0.0f}, { 0.0f,  0.0f, -1.0f}, {0.0f, 1.0f, 0.0f}, white},
+            {{ 0.5f,  0.5f, -0.5f}, { 1.0f,  0.0f,  0.0f}, {1.0f, 1.0f}, { 0.0f,  0.0f, -1.0f}, {0.0f, 1.0f, 0.0f}, white},
+            {{ 0.5f,  0.5f,  0.5f}, { 1.0f,  0.0f,  0.0f}, {0.0f, 1.0f}, { 0.0f,  0.0f, -1.0f}, {0.0f, 1.0f, 0.0f}, white},
+            // Левая грань (X-), normal (-1,0,0), tangent (0,0,1), bitangent (0,1,0)
+            {{-0.5f, -0.5f, -0.5f}, {-1.0f,  0.0f,  0.0f}, {0.0f, 0.0f}, { 0.0f,  0.0f,  1.0f}, {0.0f, 1.0f, 0.0f}, white},
+            {{-0.5f, -0.5f,  0.5f}, {-1.0f,  0.0f,  0.0f}, {1.0f, 0.0f}, { 0.0f,  0.0f,  1.0f}, {0.0f, 1.0f, 0.0f}, white},
+            {{-0.5f,  0.5f,  0.5f}, {-1.0f,  0.0f,  0.0f}, {1.0f, 1.0f}, { 0.0f,  0.0f,  1.0f}, {0.0f, 1.0f, 0.0f}, white},
+            {{-0.5f,  0.5f, -0.5f}, {-1.0f,  0.0f,  0.0f}, {0.0f, 1.0f}, { 0.0f,  0.0f,  1.0f}, {0.0f, 1.0f, 0.0f}, white},
+            // Верхняя грань (Y+), normal (0,1,0), tangent (1,0,0), bitangent (0,0,-1)
+            {{-0.5f,  0.5f,  0.5f}, { 0.0f,  1.0f,  0.0f}, {0.0f, 0.0f}, { 1.0f,  0.0f,  0.0f}, {0.0f, 0.0f, -1.0f}, white},
+            {{ 0.5f,  0.5f,  0.5f}, { 0.0f,  1.0f,  0.0f}, {1.0f, 0.0f}, { 1.0f,  0.0f,  0.0f}, {0.0f, 0.0f, -1.0f}, white},
+            {{ 0.5f,  0.5f, -0.5f}, { 0.0f,  1.0f,  0.0f}, {1.0f, 1.0f}, { 1.0f,  0.0f,  0.0f}, {0.0f, 0.0f, -1.0f}, white},
+            {{-0.5f,  0.5f, -0.5f}, { 0.0f,  1.0f,  0.0f}, {0.0f, 1.0f}, { 1.0f,  0.0f,  0.0f}, {0.0f, 0.0f, -1.0f}, white},
+            // Нижняя грань (Y-), normal (0,-1,0), tangent (1,0,0), bitangent (0,0,1)
+            {{-0.5f, -0.5f, -0.5f}, { 0.0f, -1.0f,  0.0f}, {0.0f, 0.0f}, { 1.0f,  0.0f,  0.0f}, {0.0f, 0.0f,  1.0f}, white},
+            {{ 0.5f, -0.5f, -0.5f}, { 0.0f, -1.0f,  0.0f}, {1.0f, 0.0f}, { 1.0f,  0.0f,  0.0f}, {0.0f, 0.0f,  1.0f}, white},
+            {{ 0.5f, -0.5f,  0.5f}, { 0.0f, -1.0f,  0.0f}, {1.0f, 1.0f}, { 1.0f,  0.0f,  0.0f}, {0.0f, 0.0f,  1.0f}, white},
+            {{-0.5f, -0.5f,  0.5f}, { 0.0f, -1.0f,  0.0f}, {0.0f, 1.0f}, { 1.0f,  0.0f,  0.0f}, {0.0f, 0.0f,  1.0f}, white},
         };
 
         std::vector<unsigned int> indices = {
-            0,1,2,2,3,0,  // Передняя
-            // ... (твои старые индексы, адаптируй)
+            0,  1,  2,  2,  3,  0,   // передняя (Z+)
+            4,  5,  6,  6,  7,  4,   // задняя (Z-)
+            8,  9, 10, 10, 11,  8,   // правая (X+)
+            12, 13, 14, 14, 15, 12,  // левая (X-)
+            16, 17, 18, 18, 19, 16,  // верх (Y+)
+            20, 21, 22, 22, 23, 20,  // низ (Y-)
         };
 
         CreateGeometry(vertices, indices);
         ComputeBoundingRadius(vertices);
 
-        // Дефолтный материал для куба
+        auto& shaderCtrl = ShaderController::Get();
         m_material = std::make_shared<BasicMaterial>();
-        m_material->SetColor({ 1.0f, 0.5f, 0.0f, 1.0f });  // Пример оранжевый
+        m_material->SetShader(shaderCtrl.GetBuiltin(ShaderController::Builtin::BasicColor).get());
+        m_material->SetColor({ 1.0f, 0.5f, 0.0f, 1.0f });
     }
 
-    void Mesh::Render(float time, const glm::mat4& model, const glm::mat4& view, const glm::mat4& projection) {
+    void Mesh::Render(float time, const glm::mat4& model, const glm::mat4& view, const glm::mat4& projection, const LightContext* lights) {
         if (!m_material) return;
 
         auto* shader = m_material->GetShader();
@@ -109,9 +138,10 @@ namespace ogle {
         shader->SetMat4("uModel", model);
         shader->SetMat4("uView", view);
         shader->SetMat4("uProjection", projection);
-        // Добавь globals: shader->SetFloat("uTime", time); если шейдер использует
 
         m_material->Apply(shader);  // Set params, bind textures, apply RenderState
+
+        LightContext::ApplyToShader(lights, shader, m_material->GetUseLighting());
 
         glBindVertexArray(m_vao);
         glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(m_indexCount), GL_UNSIGNED_INT, 0);

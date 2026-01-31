@@ -2,6 +2,7 @@
 #pragma once
 
 #include "SceneComponent.h"
+#include "render/LightContext.h"
 #include <glad/gl.h>
 #include <memory>
 #include <vector>
@@ -28,7 +29,7 @@ namespace ogle {
 
         bool Initialize();
         void CreateCube();  // Тестовый куб (для примера)
-        void Render(float time, const glm::mat4& model, const glm::mat4& view, const glm::mat4& projection) override;
+        void Render(float time, const glm::mat4& model, const glm::mat4& view, const glm::mat4& projection, const LightContext* lights = nullptr) override;
         float GetBoundingRadius() const { return m_boundingRadius; }
 
         std::shared_ptr<Material> GetMaterial() const { return m_material; }

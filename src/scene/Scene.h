@@ -11,7 +11,8 @@
 #include "Mesh.h"                // Mesh компонент
 #include "Components.h"          // Struct-компоненты
 #include "log/Logger.h"
-#include "render/Camera.h"    // Для IsInFrustum
+#include "render/Camera.h"       // Для IsInFrustum
+#include "render/LightContext.h" // Контекст освещения для рендера
 
 namespace ogle {
 
@@ -37,9 +38,12 @@ namespace ogle {
         void UpdateHierarchy();
         void UpdateTransformHierarchy(entt::entity e);
 
-        void RenderSubtree(entt::entity e, float time, const glm::mat4& view, const glm::mat4& proj, Camera* cam);
 
         void UpdatePhysics(float dt);
+
+        void CollectLights(LightContext& out) const;
+
+        void RenderSubtree(entt::entity e, float time, const glm::mat4& view, const glm::mat4& proj, Camera* cam, const LightContext* lights);
     };
 
 } // namespace ogle

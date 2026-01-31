@@ -67,6 +67,7 @@ in vec2 vTexCoord;     // ← ЕСТЬ
 
 uniform vec3 uColor;
 uniform vec3 uLightDir;
+uniform vec3 uLightColor;
 uniform bool uUseLighting;
 uniform bool uUseTexture;
 uniform sampler2D uTexture;
@@ -82,8 +83,10 @@ void main() {
     }
     
     if (uUseLighting) {
-        float light = max(dot(normalize(vNormal), normalize(uLightDir)), 0.2);
-        color *= light;
+        float NdotL = max(dot(normalize(vNormal), normalize(uLightDir)), 0.0);
+        float ambient = 0.2;
+        vec3 lighting = uLightColor * (ambient + (1.0 - ambient) * NdotL);
+        color *= lighting;
     }
     
     FragColor = vec4(color, 1.0);
@@ -125,6 +128,7 @@ in vec2 vTexCoord;          // ← ЭТО ДОЛЖНО БЫТЬ
 
 uniform sampler2D uTexture;
 uniform vec3 uLightDir;
+uniform vec3 uLightColor;
 uniform bool uUseLighting;
 uniform vec3 uColor;
 uniform bool uUseColor;
@@ -141,8 +145,10 @@ void main() {
     }
     
     if (uUseLighting) {
-        float light = max(dot(normalize(vNormal), normalize(uLightDir)), 0.2);  // ← использует vNormal
-        color *= light;
+        float NdotL = max(dot(normalize(vNormal), normalize(uLightDir)), 0.0);
+        float ambient = 0.2;
+        vec3 lighting = uLightColor * (ambient + (1.0 - ambient) * NdotL);
+        color *= lighting;
     }
     
     FragColor = vec4(color, 1.0);
