@@ -61,7 +61,7 @@ namespace ogle {
 
 	void RenderSystem::Update(float deltaTime) {
 		// Обновляем тестовый куб
-		m_testCube.Update(deltaTime);
+		//m_testCube.Update(deltaTime);
 		m_time += deltaTime;
 		// Обновляем сцену
 		if (m_scene) {
@@ -94,9 +94,9 @@ namespace ogle {
 		//	if (renderer) renderer->Render();
 		//}
 
-		m_testCube.Render(m_time, m_camera);
+		//m_testCube.Render(m_time, m_camera);
 
-		//m_scene->Render(m_time, m_camera);
+		m_scene->Render(m_time, m_camera);
 
 		// 3. Рендерим GUI поверх всего
 		if (m_guiEnabled && m_guiSystem) {

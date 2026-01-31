@@ -5,13 +5,6 @@ set(CMAKE_CXX_STANDARD          20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS        OFF)
 
-if(MSVC)
-    add_compile_options(/utf-8 /W4 /MP)
-    add_compile_definitions(UNICODE _UNICODE)
-else()
-    add_compile_options(-Wall -Wextra -Wpedantic)
-endif()
-
 # Путь к ресурсам (иконка)
 set(APP_ICON_RESOURCE "${CMAKE_CURRENT_SOURCE_DIR}/res/app.rc")
 
@@ -104,6 +97,19 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(nlohmann_json)
 
+FetchContent_Declare(
+    assimp
+    GIT_REPOSITORY https://github.com/assimp/assimp.git
+    GIT_TAG v6.0.4
+    GIT_PROGRESS TRUE
+)
+
+set(ASSIMP_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(ASSIMP_INSTALL OFF CACHE BOOL "" FORCE)
+set(ASSIMP_NO_EXPORT ON CACHE BOOL "" FORCE)
+set(ASSIMP_BUILD_ASSIMP_TOOLS OFF CACHE BOOL "" FORCE)
+
+FetchContent_MakeAvailable(assimp)
 
 # Для Win32 бэкенда
 if(WIN32)
@@ -122,6 +128,12 @@ add_executable(ogle WIN32
     ${APP_ICON_RESOURCE}
 )
 
+if(MSVC)
+    add_compile_options(/utf-8 /W4 /MP)
+    add_compile_definitions(UNICODE _UNICODE)
+else()
+    add_compile_options(-Wall -Wextra -Wpedantic)
+endif()
 
 # В target_link_libraries добавь imgui:
 target_link_libraries(ogle PRIVATE
@@ -130,6 +142,7 @@ target_link_libraries(ogle PRIVATE
     glm::glm
     imgui
     nlohmann_json::nlohmann_json
+    assimp::assimp
     opengl32
     user32
     gdi32
@@ -139,10 +152,11 @@ target_link_libraries(ogle PRIVATE
 # Добавляем include директории
 target_include_directories(ogle PRIVATE 
     src
-    ${stb_SOURCE_DIR}            # ← Добавляем
+    ${stb_SOURCE_DIR}
     ${entt_SOURCE_DIR}/single_include
-    ${imgui_SOURCE_DIR}           # ← Добавляем
-    ${imgui_SOURCE_DIR}/backends  # ← Добавляем
+    ${imgui_SOURCE_DIR}
+    ${imgui_SOURCE_DIR}/backends
+    ${assimp_SOURCE_DIR}/include
 )
 
 

@@ -243,8 +243,26 @@ std::vector<std::string> MaterialController::GetMaterialNames() const {
 }
 
 std::vector<Material*> MaterialController::GetMaterialsByShader(const std::string& shaderName) const {
-    std::vector<Material*> result; return result; // TODO: implement
+    std::vector<Material*> result;
+    Logger::Debug("Retrieving materials with shader: " + shaderName);
+
+    for (const auto& pair : m_materials) {
+        Material* material = pair.second.get();
+        if (material->GetShader() && material->GetShader()->GetName() == shaderName) {
+            result.push_back(material);
+        }
+    }
+
+    if (result.empty()) {
+        Logger::Warning("No materials found with shader: " + shaderName);
+    }
+    else {
+        Logger::Info("Found " + std::to_string(result.size()) + " materials with shader: " + shaderName);
+    }
+
+    return result;
 }
+
 
 void MaterialController::PrintDebugInfo() const {
     Logger::Info("=== MaterialController Debug Info ===");

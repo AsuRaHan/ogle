@@ -34,14 +34,13 @@ namespace ogle {
     void TestCube::CreateGeometry() {
         // Позиция (3) + Нормаль (3) + Текстурные координаты (2) = 8 floats на вершину
         float vertices[] = {
-            // Позиция X,Y,Z, Нормаль X,Y,Z, Текстурные координаты U,V
             // Передняя грань
             -0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 1.0f,  0.0f, 0.0f,
              0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 1.0f,  1.0f, 0.0f,
              0.5f,  0.5f,  0.5f,  0.0f, 0.0f, 1.0f,  1.0f, 1.0f,
             -0.5f,  0.5f,  0.5f,  0.0f, 0.0f, 1.0f,  0.0f, 1.0f,
 
-            // Задняя грань  
+            // Задняя грань
             -0.5f, -0.5f, -0.5f,  0.0f, 0.0f, -1.0f, 1.0f, 0.0f,
              0.5f, -0.5f, -0.5f,  0.0f, 0.0f, -1.0f, 0.0f, 0.0f,
              0.5f,  0.5f, -0.5f,  0.0f, 0.0f, -1.0f, 0.0f, 1.0f,
@@ -72,15 +71,17 @@ namespace ogle {
              -0.5f,  0.5f,  0.5f,  -1.0f, 0.0f, 0.0f, 0.0f, 1.0f,
         };
 
+
         // Индексы те же
         unsigned int indices[] = {
-            0,1,2,2,3,0,     // перед
-            4,5,6,6,7,4,     // зад
-            8,9,10,10,11,8,  // верх
-            12,13,14,14,15,12,// низ
-            16,17,18,18,19,16,// право
-            20,21,22,22,23,20 // лево
+            0, 1, 2, 2, 3, 0,     // передняя грань
+            4, 5, 6, 6, 7, 4,     // задняя грань
+            8, 9, 10, 10, 11, 8,  // верхняя грань
+            12, 13, 14, 14, 15, 12, // нижняя грань
+            16, 17, 18, 18, 19, 16, // правая грань
+            20, 21, 22, 22, 23, 20 // левая грань
         };
+
 
         glGenVertexArrays(1, &m_vao);
         glGenBuffers(1, &m_vbo);
@@ -140,163 +141,163 @@ namespace ogle {
         Logger::Info("Texture test completed");
     }
 
-// В тесте используйте dynamic_cast для доступа к специфичным методам:
-void TestCube::TestMaterialSystem() {
-    Logger::Info("=== Testing Material System ===");
+    // В тесте используйте dynamic_cast для доступа к специфичным методам:
+    void TestCube::TestMaterialSystem() {
+        Logger::Info("=== Testing Material System ===");
 
-    auto& matCtrl = MaterialController::Get();
+        auto& matCtrl = MaterialController::Get();
 
-    auto& texCtrl = TextureController::Get();
-    auto& shaderCtrl = ShaderController::Get();
+        auto& texCtrl = TextureController::Get();
+        auto& shaderCtrl = ShaderController::Get();
 
-    // Простой тест: создаем и сразу удаляем материал
-    auto* testMat = matCtrl.CreateMaterial("SystemTest", MaterialType::Basic);
-    if (testMat && testMat->GetType() == MaterialType::Basic) {
-        Logger::Success("✓ Material creation works");
+        // Простой тест: создаем и сразу удаляем материал
+        auto* testMat = matCtrl.CreateMaterial("SystemTest", MaterialType::Basic);
+        if (testMat && testMat->GetType() == MaterialType::Basic) {
+            Logger::Success("✓ Material creation works");
 
-        // Приводим к BasicMaterial
-        auto* basicMat = dynamic_cast<BasicMaterial*>(testMat);
-        if (basicMat) {
-            basicMat->SetColor(glm::vec4(1.0f, 0.0f, 0.0f, 1.0f));
-            auto color = basicMat->GetColor();
+            // Приводим к BasicMaterial
+            auto* basicMat = dynamic_cast<BasicMaterial*>(testMat);
+            if (basicMat) {
+                basicMat->SetColor(glm::vec4(1.0f, 0.0f, 0.0f, 1.0f));
+                auto color = basicMat->GetColor();
 
-            if (color.r == 1.0f && color.g == 0.0f && color.b == 0.0f) {
-                Logger::Success("✓ Material parameters work");
+                if (color.r == 1.0f && color.g == 0.0f && color.b == 0.0f) {
+                    Logger::Success("✓ Material parameters work");
+                }
+            }
+
+            // Очищаем тестовый материал
+            matCtrl.RemoveMaterial("SystemTest");
+        }
+
+        // Дополнительная проверка: создание материалла с текстурой и шейдером
+        std::string texturePath = "../res/koshka-1.png"; // example path
+        Texture* tstTex = texCtrl.LoadTexture2D(texturePath, "MatTestTexture");
+
+        auto* mat = matCtrl.CreateMaterial("MatTest", MaterialType::Basic);
+        if (mat) {
+            // Use BasicTexture shader for textured materials
+            auto shader = shaderCtrl.GetBuiltin(ShaderController::Builtin::BasicTexture);
+            if (shader) mat->SetShader(shader.get());
+
+            if (tstTex) {
+                mat->SetTexture(tstTex);
+                mat->SetInt("uUseColor", 0); // use texture
+                Logger::Success("✓ Material assigned texture: " + tstTex->GetName());
+            }
+
+            mat->SetColor(glm::vec4(1.0f));
+            mat->SetVec3("uLightDir", glm::vec3(0.5f, 1.0f, 0.5f));
+
+            // Create instance
+            auto* instance = matCtrl.CreateInstance(mat, "MatTest_Instance");
+            if (instance) Logger::Success("✓ Material instance created: " + instance->GetName());
+
+            // Save and load material to test serialization (paths are examples)
+            std::string savePath = "../res/test_material.json";
+            if (matCtrl.SaveMaterialToFile(mat->GetName(), savePath)) {
+                Logger::Success("✓ Material saved to: " + savePath);
+                auto* loaded = matCtrl.LoadMaterialFromFile(savePath, "LoadedMatTest");
+                if (loaded) Logger::Success("✓ Material loaded from file: " + loaded->GetName());
+                else Logger::Warning("Material load failed from: " + savePath);
+            } else {
+                Logger::Warning("Material save failed: " + savePath);
             }
         }
-
-        // Очищаем тестовый материал
-        matCtrl.RemoveMaterial("SystemTest");
     }
 
-    // Дополнительная проверка: создание материалла с текстурой и шейдером
-    std::string texturePath = "../res/koshka-1.png"; // example path
-    Texture* tstTex = texCtrl.LoadTexture2D(texturePath, "MatTestTexture");
+    void TestCube::CreateTestMaterials() {
+        Logger::Info("=== Creating Test Materials ===");
 
-    auto* mat = matCtrl.CreateMaterial("MatTest", MaterialType::Basic);
-    if (mat) {
-        // Use BasicTexture shader for textured materials
-        auto shader = shaderCtrl.GetBuiltin(ShaderController::Builtin::BasicTexture);
-        if (shader) mat->SetShader(shader.get());
+        auto& matCtrl = MaterialController::Get();
+        auto& texCtrl = TextureController::Get();
+        auto& shaderCtrl = ShaderController::Get();
 
-        if (tstTex) {
-            mat->SetTexture(tstTex);
-            mat->SetInt("uUseColor", 0); // use texture
-            Logger::Success("✓ Material assigned texture: " + tstTex->GetName());
+        // 1. Красный материал
+        auto* redMat = matCtrl.CreateMaterial("TestRed", MaterialType::Basic);
+        if (redMat) {
+            redMat->SetShader(shaderCtrl.GetBuiltin(ShaderController::Builtin::BasicColor).get());
+            redMat->SetColor(glm::vec4(1.0f, 0.0f, 0.0f, 1.0f));
+            redMat->SetUseLighting(true);
+            redMat->SetInt("uUseTexture", 0);  // ← ТОЛЬКО для BasicColor!
+            redMat->SetVec3("uLightDir", glm::vec3(0.5f, 1.0f, 0.5f));
+            m_materials.push_back(redMat);
+            Logger::Info("TestCube Created: Red material");
         }
 
-        mat->SetColor(glm::vec4(1.0f));
-        mat->SetVec3("uLightDir", glm::vec3(0.5f, 1.0f, 0.5f));
-
-        // Create instance
-        auto* instance = matCtrl.CreateInstance(mat, "MatTest_Instance");
-        if (instance) Logger::Success("✓ Material instance created: " + instance->GetName());
-
-        // Save and load material to test serialization (paths are examples)
-        std::string savePath = "../res/test_material.json";
-        if (matCtrl.SaveMaterialToFile(mat->GetName(), savePath)) {
-            Logger::Success("✓ Material saved to: " + savePath);
-            auto* loaded = matCtrl.LoadMaterialFromFile(savePath, "LoadedMatTest");
-            if (loaded) Logger::Success("✓ Material loaded from file: " + loaded->GetName());
-            else Logger::Warning("Material load failed from: " + savePath);
-        } else {
-            Logger::Warning("Material save failed: " + savePath);
+        // 2. Зеленый материал
+        auto* greenMat = matCtrl.CreateMaterial("TestGreen", MaterialType::Basic);
+        if (greenMat) {
+            greenMat->SetColor(glm::vec4(0.0f, 1.0f, 0.0f, 1.0f));
+            greenMat->SetShader(shaderCtrl.GetBuiltin(ShaderController::Builtin::BasicColor).get());
+            greenMat->SetUseLighting(true);
+            greenMat->SetVec3("uLightDir", glm::vec3(0.5f, 1.0f, 0.5f));
+            greenMat->SetInt("uUseTexture", 0);
+            m_materials.push_back(greenMat);
+            Logger::Info("TestCube Created: Green material");
         }
+
+        // 3. Синий материал
+        auto* blueMat = matCtrl.CreateMaterial("TestBlue", MaterialType::Basic);
+        if (blueMat) {
+            blueMat->SetColor(glm::vec4(0.0f, 0.0f, 1.0f, 1.0f));
+            blueMat->SetShader(shaderCtrl.GetBuiltin(ShaderController::Builtin::BasicColor).get());
+            blueMat->SetUseLighting(true);
+            blueMat->SetVec3("uLightDir", glm::vec3(0.5f, 1.0f, 0.5f));
+            blueMat->SetInt("uUseTexture", 0);
+            m_materials.push_back(blueMat);
+            Logger::Info("TestCube Created: Blue material");
+        }
+
+        // 4. Текстурированный материал
+    // 4. Текстурированный материал - используем BasicTexture шейдер!
+        auto* texMat = matCtrl.CreateMaterial("TestTextured", MaterialType::Basic);
+        if (texMat) {
+            Texture* checker = texCtrl.GetBuiltin(TextureController::Builtin::Checkerboard);
+
+            // 1. Сначала устанавливаем шейдер
+            texMat->SetShader(shaderCtrl.GetBuiltin(ShaderController::Builtin::BasicTexture).get());
+
+            // 2. Устанавливаем цвет (белый)
+            texMat->SetColor(glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+
+            // 3. Устанавливаем текстуру (ВАЖНО: в BasicTexture шейдере SetTexture должен установить uUseColor = 0)
+            texMat->SetTexture(checker);
+
+            // 4. Дополнительные параметры
+            texMat->SetInt("uUseLighting", 1);
+            texMat->SetVec3("uLightDir", glm::vec3(0.5f, 1.0f, 0.5f));
+
+            // 5. ЯВНО указываем что использовать текстуру, а не цвет
+            texMat->SetInt("uUseColor", 0);  // ← 0 = использовать текстуру, 1 = использовать цвет
+
+            m_materials.push_back(texMat);
+            Logger::Info("Created: Textured material");
+        }
+
+        // 5. Wireframe материал
+        auto* wireMat = matCtrl.CreateMaterial("TestWireframe", MaterialType::Basic);
+        if (wireMat) {
+            wireMat->SetShader(shaderCtrl.GetBuiltin(ShaderController::Builtin::BasicColor).get());
+            wireMat->SetColor(glm::vec4(0.0f, 1.0f, 1.0f, 1.0f));
+            wireMat->SetUseLighting(false);  // Wireframe обычно без освещения
+            wireMat->SetInt("uUseTexture", 0);
+            wireMat->SetVec3("uLightDir", glm::vec3(0.5f, 1.0f, 0.5f));
+            wireMat->GetRenderState().wireframe = true;
+            wireMat->GetRenderState().lineWidth = 2.0f;
+            m_materials.push_back(wireMat);
+            Logger::Info("TestCube Created: Wireframe material");
+        }
+
+        // Устанавливаем первый материал как текущий
+        if (!m_materials.empty()) {
+            m_currentMaterial = m_materials[0];
+            m_currentMaterialIndex = 0;
+            Logger::Info("Current material: " + m_currentMaterial->GetName());
+        }
+
+        Logger::Info("Created " + std::to_string(m_materials.size()) + " test materials");
     }
-}
-
-void TestCube::CreateTestMaterials() {
-    Logger::Info("=== Creating Test Materials ===");
-
-    auto& matCtrl = MaterialController::Get();
-    auto& texCtrl = TextureController::Get();
-    auto& shaderCtrl = ShaderController::Get();
-
-    // 1. Красный материал
-    auto* redMat = matCtrl.CreateMaterial("TestRed", MaterialType::Basic);
-    if (redMat) {
-        redMat->SetShader(shaderCtrl.GetBuiltin(ShaderController::Builtin::BasicColor).get());
-        redMat->SetColor(glm::vec4(1.0f, 0.0f, 0.0f, 1.0f));
-        redMat->SetUseLighting(true);
-        redMat->SetInt("uUseTexture", 0);  // ← ТОЛЬКО для BasicColor!
-        redMat->SetVec3("uLightDir", glm::vec3(0.5f, 1.0f, 0.5f));
-        m_materials.push_back(redMat);
-        Logger::Info("TestCube Created: Red material");
-    }
-
-    // 2. Зеленый материал
-    auto* greenMat = matCtrl.CreateMaterial("TestGreen", MaterialType::Basic);
-    if (greenMat) {
-        greenMat->SetColor(glm::vec4(0.0f, 1.0f, 0.0f, 1.0f));
-        greenMat->SetShader(shaderCtrl.GetBuiltin(ShaderController::Builtin::BasicColor).get());
-        greenMat->SetUseLighting(true);
-        greenMat->SetVec3("uLightDir", glm::vec3(0.5f, 1.0f, 0.5f));
-        greenMat->SetInt("uUseTexture", 0);
-        m_materials.push_back(greenMat);
-        Logger::Info("TestCube Created: Green material");
-    }
-
-    // 3. Синий материал
-    auto* blueMat = matCtrl.CreateMaterial("TestBlue", MaterialType::Basic);
-    if (blueMat) {
-        blueMat->SetColor(glm::vec4(0.0f, 0.0f, 1.0f, 1.0f));
-        blueMat->SetShader(shaderCtrl.GetBuiltin(ShaderController::Builtin::BasicColor).get());
-        blueMat->SetUseLighting(true);
-        blueMat->SetVec3("uLightDir", glm::vec3(0.5f, 1.0f, 0.5f));
-        blueMat->SetInt("uUseTexture", 0);
-        m_materials.push_back(blueMat);
-        Logger::Info("TestCube Created: Blue material");
-    }
-
-    // 4. Текстурированный материал
-// 4. Текстурированный материал - используем BasicTexture шейдер!
-    auto* texMat = matCtrl.CreateMaterial("TestTextured", MaterialType::Basic);
-    if (texMat) {
-        Texture* checker = texCtrl.GetBuiltin(TextureController::Builtin::Checkerboard);
-
-        // 1. Сначала устанавливаем шейдер
-        texMat->SetShader(shaderCtrl.GetBuiltin(ShaderController::Builtin::BasicTexture).get());
-
-        // 2. Устанавливаем цвет (белый)
-        texMat->SetColor(glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
-
-        // 3. Устанавливаем текстуру (ВАЖНО: в BasicTexture шейдере SetTexture должен установить uUseColor = 0)
-        texMat->SetTexture(checker);
-
-        // 4. Дополнительные параметры
-        texMat->SetInt("uUseLighting", 1);
-        texMat->SetVec3("uLightDir", glm::vec3(0.5f, 1.0f, 0.5f));
-
-        // 5. ЯВНО указываем что использовать текстуру, а не цвет
-        texMat->SetInt("uUseColor", 0);  // ← 0 = использовать текстуру, 1 = использовать цвет
-
-        m_materials.push_back(texMat);
-        Logger::Info("Created: Textured material");
-    }
-
-    // 5. Wireframe материал
-    auto* wireMat = matCtrl.CreateMaterial("TestWireframe", MaterialType::Basic);
-    if (wireMat) {
-        wireMat->SetShader(shaderCtrl.GetBuiltin(ShaderController::Builtin::BasicColor).get());
-        wireMat->SetColor(glm::vec4(0.0f, 1.0f, 1.0f, 1.0f));
-        wireMat->SetUseLighting(false);  // Wireframe обычно без освещения
-        wireMat->SetInt("uUseTexture", 0);
-        wireMat->SetVec3("uLightDir", glm::vec3(0.5f, 1.0f, 0.5f));
-        wireMat->GetRenderState().wireframe = true;
-        wireMat->GetRenderState().lineWidth = 2.0f;
-        m_materials.push_back(wireMat);
-        Logger::Info("TestCube Created: Wireframe material");
-    }
-
-    // Устанавливаем первый материал как текущий
-    if (!m_materials.empty()) {
-        m_currentMaterial = m_materials[0];
-        m_currentMaterialIndex = 0;
-        Logger::Info("Current material: " + m_currentMaterial->GetName());
-    }
-
-    Logger::Info("Created " + std::to_string(m_materials.size()) + " test materials");
-}
 
     void TestCube::LogMaterialInfo(Material* material) {
         if (!material) return;

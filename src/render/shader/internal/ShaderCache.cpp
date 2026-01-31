@@ -12,8 +12,8 @@ namespace ogle {
 	}
 
 	void ShaderCache::StoreProgram(const std::string& key, GLuint programId) {
-		if (programId == 0) return;
-
+		/*if (programId == 0) return;*/
+		if (programId == 0 || m_programs.find(key) != m_programs.end()) return;
 		// Удаляем старую программу, если есть
 		RemoveProgram(key);
 

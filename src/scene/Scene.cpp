@@ -1,6 +1,6 @@
 // src/scene/Scene.cpp
 #include "Scene.h"
-
+#define GLM_ENABLE_EXPERIMENTAL
 namespace ogle {
 
     Scene::Scene() {
@@ -178,9 +178,9 @@ namespace ogle {
             radius = bounds->globalRadius;
         }
 
-        if (!cam->IsInFrustum(globalPos, radius)) {
-            return;
-        }
+        //if (!cam->IsInFrustum(globalPos, radius)) {
+        //    return;
+        //}
 
         if (auto* mesh = registry.try_get<Mesh>(e)) {
             if (mesh->visible) {
