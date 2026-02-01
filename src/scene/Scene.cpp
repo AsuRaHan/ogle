@@ -62,6 +62,16 @@ namespace ogle {
         registry.destroy(e);
     }
 
+    void Scene::Clear() {
+        std::vector<entt::entity> toDestroy;
+        for (auto e : registry.view<Transform>()) {
+            toDestroy.push_back(e);
+        }
+        for (entt::entity e : toDestroy) {
+            registry.destroy(e);
+        }
+    }
+
     void Scene::SetParent(entt::entity child, entt::entity parent) {
         if (!registry.valid(child) || !registry.valid(parent)) return;
 

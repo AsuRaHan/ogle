@@ -26,6 +26,7 @@ namespace ogle {
         void Initialize(Camera* mainCamera);
         entt::entity CreateEntity(const std::string& name = "");
         void DestroyEntity(entt::entity e);
+        void Clear();
 
         void SetParent(entt::entity child, entt::entity parent);
 
