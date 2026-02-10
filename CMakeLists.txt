@@ -1,4 +1,4 @@
-﻿cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.20)
 project(ogle LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD          20)
@@ -8,51 +8,53 @@ set(CMAKE_CXX_EXTENSIONS        OFF)
 # Путь к ресурсам (иконка)
 set(APP_ICON_RESOURCE "${CMAKE_CURRENT_SOURCE_DIR}/res/app.rc")
 
-# FetchContent для GLAD 2
+# ────────────────────────────────────────────────────────────────
+# Зависимости через FetchContent
+# ────────────────────────────────────────────────────────────────
+
 include(FetchContent)
 
+# GLAD 2
 FetchContent_Declare(
     glad
     GIT_REPOSITORY https://github.com/Dav1dde/glad.git
-    GIT_TAG        v2.0.8           # или более свежий тег, если есть
+    GIT_TAG        v2.0.8
     GIT_PROGRESS   TRUE
-    SOURCE_SUBDIR  cmake            # очень важно! CMakeLists.txt лежит в поддиректории cmake/
+    SOURCE_SUBDIR  cmake
+)
+FetchContent_MakeAvailable(glad)
+glad_add_library(glad_gl_core_46 STATIC REPRODUCIBLE LOADER API gl:core=4.6)
+set_target_properties(glad_gl_core_46 PROPERTIES
+    WINDOWS_EXPORT_ALL_SYMBOLS OFF
+    POSITION_INDEPENDENT_CODE   OFF
 )
 
-FetchContent_MakeAvailable(glad)
-
-# Генерируем GLAD для OpenGL Core 4.6 (можно изменить версию)
-glad_add_library(glad_gl_core_46 STATIC REPRODUCIBLE LOADER API gl:core=4.6)
-
+# GLM
 FetchContent_Declare(
     glm
     GIT_REPOSITORY https://github.com/g-truc/glm.git
-    GIT_TAG        1.0.3            # или более свежий тег, если есть
+    GIT_TAG        1.0.3
 )
-
 FetchContent_MakeAvailable(glm)
 
-# Добавляем EnTT (header-only библиотека для ECS)
+# EnTT
 FetchContent_Declare(
     entt
     GIT_REPOSITORY https://github.com/skypjack/entt.git
-    GIT_TAG        v3.16.0          # свежая версия на момент написания; проверь на GitHub
+    GIT_TAG        v3.16.0
     GIT_PROGRESS   TRUE
 )
-
 FetchContent_MakeAvailable(entt)
 
-# Добавляем ImGui
+# ImGui — master (docking теперь встроен)
 FetchContent_Declare(
     imgui
     GIT_REPOSITORY https://github.com/ocornut/imgui.git
-    GIT_TAG        docking  # Ветка с поддержкой докинга
+    GIT_TAG        master
     GIT_PROGRESS   TRUE
 )
-
 FetchContent_MakeAvailable(imgui)
 
-# Создаем библиотеку ImGui
 add_library(imgui STATIC
     ${imgui_SOURCE_DIR}/imgui.cpp
     ${imgui_SOURCE_DIR}/imgui_draw.cpp
@@ -67,98 +69,93 @@ target_include_directories(imgui PUBLIC
     ${imgui_SOURCE_DIR}/backends
 )
 
-target_compile_definitions(imgui PRIVATE
-    IMGUI_IMPL_OPENGL_LOADER_GLAD2  # Используем GLAD2
-)
+# Для Win32 бэкенда
+if(WIN32)
+    target_link_libraries(imgui PRIVATE imm32)
+endif()
 
-# Добавляем stb_image (stb) для загрузки текстур
+# stb_image
 FetchContent_Declare(
     stb
     GIT_REPOSITORY https://github.com/nothings/stb.git
-    GIT_TAG        master  # конкретный коммит для стабильности
+    GIT_TAG        master
     GIT_PROGRESS   TRUE
 )
-
 FetchContent_MakeAvailable(stb)
 
-# Создаем интерфейсную библиотеку для stb
 add_library(stb_interface INTERFACE)
-target_include_directories(stb_interface INTERFACE 
-    ${stb_SOURCE_DIR}
-)
+target_include_directories(stb_interface INTERFACE ${stb_SOURCE_DIR})
 
-# Добавляем nlohmann/json
+# nlohmann/json
 FetchContent_Declare(
     nlohmann_json
     GIT_REPOSITORY https://github.com/nlohmann/json.git
     GIT_TAG        v3.12.0
     GIT_PROGRESS   TRUE
 )
-
 FetchContent_MakeAvailable(nlohmann_json)
 
+# assimp
 FetchContent_Declare(
     assimp
     GIT_REPOSITORY https://github.com/assimp/assimp.git
-    GIT_TAG v6.0.4
-    GIT_PROGRESS TRUE
+    GIT_TAG        v6.0.4
+    GIT_PROGRESS   TRUE
 )
 
-set(ASSIMP_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-set(ASSIMP_INSTALL OFF CACHE BOOL "" FORCE)
-set(ASSIMP_NO_EXPORT ON CACHE BOOL "" FORCE)
-set(ASSIMP_BUILD_ASSIMP_TOOLS OFF CACHE BOOL "" FORCE)
+set(ASSIMP_BUILD_TESTS              OFF CACHE BOOL "" FORCE)
+set(ASSIMP_INSTALL                  OFF CACHE BOOL "" FORCE)
+set(ASSIMP_NO_EXPORT                ON  CACHE BOOL "" FORCE)
+set(ASSIMP_BUILD_ASSIMP_TOOLS       OFF CACHE BOOL "" FORCE)
 
 FetchContent_MakeAvailable(assimp)
 
-# Для Win32 бэкенда
-if(WIN32)
-    target_link_libraries(imgui PRIVATE imm32)
-endif()
+# ────────────────────────────────────────────────────────────────
+# Основной проект
+# ────────────────────────────────────────────────────────────────
 
-# Автоматический сбор всех .cpp и .h файлов из src/
 file(GLOB_RECURSE SOURCES
     "src/*.cpp"
     "src/*.h"
+    "src/*.hpp"    # если используешь .hpp
 )
 
-# Основной исполняемый файл (все исходники автоматически добавлены)
 add_executable(ogle WIN32
     ${SOURCES}
     ${APP_ICON_RESOURCE}
 )
 
+# Флаги компиляции
 if(MSVC)
-    add_compile_options(/utf-8 /W4 /MP)
-    add_compile_definitions(UNICODE _UNICODE)
+    target_compile_options(ogle PRIVATE /utf-8 /W4 /MP)
+    target_compile_definitions(ogle PRIVATE UNICODE _UNICODE)
 else()
-    add_compile_options(-Wall -Wextra -Wpedantic)
+    target_compile_options(ogle PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 
-# В target_link_libraries добавь imgui:
+# Линковка
 target_link_libraries(ogle PRIVATE
     glad_gl_core_46
     stb_interface
     glm::glm
     imgui
+    EnTT::EnTT               # ← автоматом подтянет include
     nlohmann_json::nlohmann_json
     assimp::assimp
     opengl32
     user32
     gdi32
-    imm32                    # Для Win32 input (может потребоваться)
+    imm32
 )
 
-# Добавляем include директории
-target_include_directories(ogle PRIVATE 
+# Include-директории (assimp уже включён в target)
+target_include_directories(ogle PRIVATE
     src
     ${stb_SOURCE_DIR}
-    ${entt_SOURCE_DIR}/single_include
+    # ${entt_SOURCE_DIR}/single_include   ← не нужен, если EnTT::EnTT
     ${imgui_SOURCE_DIR}
     ${imgui_SOURCE_DIR}/backends
-    ${assimp_SOURCE_DIR}/include
 )
-
 
 set_target_properties(ogle PROPERTIES
     WIN32_EXECUTABLE            TRUE
@@ -168,24 +165,13 @@ set_target_properties(ogle PROPERTIES
 
 set_source_files_properties(${APP_ICON_RESOURCE} PROPERTIES LANGUAGE RC)
 
-# ────────────────────────────────────────────────────────────────
-# Копирование исполняемого файла в корень проекта после сборки
-# ────────────────────────────────────────────────────────────────
-
-# Для Release
+# Копирование .exe в корень (Debug + Release)
 add_custom_command(TARGET ogle POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         $<TARGET_FILE:ogle>
         ${CMAKE_SOURCE_DIR}/$<TARGET_FILE_NAME:ogle>
-    COMMENT "Копируем ogle.exe в корень проекта (Release)"
-    CONFIG Release
+    COMMENT "Копируем исполняемый файл в корень проекта"
 )
 
-# Для Debug
-add_custom_command(TARGET ogle POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        $<TARGET_FILE:ogle>
-        ${CMAKE_SOURCE_DIR}/$<TARGET_FILE_NAME:ogle>
-    COMMENT "Копируем ogled.exe в корень проекта (Debug)"
-    CONFIG Debug
-)
+# Полезно для отладки
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE INTERNAL "")

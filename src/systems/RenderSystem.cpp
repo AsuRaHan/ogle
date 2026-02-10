@@ -1,6 +1,7 @@
 // src/systems/RenderSystem.cpp
 #include "RenderSystem.h"
 #include "managers/CameraManager.h"
+#include "managers/SceneManager.h"
 #include <algorithm>
 
 namespace ogle {
@@ -52,7 +53,12 @@ namespace ogle {
 			m_camera->SetPerspective(45.0f, 1280.0f / 720.0f, 0.1f, 100.0f);
 		}
 
-		m_scene = std::make_unique<Scene>();
+		Scene* scene = SceneManager::Get().GetScene();
+		if (!scene) {
+		    Logger::Error("RenderSystem: No scene available");
+		    return false;
+		}
+		m_scene = scene;
 		m_scene->Initialize(m_camera);  // Передаём камеру для culling
 
 		Logger::Info("RenderSystem initialized: " + m_context->GetVersionString());
@@ -120,7 +126,7 @@ namespace ogle {
 	}
 
 	void RenderSystem::Shutdown() {
-		m_scene.reset();
+		// m_scene is managed by SceneManager; no reset needed
 		m_context.reset();
 		m_camera = nullptr;
 		m_renderers.clear();

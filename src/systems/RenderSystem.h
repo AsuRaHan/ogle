@@ -54,7 +54,7 @@ private:
     
     Camera* m_camera = nullptr;
 
-    std::unique_ptr<Scene> m_scene;
+    Scene* m_scene = nullptr;
 
     // Список рендереров
     std::vector<ISystem*> m_renderers;
