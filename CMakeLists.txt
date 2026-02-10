@@ -5,6 +5,15 @@ set(CMAKE_CXX_STANDARD          20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS        OFF)
 
+# Force building static libraries by default to avoid DLLs
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build all libraries as static by default" FORCE)
+
+# For MSVC: use static CRT (MultiThreaded / MultiThreadedDebug)
+if(MSVC)
+    # Requires CMake >= 3.15 (we have 3.20)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>" CACHE STRING "" FORCE)
+endif()
+
 # Путь к ресурсам (иконка)
 set(APP_ICON_RESOURCE "${CMAKE_CURRENT_SOURCE_DIR}/res/app.rc")
 
@@ -103,6 +112,9 @@ FetchContent_Declare(
     GIT_PROGRESS   TRUE
 )
 
+# Build Assimp as static to avoid DLLs
+set(ASSIMP_BUILD_SHARED_LIBS OFF CACHE BOOL "Build Assimp as static" FORCE)
+
 set(ASSIMP_BUILD_TESTS              OFF CACHE BOOL "" FORCE)
 set(ASSIMP_INSTALL                  OFF CACHE BOOL "" FORCE)
 set(ASSIMP_NO_EXPORT                ON  CACHE BOOL "" FORCE)
@@ -161,17 +173,13 @@ set_target_properties(ogle PROPERTIES
     WIN32_EXECUTABLE            TRUE
     VS_GLOBAL_CharacterSet      "Unicode"
     DEBUG_POSTFIX               d
+    RUNTIME_OUTPUT_DIRECTORY    ${CMAKE_SOURCE_DIR}
+    RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_SOURCE_DIR}
+    RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_SOURCE_DIR}
 )
 
 set_source_files_properties(${APP_ICON_RESOURCE} PROPERTIES LANGUAGE RC)
 
-# Копирование .exe в корень (Debug + Release)
-add_custom_command(TARGET ogle POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        $<TARGET_FILE:ogle>
-        ${CMAKE_SOURCE_DIR}/$<TARGET_FILE_NAME:ogle>
-    COMMENT "Копируем исполняемый файл в корень проекта"
-)
-
+# Убрано ручное копирование exe — теперь бинари собираются прямо в корень проекта
 # Полезно для отладки
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE INTERNAL "")
