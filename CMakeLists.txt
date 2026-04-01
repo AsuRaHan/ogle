@@ -16,6 +16,11 @@ add_executable(${PROJECT_NAME} WIN32
     src/main.cpp
     src/App.cpp
 
+    src/config/AppConfig.h
+    src/config/ConfigManager.cpp
+    src/config/ConfigManager.h
+    src/core/FileSystem.cpp
+    src/core/FileSystem.h
     src/editor/Editor.cpp
     src/editor/Editor.h
 

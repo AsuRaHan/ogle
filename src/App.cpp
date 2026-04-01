@@ -1,11 +1,13 @@
 #include "App.h"
 
 #include "Logger.h"
+#include "core/FileSystem.h"
 #include "ui/IWindow.h"
 #include <glm/vec3.hpp>
 
-App::App(std::unique_ptr<IWindow> window)
+App::App(std::unique_ptr<IWindow> window, ConfigManager configManager)
     : m_window(std::move(window))
+    , m_configManager(std::move(configManager))
 {
 }
 
@@ -17,6 +19,16 @@ CameraManager& App::GetCameraManager()
 const CameraManager& App::GetCameraManager() const
 {
     return m_cameraManager;
+}
+
+ConfigManager& App::GetConfigManager()
+{
+    return m_configManager;
+}
+
+const ConfigManager& App::GetConfigManager() const
+{
+    return m_configManager;
 }
 
 Editor& App::GetEditor()
@@ -37,6 +49,26 @@ WorldManager& App::GetWorldManager()
 const WorldManager& App::GetWorldManager() const
 {
     return m_worldManager;
+}
+
+void App::InitializeWorldFromConfig()
+{
+    const AppConfig& config = m_configManager.GetConfig();
+    const std::filesystem::path worldPath = FileSystem::ResolvePath(config.world.path);
+
+    if (config.world.loadOnStartup && FileSystem::Exists(worldPath)) {
+        m_worldManager.LoadActiveWorld(worldPath.string());
+        LOG_INFO("Loaded world from config: " + worldPath.string());
+        return;
+    }
+
+    m_worldManager.CreateDefaultWorld();
+    LOG_INFO("Created default world");
+
+    if (config.world.saveDefaultWorldIfMissing) {
+        m_worldManager.SaveActiveWorld(worldPath.string());
+        LOG_INFO("Saved default world to: " + worldPath.string());
+    }
 }
 
 int App::Run(HINSTANCE hInstance, int nCmdShow)
@@ -67,17 +99,20 @@ int App::Run(HINSTANCE hInstance, int nCmdShow)
         LOG_ERROR("Editor initialization failed");
         return -1;
     }
+    m_editor.SetEnabled(m_configManager.GetConfig().editor.enabled);
 
-    m_worldManager.CreateDefaultWorld();
-    m_worldManager.SaveActiveWorld("world.json");
+    InitializeWorldFromConfig();
 
     if (!m_scriptManager.Initialize(m_worldManager)) {
         LOG_ERROR("Script system initialization failed");
         return -1;
     }
 
-    if (!m_scriptManager.ExecuteFile("scripts/test_world.js")) {
-        LOG_WARN("Test script was not executed");
+    const AppConfig& config = m_configManager.GetConfig();
+    if (config.scripts.runStartupScript &&
+        !config.scripts.startupScriptPath.empty() &&
+        !m_scriptManager.ExecuteFile(config.scripts.startupScriptPath)) {
+        LOG_WARN("Startup script was not executed");
     }
 
     if (!m_physicsManager.Initialize(m_worldManager)) {

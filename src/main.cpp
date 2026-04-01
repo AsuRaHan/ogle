@@ -1,4 +1,5 @@
 #include "App.h"
+#include "config/ConfigManager.h"
 #include "ui/Win32Window.h"
 #include "Logger.h"
 #include <memory>
@@ -49,13 +50,21 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow)
 
     LOG_INFO("Application start");
 
+    ConfigManager configManager;
+    if (!configManager.LoadOrCreateDefault())
+    {
+        LOG_WARN("Failed to load config, using defaults");
+    }
+
+    const AppConfig& config = configManager.GetConfig();
+
     auto mainWindow = std::make_unique<MainAppWindow>();
-    mainWindow->SetTitle(L"Main window");
-    mainWindow->SetSize(900, 600);
+    mainWindow->SetTitle(config.window.title);
+    mainWindow->SetSize(config.window.width, config.window.height);
     mainWindow->SetStyle(WS_OVERLAPPEDWINDOW);
     mainWindow->SetExStyle(0);
 
-    App app(std::move(mainWindow));
+    App app(std::move(mainWindow), std::move(configManager));
     int appResult = app.Run(hInstance, nCmdShow);
 
     LOG_INFO("Application exit: " + std::to_string(appResult));

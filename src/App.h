@@ -1,5 +1,6 @@
 #pragma once
 
+#include "config/ConfigManager.h"
 #include "editor/Editor.h"
 #include "managers/CameraManager.h"
 #include "managers/ImGuiManager.h"
@@ -19,17 +20,22 @@ class IWindow;
 class App
 {
 public:
-    explicit App(std::unique_ptr<IWindow> window);
+    App(std::unique_ptr<IWindow> window, ConfigManager configManager);
     int Run(HINSTANCE hInstance, int nCmdShow);
     CameraManager& GetCameraManager();
     const CameraManager& GetCameraManager() const;
     Editor& GetEditor();
     const Editor& GetEditor() const;
+    ConfigManager& GetConfigManager();
+    const ConfigManager& GetConfigManager() const;
     WorldManager& GetWorldManager();
     const WorldManager& GetWorldManager() const;
 
 private:
+    void InitializeWorldFromConfig();
+
     std::unique_ptr<IWindow> m_window;
+    ConfigManager m_configManager;
     Editor m_editor;
     CameraManager m_cameraManager;
     ImGuiManager m_imguiManager;

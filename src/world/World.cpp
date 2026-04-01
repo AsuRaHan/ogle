@@ -1,5 +1,7 @@
 #include "World.h"
 
+#include "core/FileSystem.h"
+
 #include <fstream>
 
 #include <nlohmann/json.hpp>
@@ -114,6 +116,7 @@ namespace OGLE {
             j["entities"].push_back(entityJson);
         }
 
+        FileSystem::EnsureParentDirectory(path);
         std::ofstream file(path);
         file << j.dump(4);
     }
@@ -121,7 +124,8 @@ namespace OGLE {
     void World::Load(const std::string& path) {
         m_registry.clear();
 
-        std::ifstream file(path);
+        const std::filesystem::path resolvedPath = FileSystem::ResolvePath(path);
+        std::ifstream file(resolvedPath);
         if (!file.is_open()) {
             return;
         }
