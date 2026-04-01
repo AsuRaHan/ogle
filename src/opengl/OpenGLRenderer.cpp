@@ -17,9 +17,15 @@ OpenGLRenderer::OpenGLRenderer(int width, int height, ogle::Camera& camera, OGLE
     , m_world(world)
     , m_width(width)
     , m_height(height)
+    , m_highlightedEntity(entt::null)
     , m_scene(nullptr)
     , m_startTime(std::chrono::steady_clock::now())
 {
+}
+
+void OpenGLRenderer::SetHighlightedEntity(OGLE::Entity entity)
+{
+    m_highlightedEntity = entity;
 }
 
 OpenGLRenderer::~OpenGLRenderer() {
@@ -59,6 +65,8 @@ bool OpenGLRenderer::Initialize() {
         uniform int uHasDiffuseTexture;
         uniform vec3 uBaseColor;
         uniform vec3 uLightDirection;
+        uniform vec3 uSelectionTint;
+        uniform float uSelectionMix;
         out vec4 FragColor;
         void main() {
             vec3 albedo = uBaseColor;
@@ -70,6 +78,7 @@ bool OpenGLRenderer::Initialize() {
             float diffuse = max(dot(normal, normalize(-uLightDirection)), 0.0);
             float ambient = 0.25;
             vec3 litColor = albedo * (ambient + diffuse * 0.75);
+            litColor = mix(litColor, uSelectionTint, uSelectionMix);
             FragColor = vec4(litColor, 1.0);
         }
     )";
@@ -124,10 +133,15 @@ void OpenGLRenderer::Render() {
     const GLint mvpLocation = glGetUniformLocation(program, "uMVP");
     const GLint modelLocation = glGetUniformLocation(program, "uModel");
     const GLint lightDirectionLocation = glGetUniformLocation(program, "uLightDirection");
+    const GLint selectionTintLocation = glGetUniformLocation(program, "uSelectionTint");
+    const GLint selectionMixLocation = glGetUniformLocation(program, "uSelectionMix");
     const glm::mat4 viewProjection = m_camera.GetProjectionMatrix() * m_camera.GetViewMatrix();
 
     if (lightDirectionLocation >= 0) {
         glUniform3f(lightDirectionLocation, -0.4f, -1.0f, -0.3f);
+    }
+    if (selectionTintLocation >= 0) {
+        glUniform3f(selectionTintLocation, 1.0f, 0.85f, 0.2f);
     }
 
     // 5. Параметры сцены
@@ -139,9 +153,13 @@ void OpenGLRenderer::Render() {
     //     m_scene->Render(timeSec);
     // }
 
-    auto worldView = m_world.GetRegistry().view<OGLE::ModelComponent>();
+    auto worldView = m_world.GetRegistry().view<OGLE::WorldObjectComponent, OGLE::ModelComponent>();
     for (auto entity : worldView) {
+        auto& worldObjectComponent = worldView.get<OGLE::WorldObjectComponent>(entity);
         auto& modelComponent = worldView.get<OGLE::ModelComponent>(entity);
+        if (!worldObjectComponent.enabled || !worldObjectComponent.visible) {
+            continue;
+        }
         if (!modelComponent.model) {
             continue;
         }
@@ -152,6 +170,9 @@ void OpenGLRenderer::Render() {
         }
         if (modelLocation >= 0) {
             glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(modelComponent.model->GetModelMatrix()));
+        }
+        if (selectionMixLocation >= 0) {
+            glUniform1f(selectionMixLocation, entity == m_highlightedEntity ? 0.45f : 0.0f);
         }
 
         modelComponent.model->BindMaterial(program);

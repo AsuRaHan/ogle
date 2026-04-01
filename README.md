@@ -1,22 +1,23 @@
-﻿# OGLE20
+﻿# OGLE20 v0.2
 
-`OGLE20` is an experimental 3D engine/editor project on C++17 with Win32, OpenGL, ECS world management through `EnTT`, editor UI through `Dear ImGui`, scripting through `Duktape`, and basic physics through `Bullet`.
+`OGLE20` is an experimental 3D engine/editor project on C++17 with Win32, OpenGL, ECS world management through `EnTT`, editor UI through `Dear ImGui`, scripting through `Duktape`, textured rendering, asset browsing, and basic physics through `Bullet`.
 
 The project already includes:
 - a Win32 window and OpenGL context
 - manager-based application architecture
 - ECS world and world objects
 - procedural test scene generation
+- textured mesh rendering
 - camera movement and input actions
 - JSON world save/load
 - config file load/save on disk
-- editor layer with object picking and inspector
+- editor windows for world, hierarchy, inspector, and content browser
 - JavaScript startup/runtime scripting
 - basic rigid body physics
 
 ## Current Status
 
-This is an active work-in-progress engine foundation. The architecture is already split into subsystems and usable for experiments, but many systems are still intentionally minimal.
+This is an active work-in-progress engine foundation. The project now has a usable in-engine workflow for building a small scene, browsing assets, assigning textures, selecting objects in the viewport, controlling simulation playback, and saving/loading world state. Many systems are still intentionally simple, but the codebase is already practical for experiments and editor iteration.
 
 ## Implemented So Far
 
@@ -43,6 +44,10 @@ This is an active work-in-progress engine foundation. The architecture is alread
 - camera logic is moved into `CameraManager`
 - DPI/viewport resize issues were fixed
 - ECS world objects are rendered from world data
+- textured materials are supported
+- diffuse textures are loaded from disk
+- selected objects are highlighted in the viewport
+- object `enabled` and `visible` flags affect rendering
 
 ### ECS World
 - `WorldManager` owns the active world
@@ -56,26 +61,56 @@ This is an active work-in-progress engine foundation. The architecture is alread
   - `PhysicsBodyComponent`
 - default test world exists
 - world save/load to JSON exists
+- procedural geometry is serialized for save/load
+- material texture paths are serialized with world data
 
 ### Procedural Objects
 - cubes can be created without loading files
 - the default world is built procedurally
 - the world can be extended from C++ and from scripts
+- cubes can use textures
+
+### Assets and Models
+- models are loaded through `Assimp`
+- diffuse texture paths can be imported from model materials
+- a basic material system exists
+- a texture cache exists
+- the editor includes a content browser rooted at the configured assets folder
 
 ### Scripting
 - `Duktape` is integrated
 - `ScriptManager` loads `.js` files
 - `onStart()` and `onUpdate(dt)` are supported
 - scripts can spawn and manipulate world objects
+- scripts can assign textures to entities
 
 ### UI and Editor
 - `Dear ImGui` is integrated
-- `ImGuiManager` renders the general debug UI
+- the old debug/demo windows are hidden by default
 - `Editor` is a separate layer
 - the editor can be enabled/disabled
 - object picking by mouse click is implemented
-- `Inspector` shows the currently selected object
-- transform editing for the selected entity is available
+- the editor uses separate windows for:
+  - `World`
+  - `Hierarchy`
+  - `Inspector`
+  - `Content Browser`
+- hierarchy shows scene objects and supports quick add/delete actions
+- inspector edits:
+  - transform
+  - object state
+  - texture assignment
+  - simple physics settings
+- content browser uses the configured assets root folder
+- content browser supports drag-and-drop:
+  - model file -> world window to spawn entity
+  - texture file -> inspector to assign texture
+- world window supports load/save/clear/default-world actions
+- simulation control supports:
+  - play
+  - pause
+  - step
+- script, physics, and world updates can be paused without stopping rendering or input
 
 ### Physics
 - `Bullet Physics` is integrated
@@ -83,12 +118,13 @@ This is an active work-in-progress engine foundation. The architecture is alread
 - basic box rigid bodies are supported
 - Bullet bodies sync back into ECS transforms
 - default scene creates static and dynamic physics objects
+- editor can add, update, or remove simple box physics settings for selected objects
 
 ### Config and File System
 - `FileSystem` was added for path and text-file operations
 - `AppConfig` and `ConfigManager` were added
 - config is loaded from disk or created with defaults
-- window settings, editor state, world path and script startup behavior are configurable
+- window settings, editor state, world path, assets path, and script startup behavior are configurable
 - if the configured world file is missing, the engine creates a default world and saves it
 
 ## Project Layout
@@ -127,6 +163,10 @@ src/
     MeshBuffer.h/.cpp
     ModelEntity.h/.cpp
 
+  render/
+    Material.h/.cpp
+    Texture2D.h/.cpp
+
   opengl/
     OpenGLInitializer.h/.cpp
     OpenGLRenderer.h/.cpp
@@ -158,6 +198,7 @@ Dependencies are pulled through `CMake FetchContent`.
 - `Duktape`
 - `Dear ImGui`
 - `Bullet Physics`
+- `Windows Imaging Component (WIC)` for texture loading
 
 ## Build
 
@@ -201,6 +242,7 @@ Default project paths:
 
 - config: `config/app_config.json`
 - world: `data/worlds/default_world.json`
+- assets: `assets/`
 - scripts: `scripts/*.js`
 - log: `log.txt`
 
@@ -224,6 +266,9 @@ If the world file is missing, the default test world is generated and saved auto
     "path": "data/worlds/default_world.json",
     "loadOnStartup": true,
     "saveDefaultWorldIfMissing": true
+  },
+  "assets": {
+    "path": "assets"
   },
   "scripts": {
     "runStartupScript": false,
@@ -286,6 +331,7 @@ Main methods:
 - `SetEntityPosition(...)`
 - `SetEntityRotation(...)`
 - `SetEntityScale(...)`
+- `SetEntityDiffuseTexture(...)`
 - `SaveActiveWorld(path)`
 - `LoadActiveWorld(path)`
 
@@ -363,6 +409,7 @@ Currently exposed JS functions:
 - `setPosition(entityId, x, y, z)`
 - `setRotation(entityId, x, y, z)`
 - `setScale(entityId, x, y, z)`
+- `setTexture(entityId, path)`
 - `entityExists(entityId)`
 
 Example script:
@@ -393,11 +440,19 @@ Main methods:
 - `BuildUi(...)`
 
 Current features:
-- editor window
+- world window
+- hierarchy window
+- inspector window
+- content browser window
 - selected object tracking
 - click selection in the scene
-- inspector window
-- transform editing for the selected entity
+- viewport highlight for the selected object
+- transform editing
+- object visibility and enabled editing
+- texture assignment
+- simple physics editing
+- drag-and-drop from content browser into the world and inspector
+- simulation play/pause/step
 
 ### `ConfigManager`
 
@@ -426,16 +481,31 @@ Main methods:
 
 ## Reasonable Next Steps
 
-- editor main menu bar
-- hierarchy panel
-- richer inspector for ECS components
-- save/load world from editor UI
-- editor hotkeys
-- physics body creation from UI and scripts
-- selected object highlight
-- gizmo manipulation
+- transform gizmo in the viewport
+- better object outlines / selection rendering
+- scene parenting and true hierarchy relationships
+- asset preview thumbnails
+- spawn dragged models under mouse position in the scene
+- script reload tools in the editor
+- more robust material system
+- skinned meshes and animation runtime
 - prefab system
 - broader resource file system
+
+## Changes in v0.2
+
+- added textured rendering and basic material support
+- added texture loading through WIC
+- switched model loading to an Assimp-based runtime path for mesh and diffuse texture import
+- added world serialization for procedural geometry and material texture paths
+- expanded the editor into separate `World`, `Hierarchy`, `Inspector`, and `Content Browser` windows
+- added a configurable assets root folder in config and editor UI
+- added content browser drag-and-drop for models and textures
+- added selected-object viewport highlighting
+- added scene object create/delete tools in hierarchy and world windows
+- added simulation `Play`, `Pause`, and `Step` controls
+- made simulation updates controllable without stopping rendering or input
+- connected visibility and enabled object flags to rendering
 
 ## Note
 

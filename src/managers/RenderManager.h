@@ -1,5 +1,7 @@
 #pragma once
 
+#include "world/WorldComponents.h"
+
 #include <memory>
 
 class IWindow;
@@ -18,6 +20,7 @@ public:
     bool Initialize(IWindow& window, CameraManager& cameraManager, WorldManager& worldManager);
     void Resize(int width, int height, IWindow& window);
     void RenderFrame(IWindow& window, ImGuiManager* imguiManager = nullptr);
+    void SetHighlightedEntity(OGLE::Entity entity);
 
 private:
     int m_viewportWidth = 0;

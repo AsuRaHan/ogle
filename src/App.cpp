@@ -191,14 +191,20 @@ int App::Run(HINSTANCE hInstance, int nCmdShow)
         m_imguiManager.BeginFrame();
         m_imguiManager.BuildDefaultUi(m_cameraManager, m_worldManager, deltaTime);
         m_editor.BuildUi(m_cameraManager, m_worldManager, m_physicsManager, m_configManager);
+        m_renderManager.SetHighlightedEntity(m_editor.GetSelectedEntity());
 
         if (!m_imguiManager.WantsKeyboardCapture() && !m_imguiManager.WantsMouseCapture()) {
             m_inputActionsManager.UpdateCameraControls(m_cameraManager, deltaTime);
         }
 
-        m_scriptManager.Update(deltaTime);
-        m_physicsManager.Update(deltaTime);
-        m_worldManager.Update();
+        const bool runSimulation = m_editor.GetSimulationState() == Editor::SimulationState::Playing;
+        const bool stepSimulation = m_editor.ConsumeSimulationStepRequest();
+        if (runSimulation || stepSimulation) {
+            const float simulationDeltaTime = stepSimulation ? (1.0f / 60.0f) : deltaTime;
+            m_scriptManager.Update(simulationDeltaTime);
+            m_physicsManager.Update(simulationDeltaTime);
+            m_worldManager.Update();
+        }
         m_cameraManager.Update(deltaTime);
         m_renderManager.RenderFrame(*m_window, &m_imguiManager);
     }

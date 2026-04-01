@@ -21,6 +21,11 @@
 #include <utility>
 #include <vector>
 
+namespace
+{
+    constexpr const char* kContentBrowserAssetPayload = "OGLE_CONTENT_BROWSER_ASSET";
+}
+
 bool Editor::Initialize()
 {
     if (m_initialized) {
@@ -71,6 +76,23 @@ bool Editor::IsEnabled() const
 bool Editor::IsInitialized() const
 {
     return m_initialized;
+}
+
+OGLE::Entity Editor::GetSelectedEntity() const
+{
+    return m_selectedEntity;
+}
+
+Editor::SimulationState Editor::GetSimulationState() const
+{
+    return m_simulationState;
+}
+
+bool Editor::ConsumeSimulationStepRequest()
+{
+    const bool shouldStep = m_stepSimulationRequested;
+    m_stepSimulationRequested = false;
+    return shouldStep;
 }
 
 void Editor::BuildUi(
@@ -139,6 +161,21 @@ void Editor::BuildUi(
             ImGui::EndMenu();
         }
 
+        if (ImGui::BeginMenu("Simulation")) {
+            const bool isPlaying = m_simulationState == SimulationState::Playing;
+            if (ImGui::MenuItem("Play", nullptr, isPlaying)) {
+                m_simulationState = SimulationState::Playing;
+            }
+            if (ImGui::MenuItem("Pause", nullptr, !isPlaying)) {
+                m_simulationState = SimulationState::Paused;
+            }
+            if (ImGui::MenuItem("Step")) {
+                m_simulationState = SimulationState::Paused;
+                m_stepSimulationRequested = true;
+            }
+            ImGui::EndMenu();
+        }
+
         if (ImGui::BeginMenu("Window")) {
             ImGui::MenuItem("World", nullptr, &m_showWorldWindow);
             ImGui::MenuItem("Hierarchy", nullptr, &m_showHierarchyWindow);
@@ -163,6 +200,7 @@ void Editor::BuildUi(
 
         ImGui::Text("World entities: %u", static_cast<unsigned int>(entityCount));
         ImGui::Text("Physics bodies: %u", static_cast<unsigned int>(physicsManager.GetBodyCount()));
+        ImGui::Text("Simulation: %s", m_simulationState == SimulationState::Playing ? "Playing" : "Paused");
         ImGui::Separator();
         ImGui::Text("Camera");
         ImGui::Text("Position: %.2f %.2f %.2f", position.x, position.y, position.z);
@@ -201,15 +239,48 @@ void Editor::BuildUi(
             m_textureEditingEntity = entt::null;
         }
 
+        if (ImGui::Button(m_simulationState == SimulationState::Playing ? "Pause Simulation" : "Play Simulation")) {
+            m_simulationState = (m_simulationState == SimulationState::Playing)
+                ? SimulationState::Paused
+                : SimulationState::Playing;
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Step Simulation")) {
+            m_simulationState = SimulationState::Paused;
+            m_stepSimulationRequested = true;
+        }
+
         ImGui::Separator();
         DrawCreationTools(worldManager);
+
+        if (ImGui::BeginDragDropTarget()) {
+            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(kContentBrowserAssetPayload)) {
+                const char* assetPath = static_cast<const char*>(payload->Data);
+                if (assetPath && IsModelAssetPath(assetPath)) {
+                    const std::string entityName = BuildEntityNameFromAssetPath(assetPath);
+                    const OGLE::Entity entity = worldManager.CreateModelFromFile(
+                        assetPath,
+                        OGLE::ModelType::DYNAMIC,
+                        entityName);
+
+                    if (entity != entt::null) {
+                        const glm::vec3 spawnPosition = camera.GetPosition() + camera.GetFront() * 5.0f;
+                        worldManager.SetEntityPosition(entity, spawnPosition);
+                        m_selectedEntity = entity;
+                        m_bufferedEntity = entt::null;
+                        m_textureEditingEntity = entt::null;
+                    }
+                }
+            }
+            ImGui::EndDragDropTarget();
+        }
         }
         ImGui::End();
     }
 
     if (m_showHierarchyWindow) {
         if (ImGui::Begin("Hierarchy", &m_showHierarchyWindow)) {
-            DrawWorldTree(worldManager);
+            DrawWorldTree(worldManager, physicsManager);
         }
         ImGui::End();
     }
@@ -264,62 +335,87 @@ const char* Editor::GetKindLabel(OGLE::WorldObjectKind kind)
     }
 }
 
-void Editor::DrawWorldTree(WorldManager& worldManager)
+void Editor::DrawWorldTree(WorldManager& worldManager, PhysicsManager& physicsManager)
 {
-    struct KindGroup {
-        OGLE::WorldObjectKind kind;
-        const char* label;
-    };
-
-    static const KindGroup groups[] = {
-        { OGLE::WorldObjectKind::Generic, "Generic" },
-        { OGLE::WorldObjectKind::Mesh, "Mesh" },
-        { OGLE::WorldObjectKind::Light, "Light" },
-        { OGLE::WorldObjectKind::Billboard, "Billboard" }
-    };
-
     auto nameView = worldManager.GetActiveWorld().GetRegistry().view<OGLE::NameComponent, OGLE::WorldObjectComponent>();
-    for (const KindGroup& group : groups) {
-        std::vector<OGLE::Entity> entities;
-        for (auto entity : nameView) {
-            const auto& object = nameView.get<OGLE::WorldObjectComponent>(entity);
-            if (object.kind == group.kind) {
-                entities.push_back(entity);
-            }
-        }
+    std::vector<OGLE::Entity> entities;
+    for (auto entity : nameView) {
+        entities.push_back(entity);
+    }
 
-        std::sort(entities.begin(), entities.end(), [&nameView](OGLE::Entity a, OGLE::Entity b) {
-            return nameView.get<OGLE::NameComponent>(a).value < nameView.get<OGLE::NameComponent>(b).value;
-        });
+    std::sort(entities.begin(), entities.end(), [&nameView](OGLE::Entity a, OGLE::Entity b) {
+        return nameView.get<OGLE::NameComponent>(a).value < nameView.get<OGLE::NameComponent>(b).value;
+    });
 
-        const bool opened = ImGui::TreeNodeEx(group.label, 0);
-        if (opened) {
-            if (entities.empty()) {
-                ImGui::TextDisabled("Empty");
-            } else {
-                for (OGLE::Entity entity : entities) {
-                    const auto& name = nameView.get<OGLE::NameComponent>(entity);
-                    const bool selected = entity == m_selectedEntity;
-                    ImGuiTreeNodeFlags itemFlags =
-                        ImGuiTreeNodeFlags_Leaf |
-                        ImGuiTreeNodeFlags_NoTreePushOnOpen |
-                        (selected ? ImGuiTreeNodeFlags_Selected : 0);
+    if (ImGui::Button("Add Empty")) {
+        m_selectedEntity = worldManager.CreateWorldObject("EmptyObject", OGLE::WorldObjectKind::Generic).GetEntity();
+        m_bufferedEntity = entt::null;
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Add Cube")) {
+        m_selectedEntity = worldManager.CreateCube("Cube", glm::vec3(0.0f, 0.5f, 0.0f));
+        m_bufferedEntity = entt::null;
+    }
+    ImGui::SameLine();
+    const bool canDelete = m_selectedEntity != entt::null && worldManager.IsEntityValid(m_selectedEntity);
+    if (!canDelete) {
+        ImGui::BeginDisabled();
+    }
+    if (ImGui::Button("Delete")) {
+        physicsManager.RemoveBody(m_selectedEntity);
+        worldManager.GetActiveWorld().DestroyEntity(m_selectedEntity);
+        m_selectedEntity = entt::null;
+        m_bufferedEntity = entt::null;
+        m_textureEditingEntity = entt::null;
+    }
+    if (!canDelete) {
+        ImGui::EndDisabled();
+    }
 
-                    ImGui::TreeNodeEx(
-                        reinterpret_cast<void*>(static_cast<intptr_t>(entt::to_integral(entity))),
-                        itemFlags,
-                        "%s##%u",
-                        name.value.c_str(),
-                        static_cast<unsigned int>(entt::to_integral(entity)));
+    ImGui::Separator();
+    const bool opened = ImGui::TreeNodeEx("Scene", ImGuiTreeNodeFlags_DefaultOpen);
+    if (opened) {
+        if (entities.empty()) {
+            ImGui::TextDisabled("Empty");
+        } else {
+            for (OGLE::Entity entity : entities) {
+                const auto& name = nameView.get<OGLE::NameComponent>(entity);
+                const auto& object = nameView.get<OGLE::WorldObjectComponent>(entity);
+                const bool selected = entity == m_selectedEntity;
+                ImGuiTreeNodeFlags itemFlags =
+                    ImGuiTreeNodeFlags_Leaf |
+                    ImGuiTreeNodeFlags_NoTreePushOnOpen |
+                    (selected ? ImGuiTreeNodeFlags_Selected : 0);
 
-                    if (ImGui::IsItemClicked()) {
-                        m_selectedEntity = entity;
+                ImGui::TreeNodeEx(
+                    reinterpret_cast<void*>(static_cast<intptr_t>(entt::to_integral(entity))),
+                    itemFlags,
+                    "%s [%s]##%u",
+                    name.value.c_str(),
+                    GetKindLabel(object.kind),
+                    static_cast<unsigned int>(entt::to_integral(entity)));
+
+                if (ImGui::IsItemClicked()) {
+                    m_selectedEntity = entity;
+                }
+
+                if (ImGui::BeginPopupContextItem()) {
+                    if (ImGui::MenuItem("Delete")) {
+                        physicsManager.RemoveBody(entity);
+                        if (entity == m_selectedEntity) {
+                            m_selectedEntity = entt::null;
+                            m_bufferedEntity = entt::null;
+                            m_textureEditingEntity = entt::null;
+                        }
+                        worldManager.GetActiveWorld().DestroyEntity(entity);
+                        ImGui::EndPopup();
+                        break;
                     }
+                    ImGui::EndPopup();
                 }
             }
-
-            ImGui::TreePop();
         }
+        ImGui::TreePop();
     }
 }
 
@@ -389,6 +485,18 @@ void Editor::DrawSelectionInspector(WorldManager& worldManager, PhysicsManager& 
         if (ImGui::Button("Clear Texture")) {
             worldManager.SetEntityDiffuseTexture(m_selectedEntity, "");
             m_texturePathBuffer.fill('\0');
+        }
+
+        if (ImGui::BeginDragDropTarget()) {
+            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(kContentBrowserAssetPayload)) {
+                const char* assetPath = static_cast<const char*>(payload->Data);
+                if (assetPath && IsTextureAssetPath(assetPath)) {
+                    worldManager.SetEntityDiffuseTexture(m_selectedEntity, assetPath);
+                    m_texturePathBuffer.fill('\0');
+                    std::strncpy(m_texturePathBuffer.data(), assetPath, m_texturePathBuffer.size() - 1);
+                }
+            }
+            ImGui::EndDragDropTarget();
         }
     }
 
@@ -540,6 +648,17 @@ void Editor::DrawContentBrowserDirectory(const std::filesystem::path& directoryP
             if (ImGui::Selectable((label + "##" + relativePath).c_str(), selected)) {
                 HandleContentBrowserFileSelected(entryPath, rootPath);
             }
+
+            const std::string payloadPath = entryPath.generic_string();
+            if (ImGui::BeginDragDropSource()) {
+                ImGui::SetDragDropPayload(
+                    kContentBrowserAssetPayload,
+                    payloadPath.c_str(),
+                    payloadPath.size() + 1);
+                ImGui::TextUnformatted(label.c_str());
+                ImGui::TextDisabled("%s", payloadPath.c_str());
+                ImGui::EndDragDropSource();
+            }
         }
     }
 }
@@ -577,6 +696,40 @@ void Editor::HandleContentBrowserFileSelected(const std::filesystem::path& fileP
         m_createModelPathBuffer.fill('\0');
         std::strncpy(m_createModelPathBuffer.data(), usePathString.c_str(), m_createModelPathBuffer.size() - 1);
     }
+}
+
+bool Editor::IsModelAssetPath(const std::string& path)
+{
+    std::string extension = std::filesystem::path(path).extension().string();
+    std::transform(extension.begin(), extension.end(), extension.begin(), [](unsigned char c) {
+        return static_cast<char>(std::tolower(c));
+    });
+
+    return extension == ".obj" ||
+        extension == ".fbx" ||
+        extension == ".glb" ||
+        extension == ".gltf" ||
+        extension == ".stl";
+}
+
+bool Editor::IsTextureAssetPath(const std::string& path)
+{
+    std::string extension = std::filesystem::path(path).extension().string();
+    std::transform(extension.begin(), extension.end(), extension.begin(), [](unsigned char c) {
+        return static_cast<char>(std::tolower(c));
+    });
+
+    return extension == ".png" ||
+        extension == ".jpg" ||
+        extension == ".jpeg" ||
+        extension == ".bmp" ||
+        extension == ".tga";
+}
+
+std::string Editor::BuildEntityNameFromAssetPath(const std::string& path)
+{
+    const std::filesystem::path assetPath(path);
+    return assetPath.stem().string().empty() ? "Model" : assetPath.stem().string();
 }
 
 bool Editor::TrySelectObject(const ogle::Camera& camera, WorldManager& worldManager)

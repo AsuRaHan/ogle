@@ -86,3 +86,10 @@ void RenderManager::RenderFrame(IWindow& window, ImGuiManager* imguiManager)
 
     ::SwapBuffers(window.GetDeviceContext());
 }
+
+void RenderManager::SetHighlightedEntity(OGLE::Entity entity)
+{
+    if (m_renderer) {
+        m_renderer->SetHighlightedEntity(entity);
+    }
+}
