@@ -1,75 +1,111 @@
-// src/managers/CameraManager.cpp
-#include "CameraManager.h"
-#include "log/Logger.h"
+#include "managers/CameraManager.h"
 
-namespace ogle {
-
-CameraManager::CameraManager() {
-    Logger::Info("CameraManager initialized");
+CameraManager::CameraManager()
+    : m_camera("MainCamera")
+{
 }
 
-Camera* CameraManager::CreateCamera(const std::string& name) {
-    // Проверяем, нет ли уже камеры с таким именем
-    auto it = m_cameras.find(name);
-    if (it != m_cameras.end()) {
-        Logger::Warning("Camera already exists: " + name);
-        return it->second.get();
-    }
-    
-    // Создаем новую камеру
-    auto camera = std::make_unique<Camera>(name);
-    Camera* ptr = camera.get();
-    m_cameras[name] = std::move(camera);
-    
-    // Если это первая камера - запоминаем как основную
-    if (!m_mainCamera) {
-        m_mainCamera = ptr;
-    }
-    
-    Logger::Info("Camera created: " + name);
-    return ptr;
+ogle::Camera& CameraManager::GetCamera()
+{
+    return m_camera;
 }
 
-Camera* CameraManager::GetCamera(const std::string& name) {
-    auto it = m_cameras.find(name);
-    if (it != m_cameras.end()) {
-        return it->second.get();
-    }
-    
-    Logger::Warning("Camera not found: " + name);
-    return nullptr;
+const ogle::Camera& CameraManager::GetCamera() const
+{
+    return m_camera;
 }
 
-Camera* CameraManager::GetMainCamera() {
-    return m_mainCamera;
+void CameraManager::Update(float deltaTime)
+{
+    m_camera.Update(deltaTime);
 }
 
-bool CameraManager::RemoveCamera(const std::string& name) {
-    auto it = m_cameras.find(name);
-    if (it != m_cameras.end()) {
-        // Если удаляем основную камеру и она не последняя
-        if (it->second.get() == m_mainCamera && m_cameras.size() > 1) {
-            // Находим другую камеру для замены
-            for (auto& pair : m_cameras) {
-                if (pair.first != name) {
-                    m_mainCamera = pair.second.get();
-                    break;
-                }
-            }
-        }
-        
-        m_cameras.erase(it);
-        
-        // Если это была последняя камера
-        if (m_cameras.empty()) {
-            m_mainCamera = nullptr;
-        }
-        
-        Logger::Info("Camera removed: " + name);
-        return true;
-    }
-    
-    return false;
+void CameraManager::SetPerspective(float fovDegrees, float aspectRatio, float nearClip, float farClip)
+{
+    m_camera.SetPerspective(fovDegrees, aspectRatio, nearClip, farClip);
 }
 
-} // namespace ogle
+void CameraManager::SetOrthographic(float size, float aspectRatio, float nearClip, float farClip)
+{
+    m_camera.SetOrthographic(size, aspectRatio, nearClip, farClip);
+}
+
+void CameraManager::SetOrthographic(float left, float right, float bottom, float top, float nearClip, float farClip)
+{
+    m_camera.SetOrthographic(left, right, bottom, top, nearClip, farClip);
+}
+
+void CameraManager::SetAspectRatio(float aspectRatio)
+{
+    m_camera.SetAspectRatio(aspectRatio);
+}
+
+void CameraManager::SetPosition(const glm::vec3& position)
+{
+    m_camera.SetPosition(position);
+}
+
+void CameraManager::SetRotation(const glm::quat& rotation)
+{
+    m_camera.SetRotation(rotation);
+}
+
+void CameraManager::SetRotation(float yawDegrees, float pitchDegrees, float rollDegrees)
+{
+    m_camera.SetRotation(yawDegrees, pitchDegrees, rollDegrees);
+}
+
+void CameraManager::Translate(const glm::vec3& translation)
+{
+    m_camera.Translate(translation);
+}
+
+void CameraManager::Rotate(float yawDelta, float pitchDelta, float rollDelta)
+{
+    m_camera.Rotate(yawDelta, pitchDelta, rollDelta);
+}
+
+void CameraManager::LookAt(const glm::vec3& target, const glm::vec3& up)
+{
+    m_camera.LookAt(target, up);
+}
+
+void CameraManager::MoveForward(float distance)
+{
+    m_camera.MoveForward(distance);
+}
+
+void CameraManager::MoveRight(float distance)
+{
+    m_camera.MoveRight(distance);
+}
+
+void CameraManager::MoveUp(float distance)
+{
+    m_camera.MoveUp(distance);
+}
+
+void CameraManager::SetOrbitTarget(const glm::vec3& target)
+{
+    m_camera.SetOrbitTarget(target);
+}
+
+void CameraManager::SetOrbitDistance(float distance)
+{
+    m_camera.SetOrbitDistance(distance);
+}
+
+void CameraManager::Orbit(float horizontalAngle, float verticalAngle)
+{
+    m_camera.Orbit(horizontalAngle, verticalAngle);
+}
+
+void CameraManager::SetMode(ogle::Camera::Mode mode)
+{
+    m_camera.SetMode(mode);
+}
+
+ogle::Camera::Mode CameraManager::GetMode() const
+{
+    return m_camera.GetMode();
+}

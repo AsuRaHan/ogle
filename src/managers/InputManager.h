@@ -1,37 +1,29 @@
-// src/managers/InputManager.h
 #pragma once
 
-#include <glm/glm.hpp>
 #include <array>
 
-namespace ogle {
+#include <windows.h>
 
-class Camera;  // Предварительное объявление
+class IWindow;
 
-class InputManager {
+class InputManager
+{
 public:
-    static InputManager& Get();
+    InputManager();
 
-    // Обработка клавиши
-    void ProcessKey(int keyCode);
-
-    // Обновление с передачей состояния ввода
-    void Update(float deltaTime,
-                const std::array<bool, 256>& keyStates,
-                const glm::vec2& mouseDelta,
-                float mouseWheelDelta,
-                bool rightMouseDown);
-
-    // Инициализация
-    void Initialize();
+    void AttachToWindow(IWindow& window);
+    void Update(float deltaTime);
 
 private:
-    InputManager() = default;
-    ~InputManager() = default;
+    void HandleWindowMessage(UINT msg, WPARAM wParam, LPARAM lParam);
+    void ResetAllStates();
+    static int TranslateMouseButton(UINT msg, WPARAM wParam);
 
-    // Запрет копирования
-    InputManager(const InputManager&) = delete;
-    InputManager& operator=(const InputManager&) = delete;
+    std::array<bool, 256> m_keyStates{};
+    std::array<bool, 256> m_previousKeyStates{};
+    std::array<bool, 5> m_mouseButtonStates{};
+    std::array<bool, 5> m_previousMouseButtonStates{};
+    POINT m_mousePosition{ 0, 0 };
+    POINT m_previousMousePosition{ 0, 0 };
+    float m_mouseWheelDelta = 0.0f;
 };
-
-} // namespace ogle

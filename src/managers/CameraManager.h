@@ -1,50 +1,42 @@
-// src/managers/CameraManager.h
 #pragma once
 
-#include <memory>
-#include <string>
-#include <unordered_map>
-#include "render/Camera.h"
+#include "opengl/Camera.h"
 
-namespace ogle {
+#include <glm/vec3.hpp>
 
-class CameraManager {
+class CameraManager
+{
 public:
-    static CameraManager& Get() {
-        static CameraManager instance;
-        return instance;
-    }
-    
-    // === Только три метода ===
-    
-    // Создать камеру
-    Camera* CreateCamera(const std::string& name = "MainCamera");
-    
-    // Получить камеру по имени
-    Camera* GetCamera(const std::string& name = "MainCamera");
-    
-    // Получить основную камеру (первая созданная)
-    Camera* GetMainCamera();
-    
-    // Удалить камеру
-    bool RemoveCamera(const std::string& name);
-    
-    // Получить количество камер
-    size_t GetCameraCount() const { return m_cameras.size(); }
-    
-private:
     CameraManager();
-    ~CameraManager() = default;
-    
-    // Запрет копирования
-    CameraManager(const CameraManager&) = delete;
-    CameraManager& operator=(const CameraManager&) = delete;
-    
-    // Хранилище камер
-    std::unordered_map<std::string, std::unique_ptr<Camera>> m_cameras;
-    
-    // Указатель на первую/основную камеру
-    Camera* m_mainCamera = nullptr;
-};
 
-} // namespace ogle
+    ogle::Camera& GetCamera();
+    const ogle::Camera& GetCamera() const;
+
+    void Update(float deltaTime);
+
+    void SetPerspective(float fovDegrees, float aspectRatio, float nearClip, float farClip);
+    void SetOrthographic(float size, float aspectRatio, float nearClip, float farClip);
+    void SetOrthographic(float left, float right, float bottom, float top, float nearClip, float farClip);
+    void SetAspectRatio(float aspectRatio);
+
+    void SetPosition(const glm::vec3& position);
+    void SetRotation(const glm::quat& rotation);
+    void SetRotation(float yawDegrees, float pitchDegrees, float rollDegrees = 0.0f);
+    void Translate(const glm::vec3& translation);
+    void Rotate(float yawDelta, float pitchDelta, float rollDelta = 0.0f);
+    void LookAt(const glm::vec3& target, const glm::vec3& up = glm::vec3(0.0f, 1.0f, 0.0f));
+
+    void MoveForward(float distance);
+    void MoveRight(float distance);
+    void MoveUp(float distance);
+
+    void SetOrbitTarget(const glm::vec3& target);
+    void SetOrbitDistance(float distance);
+    void Orbit(float horizontalAngle, float verticalAngle);
+
+    void SetMode(ogle::Camera::Mode mode);
+    ogle::Camera::Mode GetMode() const;
+
+private:
+    ogle::Camera m_camera;
+};

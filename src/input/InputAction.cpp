@@ -4,6 +4,8 @@
 
 
 
+#include <cmath>
+
 namespace ogle {
 
 	Modifiers::Modifiers(int win32KeyState) {
@@ -126,21 +128,30 @@ namespace ogle {
         float totalValue = 0.0f;
         bool anyActive = false;
 
-        // Оцениваем все биндинги
+        // Для ActionType::Axis суммируем все биндинги, включая клавиши с отрицательным scale.
+        // Иначе кнопки A/S с value < 0 теряются из-за std::max(...).
+        const bool isAxisAction = (m_type == ActionType::Axis);
+
         for (const auto& binding : m_bindings) {
-            float value = EvaluateBinding(binding, controller);
+            const float value = EvaluateBinding(binding, controller);
+
+            if (isAxisAction) {
+                totalValue += value;
+                if (std::abs(value) > binding.deadzone) {
+                    anyActive = true;
+                }
+                continue;
+            }
 
             if (binding.type == Binding::SourceType::KeyboardKey ||
                 binding.type == Binding::SourceType::MouseButton ||
                 binding.type == Binding::SourceType::GamepadButton) {
-                // Для кнопок: любое нажатие активирует действие
-                if (std::abs(value) > 0.5f) {  // Порог для кнопок
+                if (std::abs(value) > 0.5f) {
                     anyActive = true;
                     totalValue = std::max(totalValue, value);
                 }
             }
             else {
-                // Для осей: суммируем значения
                 totalValue += value;
                 if (std::abs(value) > binding.deadzone) {
                     anyActive = true;
@@ -148,14 +159,8 @@ namespace ogle {
             }
         }
 
-        // Обновляем состояние
         m_state.active = anyActive;
-        m_state.value = totalValue;
-
-        // Для Vector2/Vector3 действий нужно будет расширить логику
-        if (m_type == ActionType::Axis) {
-            m_state.value = std::clamp(totalValue, -1.0f, 1.0f);
-        }
+        m_state.value = isAxisAction ? std::clamp(totalValue, -1.0f, 1.0f) : totalValue;
     }
 
     float InputAction::Evaluate() const {

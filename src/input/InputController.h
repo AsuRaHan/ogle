@@ -1,16 +1,19 @@
 // src/input/InputController.h
 #pragma once
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 #include <glm/glm.hpp>
 #include <string>
 #include <memory>
 #include <unordered_map>
+#include <vector>
 
-#include "input/InputAction.h"
-#include "input/InputTypes.h"
-#include "input/AxisBinding.h"
+#include "InputAction.h"
+#include "InputTypes.h"
+#include "AxisBinding.h"
 
-#include "log/Logger.h"
+#include "Logger.h"
 
 // Предварительные объявления
 namespace ogle {

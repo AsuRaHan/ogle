@@ -1,5 +1,8 @@
 // src/input/InputController.cpp
-#include "input/InputController.h"
+#include "InputController.h"
+
+#include <algorithm>
+#include <cmath>
 
 namespace ogle {
 
@@ -10,11 +13,11 @@ namespace ogle {
 
 	InputController::InputController() {
 		RegisterDefaultAxes();
-		Logger::Info("InputController initialized");
+		LOG_INFO("InputController initialized");
 	}
 
 	InputController::~InputController() {
-		Logger::Info("InputController shutdown");
+		LOG_INFO("InputController shutdown");
 	}
 
 	// === РЕАЛИЗАЦИЯ КЛАВИАТУРЫ ===
@@ -90,7 +93,7 @@ namespace ogle {
 		// Проверяем, есть ли уже действие с таким именем
 		auto it = m_actions.find(name);
 		if (it != m_actions.end()) {
-			Logger::Warning("InputAction already exists: " + name);
+			LOG_WARN("InputAction already exists: " + name);
 			return it->second.get();
 		}
 
@@ -99,7 +102,7 @@ namespace ogle {
 		InputAction* ptr = action.get();
 		m_actions[name] = std::move(action);
 
-		Logger::Info("InputAction created: " + name);
+		LOG_INFO("InputAction created: " + name);
 		return ptr;
 	}
 
@@ -115,7 +118,7 @@ namespace ogle {
 		auto it = m_actions.find(name);
 		if (it != m_actions.end()) {
 			m_actions.erase(it);
-			Logger::Info("InputAction removed: " + name);
+			LOG_INFO("InputAction removed: " + name);
 		}
 	}
 
@@ -127,14 +130,14 @@ namespace ogle {
 
 	void InputController::PushContext(const std::string& context) {
 		m_contextStack.push_back(context);
-		Logger::Debug("Input context pushed: " + context);
+		LOG_DEBUG("Input context pushed: " + context);
 	}
 
 	void InputController::PopContext() {
 		if (!m_contextStack.empty()) {
 			std::string context = m_contextStack.back();
 			m_contextStack.pop_back();
-			Logger::Debug("Input context popped: " + context);
+			LOG_DEBUG("Input context popped: " + context);
 		}
 	}
 
@@ -254,7 +257,7 @@ namespace ogle {
 	void InputController::RegisterAxis(const std::string& name,
 		const std::vector<AxisBinding>& bindings) {
 		if (m_axes.find(name) != m_axes.end()) {
-			Logger::Warning("Axis already registered: " + name);
+			LOG_WARN("Axis already registered: " + name);
 			return;
 		}
 
@@ -262,7 +265,7 @@ namespace ogle {
 		data.bindings = bindings;
 		m_axes[name] = data;
 
-		Logger::Info("Axis registered: " + name + " (" +
+		LOG_INFO("Axis registered: " + name + " (" +
 			std::to_string(bindings.size()) + " bindings)");
 	}
 
@@ -296,14 +299,14 @@ namespace ogle {
 		RegisterAxis("RightTrigger",
 			AxisBinding::CreateGamepadAxis(0, GamepadAxis::RightTrigger));
 
-		Logger::Info("Default axes registered");
+		LOG_INFO("Default axes registered");
 	}
 	float InputController::GetAxis(const std::string& name) const {
 		auto it = m_axes.find(name);
 		if (it != m_axes.end()) {
 			return it->second.value;
 		}
-		Logger::Warning("Axis not found: " + name);
+		LOG_WARN("Axis not found: " + name);
 		return 0.0f;
 	}
 
@@ -427,7 +430,7 @@ namespace ogle {
 
 	void InputController::RemoveAxis(const std::string& name) {
 		if (m_axes.erase(name) > 0) {
-			Logger::Info("Axis removed: " + name);
+			LOG_INFO("Axis removed: " + name);
 		}
 	}
 

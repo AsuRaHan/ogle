@@ -1,52 +1,114 @@
 cmake_minimum_required(VERSION 3.20)
-project(ogle LANGUAGES CXX)
-
-set(CMAKE_CXX_STANDARD          20)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS        OFF)
-
-# Force building static libraries by default to avoid DLLs
-set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build all libraries as static by default" FORCE)
-
-# For MSVC: use static CRT (MultiThreaded / MultiThreadedDebug)
-if(MSVC)
-    # Requires CMake >= 3.15 (we have 3.20)
-    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>" CACHE STRING "" FORCE)
+if(CMAKE_VERSION VERSION_GREATER_EQUAL "4.0")
+    set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
 endif()
+set(PROJECT_NAME "OGLE3D")
+project(${PROJECT_NAME} LANGUAGES C CXX)
 
-# Путь к ресурсам (иконка)
-set(APP_ICON_RESOURCE "${CMAKE_CURRENT_SOURCE_DIR}/res/app.rc")
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# ────────────────────────────────────────────────────────────────
-# Зависимости через FetchContent
-# ────────────────────────────────────────────────────────────────
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_SOURCE_DIR}/bin)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_SOURCE_DIR}/bin)
+
+add_executable(${PROJECT_NAME} WIN32
+    src/main.cpp
+    src/App.cpp
+
+    src/editor/Editor.cpp
+    src/editor/Editor.h
+
+    src/ui/Win32Window.cpp
+    src/ui/Win32Window.h
+    src/ui/IWindow.h
+
+    src/opengl/OpenGLInitializer.cpp
+    src/opengl/OpenGLInitializer.h
+    src/opengl/OpenGLDebug.cpp
+    src/opengl/OpenGLDebug.h
+    src/opengl/GLFunctions.cpp
+    src/opengl/GLFunctions.h
+    src/opengl/ShaderManager.cpp
+    src/opengl/ShaderManager.h
+    src/opengl/OpenGLRenderer.cpp
+    src/opengl/OpenGLRenderer.h
+    src/opengl/Camera.cpp
+    src/opengl/Camera.h
+    src/opengl/DomoScene.cpp
+    src/Logger.cpp
+    src/Logger.h
+
+    src/models/MeshBuffer.cpp
+    src/models/MeshBuffer.h
+    src/models/BaseModel.cpp
+    src/models/BaseModel.h
+    src/models/ModelEntity.cpp
+    src/models/ModelEntity.h
+
+    src/input/AxisBinding.cpp
+    src/input/AxisBinding.h
+    src/input/InputAction.cpp
+    src/input/InputAction.h
+    src/input/InputController.cpp
+    src/input/InputController.h
+    src/input/InputTypes.h
+
+    src/managers/InputManager.cpp
+    src/managers/InputManager.h
+    src/managers/ImGuiManager.cpp
+    src/managers/ImGuiManager.h
+    src/managers/PhysicsManager.cpp
+    src/managers/PhysicsManager.h
+    src/managers/CameraManager.cpp
+    src/managers/CameraManager.h
+    src/managers/InputActionsManager.cpp
+    src/managers/InputActionsManager.h
+    src/managers/RenderManager.cpp
+    src/managers/RenderManager.h
+    src/managers/ScriptManager.cpp
+    src/managers/ScriptManager.h
+    src/managers/TimeManager.cpp
+    src/managers/TimeManager.h
+    src/managers/WorldManager.cpp
+    src/managers/WorldManager.h
+
+    src/world/World.cpp
+    src/world/World.h
+    src/world/WorldComponents.h
+    src/world/WorldObject.cpp
+    src/world/WorldObject.h
+)
 
 include(FetchContent)
 
-# GLAD 2
-FetchContent_Declare(
-    glad
-    GIT_REPOSITORY https://github.com/Dav1dde/glad.git
-    GIT_TAG        v2.0.8
-    GIT_PROGRESS   TRUE
-    SOURCE_SUBDIR  cmake
-)
-FetchContent_MakeAvailable(glad)
-glad_add_library(glad_gl_core_46 STATIC REPRODUCIBLE LOADER API gl:core=4.6)
-set_target_properties(glad_gl_core_46 PROPERTIES
-    WINDOWS_EXPORT_ALL_SYMBOLS OFF
-    POSITION_INDEPENDENT_CODE   OFF
-)
-
-# GLM
 FetchContent_Declare(
     glm
     GIT_REPOSITORY https://github.com/g-truc/glm.git
-    GIT_TAG        1.0.3
+    GIT_TAG master
 )
 FetchContent_MakeAvailable(glm)
 
-# EnTT
+target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/src/ui ${glm_SOURCE_DIR})
+
+target_link_libraries(${PROJECT_NAME} PRIVATE user32 gdi32 opengl32)
+
+# Подключаем библиотеки assimp и nlohmann/json
+
+FetchContent_Declare(
+    assimp
+    GIT_REPOSITORY https://github.com/assimp/assimp.git
+    GIT_TAG master
+)
+FetchContent_MakeAvailable(assimp)
+# --- OpenMesh ------ OpenMesh ------ OpenMesh ------ OpenMesh ------ OpenMesh ------ OpenMesh ------ OpenMesh ------ OpenMesh ------ OpenMesh 
+FetchContent_Declare(
+    openmesh
+    GIT_REPOSITORY https://www.graphics.rwth-aachen.de:9000/OpenMesh/OpenMesh.git
+    GIT_TAG master
+)
+FetchContent_MakeAvailable(openmesh)
+# ррр============================================================================
 FetchContent_Declare(
     entt
     GIT_REPOSITORY https://github.com/skypjack/entt.git
@@ -55,131 +117,71 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(entt)
 
-# ImGui — master (docking теперь встроен)
-FetchContent_Declare(
-    imgui
-    GIT_REPOSITORY https://github.com/ocornut/imgui.git
-    GIT_TAG        master
-    GIT_PROGRESS   TRUE
-)
-FetchContent_MakeAvailable(imgui)
-
-add_library(imgui STATIC
-    ${imgui_SOURCE_DIR}/imgui.cpp
-    ${imgui_SOURCE_DIR}/imgui_draw.cpp
-    ${imgui_SOURCE_DIR}/imgui_tables.cpp
-    ${imgui_SOURCE_DIR}/imgui_widgets.cpp
-    ${imgui_SOURCE_DIR}/backends/imgui_impl_win32.cpp
-    ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
-)
-
-target_include_directories(imgui PUBLIC
-    ${imgui_SOURCE_DIR}
-    ${imgui_SOURCE_DIR}/backends
-)
-
-# Для Win32 бэкенда
-if(WIN32)
-    target_link_libraries(imgui PRIVATE imm32)
-endif()
-
-# stb_image
-FetchContent_Declare(
-    stb
-    GIT_REPOSITORY https://github.com/nothings/stb.git
-    GIT_TAG        master
-    GIT_PROGRESS   TRUE
-)
-FetchContent_MakeAvailable(stb)
-
-add_library(stb_interface INTERFACE)
-target_include_directories(stb_interface INTERFACE ${stb_SOURCE_DIR})
-
-# nlohmann/json
 FetchContent_Declare(
     nlohmann_json
     GIT_REPOSITORY https://github.com/nlohmann/json.git
-    GIT_TAG        v3.12.0
-    GIT_PROGRESS   TRUE
+    GIT_TAG develop
 )
 FetchContent_MakeAvailable(nlohmann_json)
 
-# assimp
 FetchContent_Declare(
-    assimp
-    GIT_REPOSITORY https://github.com/assimp/assimp.git
-    GIT_TAG        v6.0.4
-    GIT_PROGRESS   TRUE
+    duktape
+    URL https://duktape.org/duktape-2.7.0.tar.xz
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
 )
-
-# Build Assimp as static to avoid DLLs
-set(ASSIMP_BUILD_SHARED_LIBS OFF CACHE BOOL "Build Assimp as static" FORCE)
-
-set(ASSIMP_BUILD_TESTS              OFF CACHE BOOL "" FORCE)
-set(ASSIMP_INSTALL                  OFF CACHE BOOL "" FORCE)
-set(ASSIMP_NO_EXPORT                ON  CACHE BOOL "" FORCE)
-set(ASSIMP_BUILD_ASSIMP_TOOLS       OFF CACHE BOOL "" FORCE)
-
-FetchContent_MakeAvailable(assimp)
-
-# ────────────────────────────────────────────────────────────────
-# Основной проект
-# ────────────────────────────────────────────────────────────────
-
-file(GLOB_RECURSE SOURCES
-    "src/*.cpp"
-    "src/*.h"
-    "src/*.hpp"    # если используешь .hpp
-)
-
-add_executable(ogle WIN32
-    ${SOURCES}
-    ${APP_ICON_RESOURCE}
-)
-
-# Флаги компиляции
-if(MSVC)
-    target_compile_options(ogle PRIVATE /utf-8 /W4 /MP)
-    target_compile_definitions(ogle PRIVATE UNICODE _UNICODE)
-else()
-    target_compile_options(ogle PRIVATE -Wall -Wextra -Wpedantic)
+FetchContent_GetProperties(duktape)
+if(NOT duktape_POPULATED)
+    FetchContent_Populate(duktape)
+    add_library(duktape STATIC ${duktape_SOURCE_DIR}/src/duktape.c)
+    target_include_directories(duktape PUBLIC ${duktape_SOURCE_DIR}/src)
 endif()
 
-# Линковка
-target_link_libraries(ogle PRIVATE
-    glad_gl_core_46
-    stb_interface
-    glm::glm
+FetchContent_Declare(
     imgui
-    EnTT::EnTT               # ← автоматом подтянет include
-    nlohmann_json::nlohmann_json
-    assimp::assimp
-    opengl32
-    user32
-    gdi32
-    imm32
+    GIT_REPOSITORY https://github.com/ocornut/imgui.git
+    GIT_TAG v1.92.5
+    GIT_PROGRESS TRUE
 )
+FetchContent_GetProperties(imgui)
+if(NOT imgui_POPULATED)
+    FetchContent_Populate(imgui)
+    add_library(imgui STATIC
+        ${imgui_SOURCE_DIR}/imgui.cpp
+        ${imgui_SOURCE_DIR}/imgui_demo.cpp
+        ${imgui_SOURCE_DIR}/imgui_draw.cpp
+        ${imgui_SOURCE_DIR}/imgui_tables.cpp
+        ${imgui_SOURCE_DIR}/imgui_widgets.cpp
+        ${imgui_SOURCE_DIR}/backends/imgui_impl_win32.cpp
+        ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
+    )
+    target_include_directories(imgui PUBLIC
+        ${imgui_SOURCE_DIR}
+        ${imgui_SOURCE_DIR}/backends
+    )
+    target_link_libraries(imgui PUBLIC opengl32 user32 gdi32)
+endif()
 
-# Include-директории (assimp уже включён в target)
-target_include_directories(ogle PRIVATE
-    src
-    ${stb_SOURCE_DIR}
-    # ${entt_SOURCE_DIR}/single_include   ← не нужен, если EnTT::EnTT
-    ${imgui_SOURCE_DIR}
-    ${imgui_SOURCE_DIR}/backends
+set(BUILD_BULLET2_DEMOS OFF CACHE BOOL "" FORCE)
+set(BUILD_CPU_DEMOS OFF CACHE BOOL "" FORCE)
+set(BUILD_OPENGL3_DEMOS OFF CACHE BOOL "" FORCE)
+set(BUILD_EXTRAS OFF CACHE BOOL "" FORCE)
+set(BUILD_UNIT_TESTS OFF CACHE BOOL "" FORCE)
+set(BUILD_BULLET3 OFF CACHE BOOL "" FORCE)
+set(BUILD_PYBULLET OFF CACHE BOOL "" FORCE)
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+set(INSTALL_LIBS OFF CACHE BOOL "" FORCE)
+FetchContent_Declare(
+    bullet
+    GIT_REPOSITORY https://github.com/bulletphysics/bullet3.git
+    GIT_TAG 3.25
+    GIT_PROGRESS TRUE
 )
+FetchContent_MakeAvailable(bullet)
 
-set_target_properties(ogle PROPERTIES
-    WIN32_EXECUTABLE            TRUE
-    VS_GLOBAL_CharacterSet      "Unicode"
-    DEBUG_POSTFIX               d
-    RUNTIME_OUTPUT_DIRECTORY    ${CMAKE_SOURCE_DIR}
-    RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_SOURCE_DIR}
-    RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_SOURCE_DIR}
-)
+target_include_directories(${PROJECT_NAME} PRIVATE ${assimp_SOURCE_DIR}/include ${openmesh_SOURCE_DIR}/src ${entt_SOURCE_DIR}/src ${bullet_SOURCE_DIR}/src)
+target_link_libraries(${PROJECT_NAME} PRIVATE assimp::assimp nlohmann_json::nlohmann_json OpenMeshCore OpenMeshTools duktape imgui BulletDynamics BulletCollision LinearMath)
 
-set_source_files_properties(${APP_ICON_RESOURCE} PROPERTIES LANGUAGE RC)
-
-# Убрано ручное копирование exe — теперь бинари собираются прямо в корень проекта
-# Полезно для отладки
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE INTERNAL "")
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/scripts
+        $<TARGET_FILE_DIR:${PROJECT_NAME}>/scripts)

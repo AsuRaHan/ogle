@@ -1,131 +1,161 @@
-// src/managers/InputManager.cpp
-#include "InputManager.h"
-#include "log/Logger.h"
-#include "managers/CameraManager.h"
-#include "render/Camera.h"
-#include <windows.h>
+#include "managers/InputManager.h"
 
-namespace ogle {
+#include "input/InputController.h"
+#include "input/InputTypes.h"
+#include "ui/IWindow.h"
 
-InputManager& InputManager::Get() {
-    static InputManager instance;
-    return instance;
+#include <algorithm>
+#include <glm/vec2.hpp>
+#include <windowsx.h>
+
+InputManager::InputManager() = default;
+
+void InputManager::AttachToWindow(IWindow& window)
+{
+    window.AddMessageObserver([this](UINT msg, WPARAM wParam, LPARAM lParam) {
+        HandleWindowMessage(msg, wParam, lParam);
+    });
 }
 
-void InputManager::ProcessKey(int keyCode) {
-    if (keyCode == VK_ESCAPE) {
-        PostQuitMessage(0);
-        Logger::Info("Escape pressed - quitting application");
+void InputManager::Update(float deltaTime)
+{
+    auto& input = ogle::InputController::Get();
+    input.ResetFrameState();
+
+    bool keyPressed[256] = { false };
+    bool keyReleased[256] = { false };
+    for (size_t i = 0; i < m_keyStates.size(); ++i) {
+        keyPressed[i] = m_keyStates[i] && !m_previousKeyStates[i];
+        keyReleased[i] = !m_keyStates[i] && m_previousKeyStates[i];
+        m_previousKeyStates[i] = m_keyStates[i];
     }
+
+    bool mousePressed[5] = { false };
+    bool mouseReleased[5] = { false };
+    for (size_t i = 0; i < m_mouseButtonStates.size(); ++i) {
+        mousePressed[i] = m_mouseButtonStates[i] && !m_previousMouseButtonStates[i];
+        mouseReleased[i] = !m_mouseButtonStates[i] && m_previousMouseButtonStates[i];
+        m_previousMouseButtonStates[i] = m_mouseButtonStates[i];
+    }
+
+    const glm::vec2 mousePosition(
+        static_cast<float>(m_mousePosition.x),
+        static_cast<float>(m_mousePosition.y));
+    const glm::vec2 mouseDelta(
+        static_cast<float>(m_mousePosition.x - m_previousMousePosition.x),
+        static_cast<float>(m_mousePosition.y - m_previousMousePosition.y));
+    m_previousMousePosition = m_mousePosition;
+
+    input.UpdateKeyboardState(m_keyStates.data(), keyPressed, keyReleased);
+    input.UpdateMouseState(
+        mousePosition,
+        mouseDelta,
+        m_mouseWheelDelta,
+        m_mouseButtonStates.data(),
+        mousePressed,
+        mouseReleased);
+
+    ogle::Modifiers modifiers;
+    modifiers.ctrl = m_keyStates[VK_CONTROL] || m_keyStates[VK_LCONTROL] || m_keyStates[VK_RCONTROL];
+    modifiers.shift = m_keyStates[VK_SHIFT] || m_keyStates[VK_LSHIFT] || m_keyStates[VK_RSHIFT];
+    modifiers.alt = m_keyStates[VK_MENU] || m_keyStates[VK_LMENU] || m_keyStates[VK_RMENU];
+    modifiers.win = m_keyStates[VK_LWIN] || m_keyStates[VK_RWIN];
+    input.UpdateModifiers(modifiers);
+    input.UpdateActions(deltaTime);
+
+    m_mouseWheelDelta = 0.0f;
 }
 
-void InputManager::Initialize() {
-    Logger::Info("InputManager initialized");
+void InputManager::ResetAllStates()
+{
+    m_keyStates.fill(false);
+    m_previousKeyStates.fill(false);
+    m_mouseButtonStates.fill(false);
+    m_previousMouseButtonStates.fill(false);
+    m_mouseWheelDelta = 0.0f;
+    m_previousMousePosition = m_mousePosition;
 }
 
-void InputManager::Update(float deltaTime,
-                         const std::array<bool, 256>& keyStates,
-                         const glm::vec2& mouseDelta,
-                         float mouseWheelDelta,
-                         bool rightMouseDown) {
-    
-    // Получаем камеру через менеджер
-    auto& cameraMgr = CameraManager::Get();
-    Camera* camera = cameraMgr.GetMainCamera();
-    
-    if (!camera) {
-        return;  // Камеры нет - выходим
-    }
-    
-    // Настраиваем скорость
-    float moveSpeed = 5.0f;
-    float mouseSensitivity = 0.1f;
-    
-    // === Управление WSAD (всегда работает) ===
-    if (keyStates['W']) {
-        camera->MoveForward(moveSpeed * deltaTime);
-    }
-    if (keyStates['S']) {
-        camera->MoveForward(-moveSpeed * deltaTime);
-    }
-    if (keyStates['A']) {
-        camera->MoveRight(-moveSpeed * deltaTime);
-    }
-    if (keyStates['D']) {
-        camera->MoveRight(moveSpeed * deltaTime);
-    }
-    
-    // Q/E - движение вверх/вниз
-    if (keyStates['Q']) {
-        camera->MoveUp(moveSpeed * deltaTime);
-    }
-    if (keyStates['E']) {
-        camera->MoveUp(-moveSpeed * deltaTime);
-    }
-    
-    // Space/Ctrl - движение вверх/вниз (альтернатива Q/E)
-    if (keyStates[VK_SPACE]) {
-        camera->MoveUp(moveSpeed * deltaTime);
-    }
-    if (keyStates[VK_CONTROL]) {
-        camera->MoveUp(-moveSpeed * deltaTime);
-    }
-    
-    // R - сброс камеры в начальную позицию
-    static bool rWasPressed = false;
-    if (keyStates['R'] && !rWasPressed) {
-        camera->SetPosition({ 2.0f, 2.0f, 3.0f });
-        camera->LookAt({ 0.0f, 0.0f, 0.0f });
-        Logger::Info("Camera reset");
-        rWasPressed = true;
-    } else if (!keyStates['R']) {
-        rWasPressed = false;
-    }
-    
-    // === Управление мышкой (только при зажатой правой кнопке) ===
-    if (rightMouseDown) {
-        if (mouseDelta.x != 0.0f || mouseDelta.y != 0.0f) {
-            // Вращаем камеру
-            camera->ProcessMouseMovement(
-                mouseDelta.x * mouseSensitivity,
-                -mouseDelta.y * mouseSensitivity  // Инвертируем Y
-            );
+void InputManager::HandleWindowMessage(UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    switch (msg)
+    {
+    case WM_KILLFOCUS:
+    case WM_CAPTURECHANGED:
+        ResetAllStates();
+        break;
+
+    case WM_ACTIVATEAPP:
+        if (wParam == FALSE) {
+            ResetAllStates();
         }
-    }
-    
-    // Прокрутка колесика мыши - зум/изменение FOV
-    if (mouseWheelDelta != 0.0f) {
-        camera->ProcessMouseScroll(mouseWheelDelta);
-    }
-    
-    // F1 - переключение режима камеры (дополнительная фича)
-    static bool f1WasPressed = false;
-    if (keyStates[VK_F1] && !f1WasPressed) {
-        Camera::Mode currentMode = camera->GetMode();
-        Camera::Mode newMode;
-        
-        switch (currentMode) {
-            case Camera::Mode::Free:
-                newMode = Camera::Mode::FirstPerson;
-                Logger::Info("Camera mode: FirstPerson");
-                break;
-            case Camera::Mode::FirstPerson:
-                newMode = Camera::Mode::Orbit;
-                Logger::Info("Camera mode: Orbit");
-                break;
-            case Camera::Mode::Orbit:
-                newMode = Camera::Mode::Free;
-                Logger::Info("Camera mode: Free");
-                break;
-            default:
-                newMode = Camera::Mode::Free;
+        break;
+
+    case WM_KEYDOWN:
+    case WM_SYSKEYDOWN:
+        if (wParam < m_keyStates.size())
+            m_keyStates[static_cast<size_t>(wParam)] = true;
+        break;
+
+    case WM_KEYUP:
+    case WM_SYSKEYUP:
+        if (wParam < m_keyStates.size())
+            m_keyStates[static_cast<size_t>(wParam)] = false;
+        break;
+
+    case WM_MOUSEMOVE:
+        m_mousePosition.x = GET_X_LPARAM(lParam);
+        m_mousePosition.y = GET_Y_LPARAM(lParam);
+        break;
+
+    case WM_MOUSEWHEEL:
+        m_mouseWheelDelta += static_cast<float>(GET_WHEEL_DELTA_WPARAM(wParam)) / static_cast<float>(WHEEL_DELTA);
+        break;
+
+    case WM_LBUTTONDOWN:
+    case WM_LBUTTONUP:
+    case WM_RBUTTONDOWN:
+    case WM_RBUTTONUP:
+    case WM_MBUTTONDOWN:
+    case WM_MBUTTONUP:
+    case WM_XBUTTONDOWN:
+    case WM_XBUTTONUP: {
+        const int button = TranslateMouseButton(msg, wParam);
+        if (button >= 0) {
+            const bool isDown =
+                msg == WM_LBUTTONDOWN || msg == WM_RBUTTONDOWN ||
+                msg == WM_MBUTTONDOWN || msg == WM_XBUTTONDOWN;
+            m_mouseButtonStates[static_cast<size_t>(button)] = isDown;
         }
-        
-        camera->SetMode(newMode);
-        f1WasPressed = true;
-    } else if (!keyStates[VK_F1]) {
-        f1WasPressed = false;
+        break;
+    }
+
+    default:
+        break;
     }
 }
 
-} // namespace ogle
+int InputManager::TranslateMouseButton(UINT msg, WPARAM wParam)
+{
+    switch (msg)
+    {
+    case WM_LBUTTONDOWN:
+    case WM_LBUTTONUP:
+        return 0;
+
+    case WM_RBUTTONDOWN:
+    case WM_RBUTTONUP:
+        return 1;
+
+    case WM_MBUTTONDOWN:
+    case WM_MBUTTONUP:
+        return 2;
+
+    case WM_XBUTTONDOWN:
+    case WM_XBUTTONUP:
+        return GET_XBUTTON_WPARAM(wParam) == XBUTTON1 ? 3 : 4;
+
+    default:
+        return -1;
+    }
+}

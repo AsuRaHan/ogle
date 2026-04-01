@@ -1,28 +1,66 @@
-#include <iostream>
-#include "log/Logger.h"
-#include "core/Engine.h"
+#include "App.h"
+#include "ui/Win32Window.h"
+#include "Logger.h"
+#include <memory>
+#include <windows.h>
 
-int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int nCmdShow)
+class MainAppWindow : public Win32Window
 {
-    // #ifdef _DEBUG
-    SetConsoleOutputCP(CP_UTF8);
-    setlocale(LC_ALL, "Russian");
-    AllocConsole();
-    FILE* fDummy;
-    freopen_s(&fDummy, "CONOUT$", "w", stdout);
-    freopen_s(&fDummy, "CONOUT$", "w", stderr);
-    freopen_s(&fDummy, "CONIN$", "r", stdin);
-    ogle::Logger::Info("Debug console activate");
-    // #endif
-
-    ogle::Engine engine(hInstance);
-
-    if (!engine.Initialize())
+protected:
+    LRESULT HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) override
     {
-        ogle::Logger::Error("Engine initialization failed!");
-        MessageBox(nullptr, L"Engine initialization failed!", L"Error", MB_ICONERROR);
-        return 1;
+        switch (msg)
+        {
+            case WM_DESTROY:
+                PostQuitMessage(0);
+                return 0;
+
+            default:
+                return Win32Window::HandleMessage(msg, wParam, lParam);
+        }
     }
-    //FreeConsole();
-    return engine.Run();
+};
+
+int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow)
+{
+    HMODULE user32Module = GetModuleHandleW(L"user32.dll");
+    if (user32Module != nullptr)
+    {
+        using SetProcessDpiAwarenessContextFn = BOOL(WINAPI*)(HANDLE);
+        auto setProcessDpiAwarenessContext =
+            reinterpret_cast<SetProcessDpiAwarenessContextFn>(
+                GetProcAddress(user32Module, "SetProcessDpiAwarenessContext"));
+
+        if (setProcessDpiAwarenessContext != nullptr)
+        {
+            setProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+        }
+        else
+        {
+            SetProcessDPIAware();
+        }
+    }
+
+    if (!Logger::Instance().Init(L"log.txt"))
+    {
+        return -1;
+    }
+    Logger::Instance().SetLevel(Logger::Level::Debug);
+
+    LOG_INFO("Application start");
+
+    auto mainWindow = std::make_unique<MainAppWindow>();
+    mainWindow->SetTitle(L"Main window");
+    mainWindow->SetSize(900, 600);
+    mainWindow->SetStyle(WS_OVERLAPPEDWINDOW);
+    mainWindow->SetExStyle(0);
+
+    App app(std::move(mainWindow));
+    int appResult = app.Run(hInstance, nCmdShow);
+
+    LOG_INFO("Application exit: " + std::to_string(appResult));
+
+    Logger::Instance().Shutdown();
+    return appResult;
 }
+
