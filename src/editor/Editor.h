@@ -55,6 +55,10 @@ private:
 
     bool m_initialized = false;
     bool m_enabled = true;
+    bool m_showWorldWindow = true;
+    bool m_showHierarchyWindow = true;
+    bool m_showInspectorWindow = true;
+    bool m_showContentBrowserWindow = true;
     OGLE::Entity m_selectedEntity = entt::null;
     OGLE::Entity m_bufferedEntity = entt::null;
     OGLE::Entity m_textureEditingEntity = entt::null;

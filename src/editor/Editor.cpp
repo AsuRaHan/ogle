@@ -109,17 +109,48 @@ void Editor::BuildUi(
 
     SyncSelectedBuffers(worldManager);
 
-    const ImGuiViewport* viewport = ImGui::GetMainViewport();
-    const float sidebarWidth = 420.0f;
-    ImGui::SetNextWindowPos(viewport->WorkPos, ImGuiCond_Always);
-    ImGui::SetNextWindowSize(ImVec2(sidebarWidth, viewport->WorkSize.y), ImGuiCond_Always);
+    if (ImGui::BeginMainMenuBar()) {
+        if (ImGui::BeginMenu("File")) {
+            if (ImGui::MenuItem("Load World")) {
+                configManager.GetConfig().world.path = m_worldPathBuffer.data();
+                configManager.Save();
+                worldManager.LoadActiveWorld(m_worldPathBuffer.data());
+                m_selectedEntity = entt::null;
+                m_bufferedEntity = entt::null;
+                m_textureEditingEntity = entt::null;
+            }
+            if (ImGui::MenuItem("Save World")) {
+                configManager.GetConfig().world.path = m_worldPathBuffer.data();
+                configManager.Save();
+                worldManager.SaveActiveWorld(m_worldPathBuffer.data());
+            }
+            if (ImGui::MenuItem("Reload Default")) {
+                worldManager.CreateDefaultWorld();
+                m_selectedEntity = entt::null;
+                m_bufferedEntity = entt::null;
+                m_textureEditingEntity = entt::null;
+            }
+            if (ImGui::MenuItem("Clear World")) {
+                worldManager.ClearWorld();
+                m_selectedEntity = entt::null;
+                m_bufferedEntity = entt::null;
+                m_textureEditingEntity = entt::null;
+            }
+            ImGui::EndMenu();
+        }
 
-    ImGuiWindowFlags windowFlags =
-        ImGuiWindowFlags_NoCollapse |
-        ImGuiWindowFlags_NoMove |
-        ImGuiWindowFlags_NoResize;
+        if (ImGui::BeginMenu("Window")) {
+            ImGui::MenuItem("World", nullptr, &m_showWorldWindow);
+            ImGui::MenuItem("Hierarchy", nullptr, &m_showHierarchyWindow);
+            ImGui::MenuItem("Inspector", nullptr, &m_showInspectorWindow);
+            ImGui::MenuItem("Content Browser", nullptr, &m_showContentBrowserWindow);
+            ImGui::EndMenu();
+        }
+        ImGui::EndMainMenuBar();
+    }
 
-    if (ImGui::Begin("Editor", nullptr, windowFlags)) {
+    if (m_showWorldWindow) {
+        if (ImGui::Begin("World", &m_showWorldWindow)) {
         std::size_t entityCount = 0;
         const auto entityView = worldManager.GetActiveWorld().GetRegistry().view<OGLE::NameComponent>();
         for (auto entity : entityView) {
@@ -172,14 +203,30 @@ void Editor::BuildUi(
 
         ImGui::Separator();
         DrawCreationTools(worldManager);
-        ImGui::Separator();
-        DrawContentBrowser(configManager);
-        ImGui::Separator();
-        DrawWorldTree(worldManager);
-        ImGui::Separator();
-        DrawSelectionInspector(worldManager, physicsManager);
+        }
+        ImGui::End();
     }
-    ImGui::End();
+
+    if (m_showHierarchyWindow) {
+        if (ImGui::Begin("Hierarchy", &m_showHierarchyWindow)) {
+            DrawWorldTree(worldManager);
+        }
+        ImGui::End();
+    }
+
+    if (m_showInspectorWindow) {
+        if (ImGui::Begin("Inspector", &m_showInspectorWindow)) {
+            DrawSelectionInspector(worldManager, physicsManager);
+        }
+        ImGui::End();
+    }
+
+    if (m_showContentBrowserWindow) {
+        if (ImGui::Begin("Content Browser", &m_showContentBrowserWindow)) {
+            DrawContentBrowser(configManager);
+        }
+        ImGui::End();
+    }
 }
 
 void Editor::SyncSelectedBuffers(WorldManager& worldManager)
@@ -219,10 +266,6 @@ const char* Editor::GetKindLabel(OGLE::WorldObjectKind kind)
 
 void Editor::DrawWorldTree(WorldManager& worldManager)
 {
-    if (!ImGui::CollapsingHeader("World Tree", ImGuiTreeNodeFlags_DefaultOpen)) {
-        return;
-    }
-
     struct KindGroup {
         OGLE::WorldObjectKind kind;
         const char* label;
@@ -282,10 +325,6 @@ void Editor::DrawWorldTree(WorldManager& worldManager)
 
 void Editor::DrawSelectionInspector(WorldManager& worldManager, PhysicsManager& physicsManager)
 {
-    if (!ImGui::CollapsingHeader("Selection", ImGuiTreeNodeFlags_DefaultOpen)) {
-        return;
-    }
-
     if (m_selectedEntity == entt::null || !worldManager.IsEntityValid(m_selectedEntity)) {
         ImGui::TextUnformatted("No object selected.");
         return;
@@ -404,9 +443,8 @@ void Editor::DrawSelectionInspector(WorldManager& worldManager, PhysicsManager& 
 
 void Editor::DrawCreationTools(WorldManager& worldManager)
 {
-    if (!ImGui::CollapsingHeader("Create", ImGuiTreeNodeFlags_DefaultOpen)) {
-        return;
-    }
+    ImGui::TextUnformatted("Create");
+    ImGui::Separator();
 
     const char* createKinds[] = { "Empty Object", "Cube", "Model From File" };
     ImGui::Combo("Create Type", &m_createKind, createKinds, IM_ARRAYSIZE(createKinds));
@@ -449,23 +487,14 @@ void Editor::DrawCreationTools(WorldManager& worldManager)
 
 void Editor::DrawContentBrowser(ConfigManager& configManager)
 {
-    if (!ImGui::CollapsingHeader("Content Browser", ImGuiTreeNodeFlags_DefaultOpen)) {
-        return;
-    }
-
     ImGui::InputText("Assets Root", m_assetsPathBuffer.data(), m_assetsPathBuffer.size());
-
-    if (ImGui::Button("Apply Assets Root")) {
-        configManager.GetConfig().assets.path = m_assetsPathBuffer.data();
-        configManager.Save();
-    }
-
-    const std::filesystem::path rootPath = std::filesystem::path(m_assetsPathBuffer.data());
 
     if (ImGui::Button("Save Assets Root")) {
         configManager.GetConfig().assets.path = m_assetsPathBuffer.data();
         configManager.Save();
     }
+
+    const std::filesystem::path rootPath = std::filesystem::path(m_assetsPathBuffer.data());
 
     if (m_contentSelectionBuffer[0] != '\0') {
         ImGui::TextWrapped("Selected asset: %s", m_contentSelectionBuffer.data());

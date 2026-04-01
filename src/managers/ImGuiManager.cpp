@@ -6,6 +6,7 @@
 #include "ui/IWindow.h"
 
 #include <imgui.h>
+#include <imgui_internal.h>
 #include <backends/imgui_impl_opengl3.h>
 #include <backends/imgui_impl_win32.h>
 #include <windows.h>
@@ -26,6 +27,9 @@ bool ImGuiManager::Initialize(IWindow& window)
 
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+#ifdef IMGUI_HAS_DOCK
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+#endif
 
     ImGui::StyleColorsDark();
 
@@ -80,6 +84,45 @@ void ImGuiManager::BuildDefaultUi(const CameraManager& cameraManager, const Worl
     if (!m_initialized) {
         return;
     }
+
+#ifdef IMGUI_HAS_DOCK
+    const ImGuiViewport* viewport = ImGui::GetMainViewport();
+    ImGui::SetNextWindowPos(viewport->Pos);
+    ImGui::SetNextWindowSize(viewport->Size);
+    ImGui::SetNextWindowViewport(viewport->ID);
+
+    ImGuiWindowFlags dockspaceWindowFlags =
+        ImGuiWindowFlags_NoTitleBar |
+        ImGuiWindowFlags_NoCollapse |
+        ImGuiWindowFlags_NoResize |
+        ImGuiWindowFlags_NoMove |
+        ImGuiWindowFlags_NoBringToFrontOnFocus |
+        ImGuiWindowFlags_NoNavFocus |
+        ImGuiWindowFlags_MenuBar |
+        ImGuiWindowFlags_NoBackground;
+
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+
+    if (ImGui::Begin("MainDockSpace", nullptr, dockspaceWindowFlags)) {
+        ImGui::PopStyleVar(3);
+
+        if (ImGui::BeginMenuBar()) {
+            if (ImGui::BeginMenu("Workspace")) {
+                ImGui::MenuItem("Docking Enabled", nullptr, true, false);
+                ImGui::EndMenu();
+            }
+            ImGui::EndMenuBar();
+        }
+
+        ImGuiID dockspaceId = ImGui::GetID("OGLEMainDockSpace");
+        ImGui::DockSpace(dockspaceId, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_PassthruCentralNode);
+    } else {
+        ImGui::PopStyleVar(3);
+    }
+    ImGui::End();
+#endif
 
     if (m_showOverlay) {
         const auto& camera = cameraManager.GetCamera();
