@@ -12,8 +12,10 @@
 #include <glm/vector_relational.hpp>
 #include <imgui.h>
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <cstring>
+#include <filesystem>
 #include <limits>
 #include <string>
 #include <utility>
@@ -26,12 +28,15 @@ bool Editor::Initialize()
     }
 
     m_worldPathBuffer.fill('\0');
+    m_assetsPathBuffer.fill('\0');
     m_selectedNameBuffer.fill('\0');
     m_createNameBuffer.fill('\0');
     m_createModelPathBuffer.fill('\0');
     m_createTexturePathBuffer.fill('\0');
+    m_contentSelectionBuffer.fill('\0');
     std::strncpy(m_createNameBuffer.data(), "NewObject", m_createNameBuffer.size() - 1);
     std::strncpy(m_worldPathBuffer.data(), "data/worlds/default_world.json", m_worldPathBuffer.size() - 1);
+    std::strncpy(m_assetsPathBuffer.data(), "assets", m_assetsPathBuffer.size() - 1);
 
     m_initialized = true;
     LOG_INFO("Editor initialized");
@@ -94,6 +99,12 @@ void Editor::BuildUi(
             m_worldPathBuffer.data(),
             configManager.GetConfig().world.path.c_str(),
             m_worldPathBuffer.size() - 1);
+    }
+    if (m_assetsPathBuffer[0] == '\0') {
+        std::strncpy(
+            m_assetsPathBuffer.data(),
+            configManager.GetConfig().assets.path.c_str(),
+            m_assetsPathBuffer.size() - 1);
     }
 
     SyncSelectedBuffers(worldManager);
@@ -161,6 +172,8 @@ void Editor::BuildUi(
 
         ImGui::Separator();
         DrawCreationTools(worldManager);
+        ImGui::Separator();
+        DrawContentBrowser(configManager);
         ImGui::Separator();
         DrawWorldTree(worldManager);
         ImGui::Separator();
@@ -431,6 +444,109 @@ void Editor::DrawCreationTools(WorldManager& worldManager)
 
         m_bufferedEntity = entt::null;
         m_textureEditingEntity = entt::null;
+    }
+}
+
+void Editor::DrawContentBrowser(ConfigManager& configManager)
+{
+    if (!ImGui::CollapsingHeader("Content Browser", ImGuiTreeNodeFlags_DefaultOpen)) {
+        return;
+    }
+
+    ImGui::InputText("Assets Root", m_assetsPathBuffer.data(), m_assetsPathBuffer.size());
+
+    if (ImGui::Button("Apply Assets Root")) {
+        configManager.GetConfig().assets.path = m_assetsPathBuffer.data();
+        configManager.Save();
+    }
+
+    const std::filesystem::path rootPath = std::filesystem::path(m_assetsPathBuffer.data());
+
+    if (ImGui::Button("Save Assets Root")) {
+        configManager.GetConfig().assets.path = m_assetsPathBuffer.data();
+        configManager.Save();
+    }
+
+    if (m_contentSelectionBuffer[0] != '\0') {
+        ImGui::TextWrapped("Selected asset: %s", m_contentSelectionBuffer.data());
+    }
+
+    if (!std::filesystem::exists(rootPath)) {
+        ImGui::TextDisabled("Folder not found: %s", rootPath.string().c_str());
+        return;
+    }
+
+    ImGui::BeginChild("ContentBrowserTree", ImVec2(0.0f, 220.0f), true);
+    DrawContentBrowserDirectory(rootPath, rootPath);
+    ImGui::EndChild();
+}
+
+void Editor::DrawContentBrowserDirectory(const std::filesystem::path& directoryPath, const std::filesystem::path& rootPath)
+{
+    std::vector<std::filesystem::directory_entry> entries;
+    for (const auto& entry : std::filesystem::directory_iterator(directoryPath)) {
+        entries.push_back(entry);
+    }
+
+    std::sort(entries.begin(), entries.end(), [](const auto& a, const auto& b) {
+        if (a.is_directory() != b.is_directory()) {
+            return a.is_directory() > b.is_directory();
+        }
+        return a.path().filename().string() < b.path().filename().string();
+    });
+
+    for (const auto& entry : entries) {
+        const std::filesystem::path entryPath = entry.path();
+        const std::string label = entryPath.filename().string();
+
+        if (entry.is_directory()) {
+            const bool opened = ImGui::TreeNode(label.c_str());
+            if (opened) {
+                DrawContentBrowserDirectory(entryPath, rootPath);
+                ImGui::TreePop();
+            }
+        } else {
+            const std::string relativePath = std::filesystem::relative(entryPath, rootPath).generic_string();
+            const bool selected = std::strcmp(m_contentSelectionBuffer.data(), relativePath.c_str()) == 0;
+            if (ImGui::Selectable((label + "##" + relativePath).c_str(), selected)) {
+                HandleContentBrowserFileSelected(entryPath, rootPath);
+            }
+        }
+    }
+}
+
+void Editor::HandleContentBrowserFileSelected(const std::filesystem::path& filePath, const std::filesystem::path& rootPath)
+{
+    std::filesystem::path pathForUse = filePath;
+    std::error_code errorCode;
+    const std::filesystem::path relativeToCwd = std::filesystem::relative(filePath, std::filesystem::current_path(), errorCode);
+    const std::string relativeToCwdString = relativeToCwd.generic_string();
+    if (!errorCode && !relativeToCwd.empty() && relativeToCwdString.rfind("../", 0) != 0 && relativeToCwdString != "..") {
+        pathForUse = relativeToCwd;
+    }
+
+    const std::string relativePath = std::filesystem::relative(filePath, rootPath).generic_string();
+    const std::string usePathString = pathForUse.generic_string();
+
+    m_contentSelectionBuffer.fill('\0');
+    std::strncpy(m_contentSelectionBuffer.data(), usePathString.c_str(), m_contentSelectionBuffer.size() - 1);
+
+    const std::string extension = filePath.extension().string();
+    std::string loweredExtension = extension;
+    std::transform(loweredExtension.begin(), loweredExtension.end(), loweredExtension.begin(), [](unsigned char c) {
+        return static_cast<char>(std::tolower(c));
+    });
+
+    if (loweredExtension == ".png" || loweredExtension == ".jpg" || loweredExtension == ".jpeg" || loweredExtension == ".bmp" || loweredExtension == ".tga") {
+        m_createTexturePathBuffer.fill('\0');
+        m_texturePathBuffer.fill('\0');
+        std::strncpy(m_createTexturePathBuffer.data(), usePathString.c_str(), m_createTexturePathBuffer.size() - 1);
+        std::strncpy(m_texturePathBuffer.data(), usePathString.c_str(), m_texturePathBuffer.size() - 1);
+    }
+
+    if (loweredExtension == ".obj" || loweredExtension == ".fbx" || loweredExtension == ".glb" || loweredExtension == ".gltf" || loweredExtension == ".stl") {
+        m_createModelPathBuffer.fill('\0');
+        std::strncpy(m_createModelPathBuffer.data(), usePathString.c_str(), m_createModelPathBuffer.size() - 1);
     }
 }
 

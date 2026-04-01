@@ -6,6 +6,7 @@
 
 #include <glm/vec3.hpp>
 #include <array>
+#include <filesystem>
 
 namespace ogle {
     class Camera;
@@ -48,6 +49,9 @@ private:
     void DrawWorldTree(WorldManager& worldManager);
     void DrawSelectionInspector(WorldManager& worldManager, PhysicsManager& physicsManager);
     void DrawCreationTools(WorldManager& worldManager);
+    void DrawContentBrowser(ConfigManager& configManager);
+    void DrawContentBrowserDirectory(const std::filesystem::path& directoryPath, const std::filesystem::path& rootPath);
+    void HandleContentBrowserFileSelected(const std::filesystem::path& filePath, const std::filesystem::path& rootPath);
 
     bool m_initialized = false;
     bool m_enabled = true;
@@ -56,9 +60,11 @@ private:
     OGLE::Entity m_textureEditingEntity = entt::null;
     std::array<char, 512> m_texturePathBuffer{};
     std::array<char, 256> m_worldPathBuffer{};
+    std::array<char, 256> m_assetsPathBuffer{};
     std::array<char, 256> m_selectedNameBuffer{};
     std::array<char, 256> m_createNameBuffer{};
     std::array<char, 512> m_createModelPathBuffer{};
     std::array<char, 512> m_createTexturePathBuffer{};
+    std::array<char, 512> m_contentSelectionBuffer{};
     int m_createKind = 1;
 };

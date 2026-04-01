@@ -20,6 +20,10 @@ struct AppConfig
         bool saveDefaultWorldIfMissing = true;
     } world;
 
+    struct AssetsSettings {
+        std::string path = "assets";
+    } assets;
+
     struct ScriptSettings {
         bool runStartupScript = false;
         std::string startupScriptPath = "scripts/test_world.js";
