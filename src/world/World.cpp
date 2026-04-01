@@ -66,7 +66,13 @@ namespace OGLE {
 
     Entity World::CreateModelFromFile(const std::string& filePath, ModelType type, const std::string& name) {
         auto model = std::make_shared<ModelEntity>(type, filePath);
-        model->LoadFromFile(filePath);
+        if (!model->LoadFromFile(filePath)) {
+            return entt::null;
+        }
+        model->BakeToGPU();
+        if (!model->GetLoadedDiffuseTexturePath().empty()) {
+            model->SetDiffuseTexturePath(model->GetLoadedDiffuseTexturePath());
+        }
         return AddModel(std::move(model), name);
     }
 

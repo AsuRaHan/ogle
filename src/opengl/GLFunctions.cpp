@@ -52,6 +52,7 @@ PFNGLDEBUGMESSAGECONTROLPROC glDebugMessageControl = nullptr;
 PFNGLBINDIMAGETEXTUREPROC glBindImageTexture = nullptr;
 PFNGLACTIVETEXTUREPROC glActiveTexture = nullptr;
 PFNGLTEXBUFFERPROC glTexBuffer = nullptr;
+PFNGLGENERATEMIPMAPPROC glGenerateMipmap = nullptr;
 
 PFNGLGETINTEGERI_VPROC glGetIntegeri_v = nullptr;
 PFNGLGETBUFFERPARAMETERIVPROC glGetBufferParameteriv = nullptr;
@@ -170,7 +171,9 @@ void LoadOpenGLFunctions() {
     glActiveTexture = (PFNGLACTIVETEXTUREPROC)wglGetProcAddress("glActiveTexture");
     CHECK_LOAD_FUNCTION(glActiveTexture);    
     glTexBuffer = (PFNGLTEXBUFFERPROC)wglGetProcAddress("glTexBuffer");
-    CHECK_LOAD_FUNCTION(glTexBuffer)    
+    CHECK_LOAD_FUNCTION(glTexBuffer)
+    glGenerateMipmap = (PFNGLGENERATEMIPMAPPROC)wglGetProcAddress("glGenerateMipmap");
+    CHECK_LOAD_FUNCTION(glGenerateMipmap)
         
     glGetIntegeri_v = (PFNGLGETINTEGERI_VPROC)wglGetProcAddress("glGetIntegeri_v");
     CHECK_LOAD_FUNCTION(glGetIntegeri_v);    

@@ -50,6 +50,10 @@ add_executable(${PROJECT_NAME} WIN32
     src/models/BaseModel.h
     src/models/ModelEntity.cpp
     src/models/ModelEntity.h
+    src/render/Texture2D.cpp
+    src/render/Texture2D.h
+    src/render/Material.cpp
+    src/render/Material.h
 
     src/input/AxisBinding.cpp
     src/input/AxisBinding.h
@@ -96,7 +100,7 @@ FetchContent_MakeAvailable(glm)
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/src/ui ${glm_SOURCE_DIR})
 
-target_link_libraries(${PROJECT_NAME} PRIVATE user32 gdi32 opengl32)
+target_link_libraries(${PROJECT_NAME} PRIVATE user32 gdi32 opengl32 ole32 windowscodecs)
 
 # Подключаем библиотеки assimp и nlohmann/json
 
@@ -189,4 +193,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE assimp::assimp nlohmann_json::nloh
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_SOURCE_DIR}/scripts
-        $<TARGET_FILE_DIR:${PROJECT_NAME}>/scripts)
+        $<TARGET_FILE_DIR:${PROJECT_NAME}>/scripts
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/assets
+        $<TARGET_FILE_DIR:${PROJECT_NAME}>/assets)

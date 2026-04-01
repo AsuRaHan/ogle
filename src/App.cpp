@@ -190,7 +190,7 @@ int App::Run(HINSTANCE hInstance, int nCmdShow)
         m_inputManager.Update(deltaTime);
         m_imguiManager.BeginFrame();
         m_imguiManager.BuildDefaultUi(m_cameraManager, m_worldManager, deltaTime);
-        m_editor.BuildUi(m_cameraManager, m_worldManager, m_physicsManager);
+        m_editor.BuildUi(m_cameraManager, m_worldManager, m_physicsManager, m_configManager);
 
         if (!m_imguiManager.WantsKeyboardCapture() && !m_imguiManager.WantsMouseCapture()) {
             m_inputActionsManager.UpdateCameraControls(m_cameraManager, deltaTime);

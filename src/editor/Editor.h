@@ -2,7 +2,10 @@
 
 #include "world/WorldComponents.h"
 
+#include "config/ConfigManager.h"
+
 #include <glm/vec3.hpp>
+#include <array>
 
 namespace ogle {
     class Camera;
@@ -29,7 +32,8 @@ public:
     void BuildUi(
         const CameraManager& cameraManager,
         WorldManager& worldManager,
-        const PhysicsManager& physicsManager);
+        PhysicsManager& physicsManager,
+        ConfigManager& configManager);
 
 private:
     bool TrySelectObject(const ogle::Camera& camera, WorldManager& worldManager);
@@ -39,10 +43,22 @@ private:
         const glm::vec3& boxMin,
         const glm::vec3& boxMax,
         float& hitDistance);
+    void SyncSelectedBuffers(WorldManager& worldManager);
+    static const char* GetKindLabel(OGLE::WorldObjectKind kind);
+    void DrawWorldTree(WorldManager& worldManager);
+    void DrawSelectionInspector(WorldManager& worldManager, PhysicsManager& physicsManager);
+    void DrawCreationTools(WorldManager& worldManager);
 
     bool m_initialized = false;
     bool m_enabled = true;
-    bool m_showWelcomeWindow = true;
-    bool m_showInspectorWindow = true;
     OGLE::Entity m_selectedEntity = entt::null;
+    OGLE::Entity m_bufferedEntity = entt::null;
+    OGLE::Entity m_textureEditingEntity = entt::null;
+    std::array<char, 512> m_texturePathBuffer{};
+    std::array<char, 256> m_worldPathBuffer{};
+    std::array<char, 256> m_selectedNameBuffer{};
+    std::array<char, 256> m_createNameBuffer{};
+    std::array<char, 512> m_createModelPathBuffer{};
+    std::array<char, 512> m_createTexturePathBuffer{};
+    int m_createKind = 1;
 };

@@ -38,21 +38,39 @@ bool OpenGLRenderer::Initialize() {
     const char* vertexShaderSrc = R"(
         #version 330 core
         layout(location = 0) in vec3 aPosition;
-        layout(location = 1) in vec3 aColor;
+        layout(location = 1) in vec3 aNormal;
+        layout(location = 2) in vec2 aTexCoord;
         uniform mat4 uMVP;
-        out vec3 vColor;
+        uniform mat4 uModel;
+        out vec3 vWorldNormal;
+        out vec2 vTexCoord;
         void main() {
-            vColor = aColor;
+            vWorldNormal = mat3(transpose(inverse(uModel))) * aNormal;
+            vTexCoord = aTexCoord;
             gl_Position = uMVP * vec4(aPosition, 1.0);
         }
     )";
 
     const char* fragmentShaderSrc = R"(
         #version 330 core
-        in vec3 vColor;
+        in vec3 vWorldNormal;
+        in vec2 vTexCoord;
+        uniform sampler2D uDiffuseTexture;
+        uniform int uHasDiffuseTexture;
+        uniform vec3 uBaseColor;
+        uniform vec3 uLightDirection;
         out vec4 FragColor;
         void main() {
-            FragColor = vec4(vColor, 1.0);
+            vec3 albedo = uBaseColor;
+            if (uHasDiffuseTexture == 1) {
+                albedo *= texture(uDiffuseTexture, vTexCoord).rgb;
+            }
+
+            vec3 normal = normalize(vWorldNormal);
+            float diffuse = max(dot(normal, normalize(-uLightDirection)), 0.0);
+            float ambient = 0.25;
+            vec3 litColor = albedo * (ambient + diffuse * 0.75);
+            FragColor = vec4(litColor, 1.0);
         }
     )";
 
@@ -104,7 +122,13 @@ void OpenGLRenderer::Render() {
     if (!m_shaderManager.useProgram("default")) return;
     const GLuint program = m_shaderManager.getProgram("default");
     const GLint mvpLocation = glGetUniformLocation(program, "uMVP");
+    const GLint modelLocation = glGetUniformLocation(program, "uModel");
+    const GLint lightDirectionLocation = glGetUniformLocation(program, "uLightDirection");
     const glm::mat4 viewProjection = m_camera.GetProjectionMatrix() * m_camera.GetViewMatrix();
+
+    if (lightDirectionLocation >= 0) {
+        glUniform3f(lightDirectionLocation, -0.4f, -1.0f, -0.3f);
+    }
 
     // 5. Параметры сцены
     // float timeSec = std::chrono::duration<float>(std::chrono::steady_clock::now() - m_startTime).count();
@@ -126,6 +150,11 @@ void OpenGLRenderer::Render() {
             const glm::mat4 mvp = viewProjection * modelComponent.model->GetModelMatrix();
             glUniformMatrix4fv(mvpLocation, 1, GL_FALSE, glm::value_ptr(mvp));
         }
+        if (modelLocation >= 0) {
+            glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(modelComponent.model->GetModelMatrix()));
+        }
+
+        modelComponent.model->BindMaterial(program);
 
         modelComponent.model->Draw();
     }

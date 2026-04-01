@@ -28,6 +28,7 @@ private:
     static duk_ret_t JsSetPosition(duk_context* context);
     static duk_ret_t JsSetRotation(duk_context* context);
     static duk_ret_t JsSetScale(duk_context* context);
+    static duk_ret_t JsSetTexture(duk_context* context);
     static duk_ret_t JsEntityExists(duk_context* context);
 
     void RegisterBindings();

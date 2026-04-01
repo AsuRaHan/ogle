@@ -362,6 +362,27 @@
 #ifndef GL_CLAMP_TO_EDGE
 #define GL_CLAMP_TO_EDGE 0x812F
 #endif
+#ifndef GL_REPEAT
+#define GL_REPEAT 0x2901
+#endif
+#ifndef GL_TEXTURE_WRAP_S
+#define GL_TEXTURE_WRAP_S 0x2802
+#endif
+#ifndef GL_TEXTURE_WRAP_T
+#define GL_TEXTURE_WRAP_T 0x2803
+#endif
+#ifndef GL_TEXTURE_MIN_FILTER
+#define GL_TEXTURE_MIN_FILTER 0x2801
+#endif
+#ifndef GL_TEXTURE_MAG_FILTER
+#define GL_TEXTURE_MAG_FILTER 0x2800
+#endif
+#ifndef GL_LINEAR
+#define GL_LINEAR 0x2601
+#endif
+#ifndef GL_LINEAR_MIPMAP_LINEAR
+#define GL_LINEAR_MIPMAP_LINEAR 0x2703
+#endif
 #ifndef GL_MAX_IMAGE_UNITS
 #define GL_MAX_IMAGE_UNITS 0x8F38
 #endif
@@ -512,6 +533,7 @@ typedef void (APIENTRY* PFNGLDEBUGMESSAGECONTROLPROC)(GLenum source, GLenum type
 typedef void (APIENTRY* PFNGLBINDIMAGETEXTUREPROC)(GLuint unit, GLuint texture, GLint level, GLboolean layered, GLint layer, GLenum access, GLenum format);
 typedef void (APIENTRY* PFNGLACTIVETEXTUREPROC)(GLenum texture);
 typedef void (APIENTRY* PFNGLTEXBUFFERPROC)(GLenum target, GLenum internalformat, GLuint buffer);
+typedef void (APIENTRY* PFNGLGENERATEMIPMAPPROC)(GLenum target);
 typedef void (APIENTRY* PFNGLGETINTEGERI_VPROC)(GLenum target, GLuint index, GLint* data);
 typedef void (APIENTRY* PFNGLGETBUFFERPARAMETERIVPROC)(GLenum target, GLenum pname, GLint* params);
 typedef GLboolean(APIENTRY* PFNGLISBUFFERPROC)(GLuint buffer);
@@ -579,6 +601,7 @@ extern PFNGLDEBUGMESSAGECONTROLPROC glDebugMessageControl;
 extern PFNGLBINDIMAGETEXTUREPROC glBindImageTexture;
 extern PFNGLACTIVETEXTUREPROC glActiveTexture;
 extern PFNGLTEXBUFFERPROC glTexBuffer;
+extern PFNGLGENERATEMIPMAPPROC glGenerateMipmap;
 
 extern PFNGLGETINTEGERI_VPROC glGetIntegeri_v;
 extern PFNGLGETBUFFERPARAMETERIVPROC glGetBufferParameteriv;

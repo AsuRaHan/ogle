@@ -32,12 +32,14 @@ public:
     OGLE::Entity CreateCube(
         const std::string& name,
         const glm::vec3& position,
-        const glm::vec3& scale = glm::vec3(1.0f, 1.0f, 1.0f));
+        const glm::vec3& scale = glm::vec3(1.0f, 1.0f, 1.0f),
+        const std::string& diffuseTexturePath = "");
     void ClearWorld();
     bool IsEntityValid(OGLE::Entity entity) const;
     bool SetEntityPosition(OGLE::Entity entity, const glm::vec3& position);
     bool SetEntityRotation(OGLE::Entity entity, const glm::vec3& rotation);
     bool SetEntityScale(OGLE::Entity entity, const glm::vec3& scale);
+    bool SetEntityDiffuseTexture(OGLE::Entity entity, const std::string& texturePath);
 
     void Update();
     void SaveActiveWorld(const std::string& path);

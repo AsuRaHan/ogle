@@ -227,6 +227,22 @@ duk_ret_t ScriptManager::JsEntityExists(duk_context* context)
     return 1;
 }
 
+duk_ret_t ScriptManager::JsSetTexture(duk_context* context)
+{
+    ScriptManager* manager = GetInstance(context);
+    if (!manager || !manager->m_worldManager) {
+        duk_push_false(context);
+        return 1;
+    }
+
+    const auto entity = ToEntity(duk_require_uint(context, 0));
+    const char* texturePath = duk_safe_to_string(context, 1);
+    duk_push_boolean(context, manager->m_worldManager->SetEntityDiffuseTexture(
+        entity,
+        texturePath ? texturePath : ""));
+    return 1;
+}
+
 void ScriptManager::RegisterBindings()
 {
     duk_push_c_function(m_context, JsLog, 1);
@@ -246,6 +262,9 @@ void ScriptManager::RegisterBindings()
 
     duk_push_c_function(m_context, JsSetScale, 4);
     duk_put_global_string(m_context, "setScale");
+
+    duk_push_c_function(m_context, JsSetTexture, 2);
+    duk_put_global_string(m_context, "setTexture");
 
     duk_push_c_function(m_context, JsEntityExists, 1);
     duk_put_global_string(m_context, "entityExists");

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "BaseModel.h"
+#include "../render/Material.h"
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <nlohmann/json.hpp>
@@ -18,9 +19,14 @@ namespace OGLE {
         ~ModelEntity();
 
         void Draw();
+        void BindMaterial(GLuint program) const;
         void ConvertToStatic();
         void UpdateGeometry();
         void SetMeshData(const std::vector<float>& vertices, const std::vector<unsigned int>& indices);
+        bool SetDiffuseTexturePath(const std::string& texturePath);
+        const std::string& GetDiffuseTexturePath() const;
+        Material& GetMaterial();
+        const Material& GetMaterial() const;
         
         void SetPosition(const glm::vec3& position);
         void SetRotation(const glm::vec3& rotation);
@@ -44,5 +50,6 @@ namespace OGLE {
         glm::vec3 m_Scale;
         glm::mat4 m_ModelMatrix;
         std::string m_FilePath;
+        Material m_material;
     };
 }

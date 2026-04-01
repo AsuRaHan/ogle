@@ -23,25 +23,29 @@ namespace OGLE {
 
     void ModelEntity::Draw() {
         if (m_MeshBuffer) {
-            // Here we would set the model matrix in the shader
-            // For now, just bind and draw
             m_MeshBuffer->Bind();
             glDrawElements(GL_TRIANGLES, m_MeshBuffer->GetIndexCount(), GL_UNSIGNED_INT, 0);
             m_MeshBuffer->Unbind();
         }
     }
 
+    void ModelEntity::BindMaterial(GLuint program) const
+    {
+        m_material.Bind(program);
+    }
+
     void ModelEntity::ConvertToStatic() {
         if (m_Type == ModelType::DYNAMIC) {
             BakeToGPU();
-            m_Mesh.reset(); // Free OpenMesh data
+            m_vertices.clear();
+            m_indices.clear();
             m_Type = ModelType::STATIC;
             LOG_INFO("Model converted to STATIC.");
         }
     }
 
     void ModelEntity::UpdateGeometry() {
-        if (m_Type == ModelType::DYNAMIC && m_Mesh) {
+        if (m_Type == ModelType::DYNAMIC && !m_vertices.empty() && !m_indices.empty()) {
             BakeToGPU();
             LOG_INFO("Model geometry updated.");
         } else {
@@ -50,10 +54,30 @@ namespace OGLE {
     }
 
     void ModelEntity::SetMeshData(const std::vector<float>& vertices, const std::vector<unsigned int>& indices) {
-        m_MeshBuffer = std::make_unique<MeshBuffer>();
-        m_MeshBuffer->Create(vertices, indices);
+        SetMeshGeometry(vertices, indices);
+        BakeToGPU();
         m_Type = ModelType::STATIC;
         m_FilePath.clear();
+    }
+
+    bool ModelEntity::SetDiffuseTexturePath(const std::string& texturePath)
+    {
+        return m_material.SetDiffuseTexturePath(texturePath);
+    }
+
+    const std::string& ModelEntity::GetDiffuseTexturePath() const
+    {
+        return m_material.GetDiffuseTexturePath();
+    }
+
+    Material& ModelEntity::GetMaterial()
+    {
+        return m_material;
+    }
+
+    const Material& ModelEntity::GetMaterial() const
+    {
+        return m_material;
     }
 
     void ModelEntity::SetPosition(const glm::vec3& position) {
@@ -97,8 +121,19 @@ namespace OGLE {
             {"type", m_Type == ModelType::STATIC ? "STATIC" : "DYNAMIC"},
             {"position", {m_Position.x, m_Position.y, m_Position.z}},
             {"rotation", {m_Rotation.x, m_Rotation.y, m_Rotation.z}},
-            {"scale", {m_Scale.x, m_Scale.y, m_Scale.z}}
+            {"scale", {m_Scale.x, m_Scale.y, m_Scale.z}},
+            {"material", {
+                {"baseColor", {m_material.GetBaseColor().x, m_material.GetBaseColor().y, m_material.GetBaseColor().z}},
+                {"diffuseTexturePath", m_material.GetDiffuseTexturePath()}
+            }}
         };
+
+        if (m_FilePath.empty() && !m_vertices.empty() && !m_indices.empty()) {
+            j["geometry"] = {
+                {"vertices", m_vertices},
+                {"indices", m_indices}
+            };
+        }
     }
 
     void ModelEntity::FromJson(const nlohmann::json& j) {
@@ -110,7 +145,31 @@ namespace OGLE {
         j.at("rotation").get_to(m_Rotation);
         j.at("scale").get_to(m_Scale);
 
-        LoadFromFile(m_FilePath);
+        if (!m_FilePath.empty()) {
+            LoadFromFile(m_FilePath);
+            BakeToGPU();
+        } else if (j.contains("geometry")) {
+            const auto& geometryJson = j.at("geometry");
+            SetMeshGeometry(
+                geometryJson.at("vertices").get<std::vector<float>>(),
+                geometryJson.at("indices").get<std::vector<unsigned int>>());
+            BakeToGPU();
+        }
+
+        if (j.contains("material")) {
+            const auto& materialJson = j.at("material");
+            if (materialJson.contains("baseColor")) {
+                const auto& baseColorJson = materialJson.at("baseColor");
+                m_material.SetBaseColor(glm::vec3(baseColorJson[0], baseColorJson[1], baseColorJson[2]));
+            }
+
+            if (materialJson.contains("diffuseTexturePath")) {
+                m_material.SetDiffuseTexturePath(materialJson.at("diffuseTexturePath").get<std::string>());
+            }
+        } else if (!GetLoadedDiffuseTexturePath().empty()) {
+            m_material.SetDiffuseTexturePath(GetLoadedDiffuseTexturePath());
+        }
+
         UpdateModelMatrix();
     }
 

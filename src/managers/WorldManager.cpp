@@ -1,5 +1,7 @@
 #include "managers/WorldManager.h"
 
+#include "core/FileSystem.h"
+
 #include <glm/vec3.hpp>
 #include <vector>
 
@@ -15,6 +17,10 @@ void WorldManager::CreateWorld()
 
 void WorldManager::CreateDefaultWorld()
 {
+    const std::string sharedTexturePath = FileSystem::Exists("assets/Q4JOI.jpg")
+        ? FileSystem::ResolvePath("assets/Q4JOI.jpg").string()
+        : std::string();
+
     if (!m_activeWorld) {
         CreateWorld();
     } else {
@@ -24,47 +30,56 @@ void WorldManager::CreateDefaultWorld()
     CreateCube(
         "CenterBlock",
         glm::vec3(0.0f, 0.0f, 0.0f),
-        glm::vec3(1.0f, 1.0f, 1.0f));
+        glm::vec3(1.0f, 1.0f, 1.0f),
+        sharedTexturePath);
 
     CreateCube(
         "Floor",
         glm::vec3(0.0f, -1.5f, 0.0f),
-        glm::vec3(12.0f, 0.25f, 12.0f));
+        glm::vec3(12.0f, 0.25f, 12.0f),
+        sharedTexturePath);
 
     CreateCube(
         "NorthPillar",
         glm::vec3(0.0f, 0.0f, -4.0f),
-        glm::vec3(0.75f, 2.5f, 0.75f));
+        glm::vec3(0.75f, 2.5f, 0.75f),
+        sharedTexturePath);
 
     CreateCube(
         "SouthPillar",
         glm::vec3(0.0f, 0.0f, 4.0f),
-        glm::vec3(0.75f, 1.75f, 0.75f));
+        glm::vec3(0.75f, 1.75f, 0.75f),
+        sharedTexturePath);
 
     CreateCube(
         "WestBlock",
         glm::vec3(-3.5f, -0.4f, 1.5f),
-        glm::vec3(1.5f, 0.8f, 1.5f));
+        glm::vec3(1.5f, 0.8f, 1.5f),
+        sharedTexturePath);
 
     CreateCube(
         "EastBlock",
         glm::vec3(3.0f, 1.2f, -1.5f),
-        glm::vec3(1.25f, 2.4f, 1.25f));
+        glm::vec3(1.25f, 2.4f, 1.25f),
+        sharedTexturePath);
 
     CreateCube(
         "Bridge",
         glm::vec3(0.5f, 2.1f, -1.5f),
-        glm::vec3(3.5f, 0.25f, 0.75f));
+        glm::vec3(3.5f, 0.25f, 0.75f),
+        sharedTexturePath);
 
     CreateCube(
         "MarkerA",
         glm::vec3(-2.5f, -0.8f, -3.0f),
-        glm::vec3(0.4f, 0.4f, 0.4f));
+        glm::vec3(0.4f, 0.4f, 0.4f),
+        sharedTexturePath);
 
     CreateCube(
         "MarkerB",
         glm::vec3(2.8f, -0.8f, 3.2f),
-        glm::vec3(0.5f, 0.5f, 0.5f));
+        glm::vec3(0.5f, 0.5f, 0.5f),
+        sharedTexturePath);
 }
 
 OGLE::World& WorldManager::GetActiveWorld()
@@ -108,7 +123,8 @@ OGLE::Entity WorldManager::CreateModelFromFile(
 OGLE::Entity WorldManager::CreateCube(
     const std::string& name,
     const glm::vec3& position,
-    const glm::vec3& scale) {
+    const glm::vec3& scale,
+    const std::string& diffuseTexturePath) {
 
     static const std::vector<float> vertices = {
         -0.5f, -0.5f,  0.5f,   0.0f,  0.0f,  1.0f,   0.0f, 0.0f,
@@ -153,6 +169,9 @@ OGLE::Entity WorldManager::CreateCube(
 
     auto model = std::make_shared<OGLE::ModelEntity>(OGLE::ModelType::STATIC);
     model->SetMeshData(vertices, indices);
+    if (!diffuseTexturePath.empty()) {
+        model->SetDiffuseTexturePath(diffuseTexturePath);
+    }
 
     const OGLE::Entity entity = AddModel(model, name);
     GetActiveWorld().SetTransform(entity, position, glm::vec3(0.0f, 0.0f, 0.0f), scale);
@@ -205,6 +224,16 @@ bool WorldManager::SetEntityScale(OGLE::Entity entity, const glm::vec3& scale)
 
     GetActiveWorld().SetTransform(entity, transform->position, transform->rotation, scale);
     return true;
+}
+
+bool WorldManager::SetEntityDiffuseTexture(OGLE::Entity entity, const std::string& texturePath)
+{
+    OGLE::ModelEntity* model = GetActiveWorld().GetModel(entity);
+    if (!model) {
+        return false;
+    }
+
+    return model->SetDiffuseTexturePath(texturePath);
 }
 
 void WorldManager::Update()

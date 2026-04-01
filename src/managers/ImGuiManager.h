@@ -24,6 +24,6 @@ public:
 
 private:
     bool m_initialized = false;
-    bool m_showDemoWindow = true;
-    bool m_showOverlay = true;
+    bool m_showDemoWindow = false;
+    bool m_showOverlay = false;
 };
