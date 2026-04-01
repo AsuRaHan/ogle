@@ -1,0 +1,48 @@
+{
+  "color": [
+    1.0,
+    1.0,
+    1.0,
+    1.0
+  ],
+  "intParams": {
+    "uUseLighting": 1,
+    "uUseTexture": 0
+  },
+  "name": "MatTest",
+  "renderState": {
+    "blend": false,
+    "blendDst": 7,
+    "blendSrc": 6,
+    "cullFace": true,
+    "cullMode": 0,
+    "depthFunc": 0,
+    "depthTest": true,
+    "depthWrite": true,
+    "lineWidth": 1.0,
+    "wireframe": false
+  },
+  "shader": "Builtin_BasicTexture",
+  "type": "Basic",
+  "useLighting": true,
+  "vec3Params": {
+    "uColor": [
+      1.0,
+      1.0,
+      1.0
+    ],
+    "uLightDir": [
+      0.5,
+      1.0,
+      0.5
+    ]
+  },
+  "vec4Params": {
+    "uColor": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ]
+  }
+}
