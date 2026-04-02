@@ -569,4 +569,31 @@ namespace OGLE {
         model.model->SetRotation(transform.rotation);
         model.model->SetScale(transform.scale);
     }
+
+    void World::MakeModelUnique(Entity entity)
+    {
+        auto* modelComp = GetRegistry().try_get<ModelComponent>(entity);
+        if (!modelComp || !modelComp->model) {
+            return;
+        }
+
+        if (modelComp->model.use_count() <= 1) {
+            return; // Already unique
+        }
+
+        // Create a deep copy of the ModelEntity
+        auto originalModel = modelComp->model;
+
+        // Create a new model. The file path is made unique to indicate it's a copy.
+        auto newModel = std::make_shared<ModelEntity>(originalModel->GetType(), originalModel->GetFilePath() + " (Unique)");
+
+        // Copy geometry data. SetMeshData will create a new MeshBuffer.
+        newModel->SetMeshData(originalModel->GetVertices(), originalModel->GetIndices());
+
+        // Copy material
+        newModel->GetMaterial() = originalModel->GetMaterial();
+
+        // Replace the shared_ptr in the component
+        modelComp->model = newModel;
+    }
 }

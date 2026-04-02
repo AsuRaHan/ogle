@@ -23,11 +23,16 @@ namespace OGLE {
         void ConvertToStatic();
         void UpdateGeometry();
         void SetMeshData(const std::vector<float>& vertices, const std::vector<unsigned int>& indices);
+        void UpdateGpuData(); // Добавлено для обновления GPU буфера
+        std::vector<float>& GetVertices(); // Добавлено для доступа к изменяемым вершинам
+        const std::vector<float>& GetVertices() const; // Добавлено для чтения вершин
+        const std::vector<unsigned int>& GetIndices() const; // Добавлено для чтения индексов
         bool SetDiffuseTexturePath(const std::string& texturePath);
         const std::string& GetDiffuseTexturePath() const;
         Material& GetMaterial();
         const Material& GetMaterial() const;
         
+        ModelType GetType() const; // Добавлено для получения типа модели
         void SetPosition(const glm::vec3& position);
         void SetRotation(const glm::vec3& rotation);
         void SetScale(const glm::vec3& scale);

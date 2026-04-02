@@ -5,7 +5,7 @@ function onStart() {
     ogle.log("Startup script 'startup.js' is running onStart().");
 
     // Clear the default world if it exists
-    ogle.world.clear();
+    // ogle.world.clear();
 
     // Create a floor
     ogle.world.createCube({

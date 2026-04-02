@@ -10,6 +10,7 @@ namespace OGLE {
         ~MeshBuffer();
 
         void Create(const std::vector<float>& vertices, const std::vector<unsigned int>& indices);
+        void Update(const std::vector<float>& vertices); // Добавлено для обновления данных на GPU
         void Bind() const;
         void Unbind() const;
 

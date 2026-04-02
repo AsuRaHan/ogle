@@ -35,6 +35,8 @@ namespace OGLE {
         void Save(const std::string& path);
         void Load(const std::string& path);
 
+        void MakeModelUnique(Entity entity);
+
         bool IsValid(Entity entity) const;
         bool HasModel(Entity entity) const;
 

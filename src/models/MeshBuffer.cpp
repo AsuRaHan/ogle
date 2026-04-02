@@ -23,7 +23,7 @@ namespace OGLE {
 
         glGenBuffers(1, &m_VBO);
         glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
-        glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_DYNAMIC_DRAW); // Изменено на GL_DYNAMIC_DRAW
 
         glGenBuffers(1, &m_EBO);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_EBO);
@@ -40,6 +40,16 @@ namespace OGLE {
         glEnableVertexAttribArray(2);
 
         glBindVertexArray(0);
+    }
+
+    void MeshBuffer::Update(const std::vector<float>& vertices)
+    {
+        if (m_VBO == 0) {
+            return;
+        }
+        glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
+        glBufferSubData(GL_ARRAY_BUFFER, 0, vertices.size() * sizeof(float), vertices.data());
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
     }
 
     void MeshBuffer::Bind() const {

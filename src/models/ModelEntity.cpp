@@ -69,6 +69,26 @@ namespace OGLE {
         m_FilePath.clear();
     }
 
+    void ModelEntity::UpdateGpuData()
+    {
+        if (m_MeshBuffer) {
+            m_MeshBuffer->Update(m_vertices);
+        }
+    }
+
+    std::vector<float>& ModelEntity::GetVertices() {
+        return m_vertices;
+    }
+
+    const std::vector<float>& ModelEntity::GetVertices() const {
+        return m_vertices;
+    }
+
+    const std::vector<unsigned int>& ModelEntity::GetIndices() const
+    {
+        return m_indices;
+    }
+
     bool ModelEntity::SetDiffuseTexturePath(const std::string& texturePath)
     {
         return m_material.SetDiffuseTexturePath(texturePath);
@@ -87,6 +107,11 @@ namespace OGLE {
     const Material& ModelEntity::GetMaterial() const
     {
         return m_material;
+    }
+
+    ModelType ModelEntity::GetType() const
+    {
+        return m_Type;
     }
 
     void ModelEntity::SetPosition(const glm::vec3& position) {
@@ -223,4 +248,3 @@ namespace OGLE {
         m_ModelMatrix = glm::scale(m_ModelMatrix, m_Scale);
     }
 }
-

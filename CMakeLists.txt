@@ -31,6 +31,8 @@ add_executable(${PROJECT_NAME} WIN32
     src/editor/EditorCreationPanel.h
     src/editor/EditorHierarchyPanel.cpp
     src/editor/EditorHierarchyPanel.h
+    src/editor/EditorMeshEditPanel.cpp
+    src/editor/EditorMeshEditPanel.h
     src/editor/EditorInspectorPanel.cpp
     src/editor/EditorInspectorPanel.h
 
