@@ -572,7 +572,7 @@ namespace OGLE {
 
     void World::MakeModelUnique(Entity entity)
     {
-        auto* modelComp = GetRegistry().try_get<ModelComponent>(entity);
+        auto* modelComp = m_registry.try_get<ModelComponent>(entity);
         if (!modelComp || !modelComp->model) {
             return;
         }

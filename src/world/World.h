@@ -79,5 +79,6 @@ namespace OGLE {
         void SyncModelTransform(Entity entity);
 
         entt::registry m_registry;
+        std::unordered_map<std::string, Entity> m_nameToEntityMap;
     };
 }
