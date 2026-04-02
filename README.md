@@ -1,19 +1,17 @@
-﻿# OGLE20 v0.2
+﻿# OGLE3D v0.3
 
-`OGLE20` is an experimental 3D engine/editor project on C++17 with Win32, OpenGL, ECS world management through `EnTT`, editor UI through `Dear ImGui`, scripting through `Duktape`, textured rendering, asset browsing, and basic physics through `Bullet`.
+`OGLE3D` is a modern 3D engine/editor written in C++17 for Windows.  It uses Win32 for windowing, OpenGL 4.x for rendering, EnTT‑based ECS for world representation, Dear ImGui for the editor UI, Duktape for JavaScript scripting, and Bullet Physics for rigid‑body simulation.  The project focuses on a clean modular architecture with separate managers for input, rendering, physics, scripting and configuration.
 
 The project already includes:
-- a Win32 window and OpenGL context
-- manager-based application architecture
-- ECS world and world objects
-- procedural test scene generation
-- textured mesh rendering
-- camera movement and input actions
-- JSON world save/load
-- config file load/save on disk
-- editor windows for world, hierarchy, inspector, and content browser
-- JavaScript startup/runtime scripting
-- basic rigid body physics
+- a Win32 window with an OpenGL context
+- a manager‑based application architecture
+- an EnTT‑based ECS world with procedural test scene generation
+- textured mesh rendering and a lightweight material system
+- camera controls and input handling via a dedicated InputManager
+- JSON world serialization (save/load) and configuration files
+- editor UI windows: world view, hierarchy, inspector, content browser
+- JavaScript runtime scripting through Duktape
+- basic rigid‑body physics using Bullet
 
 ## Current Status
 
