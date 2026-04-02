@@ -38,11 +38,11 @@ void EditorHierarchyPanel::Draw(EditorState& state, WorldManager& worldManager, 
         state.selectedEntity = worldManager.CreateWorldObject("EmptyObject", OGLE::WorldObjectKind::Generic).GetEntity();
         state.bufferedEntity = entt::null;
     }
-    ImGui::SameLine();
-    if (ImGui::Button("Add Cube")) {
-        state.selectedEntity = worldManager.CreateCube("Cube", glm::vec3(0.0f, 0.5f, 0.0f));
-        state.bufferedEntity = entt::null;
-    }
+    // ImGui::SameLine();
+    // if (ImGui::Button("Add Cube")) {
+    //     state.selectedEntity = worldManager.CreateCube("Cube", glm::vec3(0.0f, 0.5f, 0.0f));
+    //     state.bufferedEntity = entt::null;
+    // }
     ImGui::SameLine();
     const bool canDelete = state.selectedEntity != entt::null && worldManager.IsEntityValid(state.selectedEntity);
     if (!canDelete) {

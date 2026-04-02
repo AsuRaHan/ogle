@@ -37,11 +37,11 @@ public:
         const glm::vec3& position,
         const glm::vec3& scale = glm::vec3(1.0f, 1.0f, 1.0f),
         const std::string& diffuseTexturePath = "");
-    OGLE::Entity CreateCube(
-        const std::string& name,
-        const glm::vec3& position,
-        const glm::vec3& scale = glm::vec3(1.0f, 1.0f, 1.0f),
-        const std::string& diffuseTexturePath = "");
+    // OGLE::Entity CreateCube(
+    //     const std::string& name,
+    //     const glm::vec3& position,
+    //     const glm::vec3& scale = glm::vec3(1.0f, 1.0f, 1.0f),
+    //     const std::string& diffuseTexturePath = "");
     OGLE::Entity CreateDirectionalLight(
         const std::string& name,
         const glm::vec3& rotation,

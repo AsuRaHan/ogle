@@ -27,56 +27,65 @@ void WorldManager::CreateDefaultWorld()
         m_activeWorld->Clear();
     }
 
-    CreateCube(
+    CreatePrimitive(
         "CenterBlock",
+        OGLE::PrimitiveType::Cube,
         glm::vec3(0.0f, 0.0f, 0.0f),
         glm::vec3(1.0f, 1.0f, 1.0f),
         sharedTexturePath);
 
-    CreateCube(
+    CreatePrimitive(
         "Floor",
+        OGLE::PrimitiveType::Cube,
         glm::vec3(0.0f, -1.5f, 0.0f),
         glm::vec3(12.0f, 0.25f, 12.0f),
         sharedTexturePath);
 
-    CreateCube(
+    CreatePrimitive(
         "NorthPillar",
+        OGLE::PrimitiveType::Cube,
         glm::vec3(0.0f, 0.0f, -4.0f),
         glm::vec3(0.75f, 2.5f, 0.75f),
         sharedTexturePath);
 
-    CreateCube(
+    CreatePrimitive(
         "SouthPillar",
+        OGLE::PrimitiveType::Cube,
         glm::vec3(0.0f, 0.0f, 4.0f),
         glm::vec3(0.75f, 1.75f, 0.75f),
         sharedTexturePath);
 
-    CreateCube(
+    CreatePrimitive(
         "WestBlock",
+        OGLE::PrimitiveType::Cube,
         glm::vec3(-3.5f, -0.4f, 1.5f),
         glm::vec3(1.5f, 0.8f, 1.5f),
         sharedTexturePath);
 
-    CreateCube(
+    CreatePrimitive(
         "EastBlock",
+        OGLE::PrimitiveType::Cube,
         glm::vec3(3.0f, 1.2f, -1.5f),
         glm::vec3(1.25f, 2.4f, 1.25f),
         sharedTexturePath);
 
-    CreateCube(
+    CreatePrimitive(
         "Bridge",
+        OGLE::PrimitiveType::Cube,
         glm::vec3(0.5f, 2.1f, -1.5f),
         glm::vec3(3.5f, 0.25f, 0.75f),
         sharedTexturePath);
 
-    CreateCube(
+    CreatePrimitive(
         "MarkerA",
+        OGLE::PrimitiveType::Cube,
         glm::vec3(-2.5f, -0.8f, -3.0f),
         glm::vec3(0.4f, 0.4f, 0.4f),
         sharedTexturePath);
 
-    CreateCube(
+    CreatePrimitive(
         "MarkerB",
+        OGLE::PrimitiveType::Cube,
         glm::vec3(2.8f, -0.8f, 3.2f),
         glm::vec3(0.5f, 0.5f, 0.5f),
         sharedTexturePath);
@@ -156,13 +165,13 @@ OGLE::Entity WorldManager::CreatePrimitive(
     return entity;
 }
 
-OGLE::Entity WorldManager::CreateCube(
-    const std::string& name,
-    const glm::vec3& position,
-    const glm::vec3& scale,
-    const std::string& diffuseTexturePath) {
-    return CreatePrimitive(name, OGLE::PrimitiveType::Cube, position, scale, diffuseTexturePath);
-}
+// OGLE::Entity WorldManager::CreateCube(
+//     const std::string& name,
+//     const glm::vec3& position,
+//     const glm::vec3& scale,
+//     const std::string& diffuseTexturePath) {
+//     return CreatePrimitive(name, OGLE::PrimitiveType::Cube, position, scale, diffuseTexturePath);
+// }
 
 OGLE::Entity WorldManager::CreateDirectionalLight(
     const std::string& name,
