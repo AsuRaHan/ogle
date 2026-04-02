@@ -77,6 +77,8 @@ add_executable(${PROJECT_NAME} WIN32
     src/managers/InputManager.h
     src/managers/ImGuiManager.cpp
     src/managers/ImGuiManager.h
+    # src/managers/PrimitiveFactory.cpp
+    # src/managers/PrimitiveFactory.h
     src/managers/PhysicsManager.cpp
     src/managers/PhysicsManager.h
     src/managers/CameraManager.cpp
