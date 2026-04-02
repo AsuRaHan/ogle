@@ -165,6 +165,9 @@ int App::Run(HINSTANCE hInstance, int nCmdShow)
     //     1.0f);
 
     m_window->Show(nCmdShow);
+    // Save window state after closing
+    // The window will be destroyed when App is destroyed, but we can save state here
+    // if needed. We'll leave this for App's responsibility.
     m_timeManager.Reset();
 
     MSG msg{};

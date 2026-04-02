@@ -38,7 +38,12 @@ public:
     void SetMessageHandler(MessageHandler handler);
     void SetMessageObserver(MessageObserver observer) override;
     void AddMessageObserver(MessageObserver observer) override;
+    // Helper to set window position
+    bool SetPosition(int x, int y);
 
+    // Persistence helpers (public for external use)
+    bool LoadWindowState(const std::string& filePath);
+    bool SaveWindowState(const std::string& filePath) const;
 protected:
     virtual PCWSTR ClassName() const;
     virtual LRESULT HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam);
@@ -57,4 +62,7 @@ private:
     HWND m_parent;
     MessageHandler m_handler;
     std::vector<MessageObserver> m_observers;
+    // New helper to expose window handle for state persistence
+    HWND GetHandle() const { return m_hwnd; }
+
 };

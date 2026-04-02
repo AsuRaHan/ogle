@@ -31,6 +31,9 @@ public:
     WorldManager& GetWorldManager();
     const WorldManager& GetWorldManager() const;
 
+    // Save the window state to a file. The window is owned by App.
+    void SaveWindowState(const std::string& filePath);
+
 private:
     void InitializeWorldFromConfig();
 

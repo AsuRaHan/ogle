@@ -50,7 +50,6 @@ add_executable(${PROJECT_NAME} WIN32
     src/opengl/OpenGLRenderer.h
     src/opengl/Camera.cpp
     src/opengl/Camera.h
-    # src/opengl/DomoScene.cpp
 
     src/Logger.cpp
     src/Logger.h

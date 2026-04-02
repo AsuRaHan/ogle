@@ -37,4 +37,7 @@ public:
 
     virtual std::wstring Title() const { return {}; }
     virtual void SetTitle(const std::wstring& title) { (void)title; }
+    // Window state persistence
+    virtual bool LoadWindowState(const std::string& filePath) { (void)filePath; return false; }
+    virtual bool SaveWindowState(const std::string& filePath) const { (void)filePath; return false; }
 };

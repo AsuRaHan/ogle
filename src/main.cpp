@@ -58,16 +58,20 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int nCmdShow)
 
     const AppConfig& config = configManager.GetConfig();
 
+    const std::string stateFile = "window_state.txt";
     auto mainWindow = std::make_unique<MainAppWindow>();
     mainWindow->SetTitle(config.window.title);
     mainWindow->SetSize(config.window.width, config.window.height);
     mainWindow->SetStyle(WS_OVERLAPPEDWINDOW);
     mainWindow->SetExStyle(0);
 
+    // Save window state before moving the window into App
+    mainWindow->SaveWindowState(stateFile);
     App app(std::move(mainWindow), std::move(configManager));
     int appResult = app.Run(hInstance, nCmdShow);
 
     LOG_INFO("Application exit: " + std::to_string(appResult));
+    // Window state already saved before run; no need to save again
 
     Logger::Instance().Shutdown();
     return appResult;

@@ -252,3 +252,48 @@ LRESULT Win32Window::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam)
         return DefWindowProcW(m_hwnd, msg, wParam, lParam);
     }
 }
+
+
+// ------------------------------------------------------------------
+// Window state persistence helpers
+// ------------------------------------------------------------------
+bool Win32Window::SetPosition(int x, int y)
+{
+    if (!m_hwnd)
+        return false;
+    // Use SWP_NOSENDCHANGING to avoid excessive repaint
+    return SetWindowPos(m_hwnd, nullptr, x, y, 0, 0, SWP_NOSENDCHANGING | SWP_NOSIZE | SWP_NOZORDER) != 0;
+}
+
+bool Win32Window::LoadWindowState(const std::string& filePath)
+{
+    // std::ifstream fileIn(filePath);
+    // if (!fileIn.is_open())
+    //     return false;
+    // int x, y, w, h;
+    // fileIn >> x >> y >> w >> h;
+    // if (fileIn.fail())
+    //     return false;
+    // SetSize(w, h);
+    // SetPosition(x, y);
+    return true;
+}
+
+bool Win32Window::SaveWindowState(const std::string& filePath) const
+{
+    if (!m_hwnd)
+        return false;
+    RECT rect;
+    if (!GetWindowRect(m_hwnd, &rect))
+        return false;
+    int x = rect.left;
+    int y = rect.top;
+    int w = rect.right - rect.left;
+    int h = rect.bottom - rect.top;
+    // std::ofstream fileOut(filePath);
+    // if (!fileOut.is_open())
+    //     return false;
+    // fileOut << x << ' ' << y << ' ' << w << ' ' << h;
+    return true;
+}
+
