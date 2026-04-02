@@ -184,6 +184,23 @@ if(NOT imgui_POPULATED)
     target_link_libraries(imgui PUBLIC opengl32 user32 gdi32)
 endif()
 
+FetchContent_Declare(
+    imguizmo
+    GIT_REPOSITORY https://github.com/CedricGuillemet/ImGuizmo.git
+    GIT_TAG master
+)
+FetchContent_GetProperties(imguizmo)
+if(NOT imguizmo_POPULATED)
+    FetchContent_Populate(imguizmo)
+    add_library(imguizmo STATIC
+        ${imguizmo_SOURCE_DIR}/ImGuizmo.cpp
+    )
+    target_include_directories(imguizmo PUBLIC
+        ${imguizmo_SOURCE_DIR}
+    )
+    target_link_libraries(imguizmo PUBLIC imgui)
+endif()
+
 set(BUILD_BULLET2_DEMOS OFF CACHE BOOL "" FORCE)
 set(BUILD_CPU_DEMOS OFF CACHE BOOL "" FORCE)
 set(BUILD_OPENGL3_DEMOS OFF CACHE BOOL "" FORCE)
@@ -201,8 +218,8 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(bullet)
 
-target_include_directories(${PROJECT_NAME} PRIVATE ${assimp_SOURCE_DIR}/include ${openmesh_SOURCE_DIR}/src ${entt_SOURCE_DIR}/src ${bullet_SOURCE_DIR}/src)
-target_link_libraries(${PROJECT_NAME} PRIVATE assimp::assimp nlohmann_json::nlohmann_json OpenMeshCore OpenMeshTools duktape imgui BulletDynamics BulletCollision LinearMath)
+target_include_directories(${PROJECT_NAME} PRIVATE ${assimp_SOURCE_DIR}/include ${openmesh_SOURCE_DIR}/src ${entt_SOURCE_DIR}/src ${bullet_SOURCE_DIR}/src ${imguizmo_SOURCE_DIR})
+target_link_libraries(${PROJECT_NAME} PRIVATE assimp::assimp nlohmann_json::nlohmann_json OpenMeshCore OpenMeshTools duktape imgui imguizmo BulletDynamics BulletCollision LinearMath)
 
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory

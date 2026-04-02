@@ -1,16 +1,22 @@
 #include "editor/EditorInspectorPanel.h"
 
+#include <imgui.h>
+#include "ImGuizmo.h"
 #include "editor/EditorAssetHelpers.h"
 #include "editor/EditorState.h"
+#include "managers/CameraManager.h"
 #include "managers/PhysicsManager.h"
 #include "managers/WorldManager.h"
+#include "opengl/Camera.h"
 
+#include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include <imgui.h>
 #include <cstring>
 
 namespace
 {
+    static ImGuizmo::OPERATION m_currentGizmoOperation(ImGuizmo::TRANSLATE);
+
     const char* GetPrimitiveTypeLabel(OGLE::PrimitiveType type)
     {
         switch (type) {
@@ -25,7 +31,7 @@ namespace
     }
 }
 
-void EditorInspectorPanel::Draw(EditorState& state, WorldManager& worldManager, PhysicsManager& physicsManager)
+void EditorInspectorPanel::Draw(EditorState& state, WorldManager& worldManager, PhysicsManager& physicsManager, const CameraManager& cameraManager)
 {
     if (state.selectedEntity == entt::null || !worldManager.IsEntityValid(state.selectedEntity)) {
         ImGui::TextUnformatted("No object selected.");
@@ -71,6 +77,41 @@ void EditorInspectorPanel::Draw(EditorState& state, WorldManager& worldManager, 
     if (transformChanged) {
         selectedObject.SetTransform(position, rotation, scale);
     }
+
+    // ImGuizmo
+    if (ImGui::RadioButton("Translate", m_currentGizmoOperation == ImGuizmo::TRANSLATE))
+        m_currentGizmoOperation = ImGuizmo::TRANSLATE;
+    ImGui::SameLine();
+    if (ImGui::RadioButton("Rotate", m_currentGizmoOperation == ImGuizmo::ROTATE))
+        m_currentGizmoOperation = ImGuizmo::ROTATE;
+    ImGui::SameLine();
+    if (ImGui::RadioButton("Scale", m_currentGizmoOperation == ImGuizmo::SCALE))
+        m_currentGizmoOperation = ImGuizmo::SCALE;
+
+    ImGuizmo::SetOrthographic(false);
+    ImGuizmo::BeginFrame();
+
+    ImGuizmo::SetRect(ImGui::GetMainViewport()->Pos.x, ImGui::GetMainViewport()->Pos.y, ImGui::GetMainViewport()->Size.x, ImGui::GetMainViewport()->Size.y);
+
+    const auto& camera = cameraManager.GetCamera();
+    const glm::mat4& viewMatrix = camera.GetViewMatrix();
+    const glm::mat4& projectionMatrix = camera.GetProjectionMatrix();
+
+    glm::mat4 modelMatrix = glm::translate(glm::mat4(1.0f), position);
+    modelMatrix = glm::rotate(modelMatrix, glm::radians(rotation.x), glm::vec3(1, 0, 0));
+    modelMatrix = glm::rotate(modelMatrix, glm::radians(rotation.y), glm::vec3(0, 1, 0));
+    modelMatrix = glm::rotate(modelMatrix, glm::radians(rotation.z), glm::vec3(0, 0, 1));
+    modelMatrix = glm::scale(modelMatrix, scale);
+
+    ImGuizmo::Manipulate(glm::value_ptr(viewMatrix), glm::value_ptr(projectionMatrix), m_currentGizmoOperation, ImGuizmo::LOCAL, glm::value_ptr(modelMatrix));
+
+    if (ImGuizmo::IsUsing())
+    {
+        glm::vec3 newPosition, newScale, newRotation;
+        ImGuizmo::DecomposeMatrixToComponents(glm::value_ptr(modelMatrix), glm::value_ptr(newPosition), glm::value_ptr(newRotation), glm::value_ptr(newScale));
+        selectedObject.SetTransform(newPosition, newRotation, newScale);
+    }
+
 
     if (OGLE::PrimitiveComponent* primitive = world.GetPrimitive(state.selectedEntity)) {
         if (ImGui::CollapsingHeader("Primitive", ImGuiTreeNodeFlags_DefaultOpen)) {

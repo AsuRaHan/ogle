@@ -283,7 +283,7 @@ void Editor::BuildUi(
 
     if (m_showInspectorWindow) {
         if (ImGui::Begin("Inspector", &m_showInspectorWindow)) {
-            m_inspectorPanel.Draw(m_state, worldManager, physicsManager);
+            m_inspectorPanel.Draw(m_state, worldManager, physicsManager, cameraManager);
         }
         ImGui::End();
     }
