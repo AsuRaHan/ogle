@@ -104,7 +104,7 @@ int App::Run(HINSTANCE hInstance, int nCmdShow)
 
     InitializeWorldFromConfig();
 
-    if (!m_scriptManager.Initialize(m_worldManager)) {
+    if (!m_scriptManager.Initialize(m_worldManager, "assets/scripts/internal/api_bootstrap.js")) {
         LOG_ERROR("Script system initialization failed");
         return -1;
     }

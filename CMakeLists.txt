@@ -96,6 +96,11 @@ add_executable(${PROJECT_NAME} WIN32
     src/managers/WorldManager.cpp
     src/managers/WorldManager.h
 
+    src/scripting/ScriptBindings.cpp
+    src/scripting/ScriptBindings.h
+    src/scripting/ScriptEngine.cpp
+    src/scripting/ScriptEngine.h
+
     src/world/World.cpp
     src/world/World.h
     src/world/WorldComponents.h
@@ -124,14 +129,14 @@ FetchContent_Declare(
     GIT_TAG master
 )
 FetchContent_MakeAvailable(assimp)
-# --- OpenMesh ------ OpenMesh ------ OpenMesh ------ OpenMesh ------ OpenMesh ------ OpenMesh ------ OpenMesh ------ OpenMesh ------ OpenMesh 
+
 FetchContent_Declare(
     openmesh
     GIT_REPOSITORY https://www.graphics.rwth-aachen.de:9000/OpenMesh/OpenMesh.git
     GIT_TAG master
 )
 FetchContent_MakeAvailable(openmesh)
-# ррр============================================================================
+
 FetchContent_Declare(
     entt
     GIT_REPOSITORY https://github.com/skypjack/entt.git
@@ -154,7 +159,7 @@ FetchContent_Declare(
 )
 FetchContent_GetProperties(duktape)
 if(NOT duktape_POPULATED)
-    FetchContent_Populate(duktape)
+    FetchContent_MakeAvailable(duktape)
     add_library(duktape STATIC ${duktape_SOURCE_DIR}/src/duktape.c)
     target_include_directories(duktape PUBLIC ${duktape_SOURCE_DIR}/src)
 endif()
@@ -167,7 +172,7 @@ FetchContent_Declare(
 )
 FetchContent_GetProperties(imgui)
 if(NOT imgui_POPULATED)
-    FetchContent_Populate(imgui)
+    FetchContent_MakeAvailable(imgui)
     add_library(imgui STATIC
         ${imgui_SOURCE_DIR}/imgui.cpp
         ${imgui_SOURCE_DIR}/imgui_demo.cpp
@@ -191,7 +196,7 @@ FetchContent_Declare(
 )
 FetchContent_GetProperties(imguizmo)
 if(NOT imguizmo_POPULATED)
-    FetchContent_Populate(imguizmo)
+    FetchContent_MakeAvailable(imguizmo)
     add_library(imguizmo STATIC
         ${imguizmo_SOURCE_DIR}/ImGuizmo.cpp
     )
