@@ -1,8 +1,8 @@
 {
     "window": {
         "title": "Main window",
-        "width": 900,
-        "height": 600
+        "width": 1024,
+        "height": 900
     },
     "editor": {
         "enabled": true
@@ -16,7 +16,7 @@
         "path": "assets"
     },
     "scripts": {
-        "runStartupScript": false,
-        "startupScriptPath": "assets/scripts/test_world.js"
+        "runStartupScript": true,
+        "startupScriptPath": "assets/scripts/startup.js"
     }
 }
