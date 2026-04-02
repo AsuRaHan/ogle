@@ -7,7 +7,7 @@
 #include <memory>
 #include <unordered_map>
 
-class WorldManager;
+class IWorldAccess;
 class btBroadphaseInterface;
 class btCollisionDispatcher;
 class btConstraintSolver;
@@ -23,7 +23,7 @@ public:
     PhysicsManager();
     ~PhysicsManager();
 
-    bool Initialize(WorldManager& worldManager);
+    bool Initialize(IWorldAccess& worldAccess);
     void Shutdown();
 
     void SetGravity(const glm::vec3& gravity);
@@ -48,7 +48,7 @@ private:
     void PruneInvalidBodies();
     void SyncEntityFromBody(OGLE::Entity entity, const btRigidBody& body);
 
-    WorldManager* m_worldManager = nullptr;
+    IWorldAccess* m_worldAccess = nullptr;
     std::unique_ptr<btDefaultCollisionConfiguration> m_collisionConfiguration;
     std::unique_ptr<btCollisionDispatcher> m_dispatcher;
     std::unique_ptr<btBroadphaseInterface> m_broadphase;

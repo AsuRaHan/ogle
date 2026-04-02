@@ -1,11 +1,12 @@
 #include "managers/ScriptManager.h"
 
 #include "Logger.h"
-#include "managers/WorldManager.h"
+#include "managers/PrimitiveFactory.h"
 #include "models/ModelEntity.h"
 #include "render/Material.h"
 #include "world/World.h"
 #include "world/WorldComponents.h"
+#include "world/IWorldAccess.h"
 
 #include <duktape.h>
 #include <cstring>
@@ -47,6 +48,54 @@ namespace
         duk_push_number(context, value.y);
         duk_put_prop_string(context, objectIndex, "y");
     }
+
+    bool SetEntityTransform(OGLE::World& world, OGLE::Entity entity, const glm::vec3* position, const glm::vec3* rotation, const glm::vec3* scale)
+    {
+        auto* transform = world.GetTransform(entity);
+        if (!transform) {
+            return false;
+        }
+
+        world.SetTransform(
+            entity,
+            position ? *position : transform->position,
+            rotation ? *rotation : transform->rotation,
+            scale ? *scale : transform->scale);
+        return true;
+    }
+
+    bool SetEntityDiffuseTexture(OGLE::World& world, OGLE::Entity entity, const std::string& texturePath)
+    {
+        if (auto* material = world.GetMaterial(entity)) {
+            return material->material.SetDiffuseTexturePath(texturePath);
+        }
+
+        if (const auto* model = world.GetModel(entity)) {
+            OGLE::MaterialComponent component;
+            component.material = model->GetMaterial();
+            component.material.SetDiffuseTexturePath(texturePath);
+            world.GetRegistry().emplace<OGLE::MaterialComponent>(entity, component);
+            return true;
+        }
+
+        return false;
+    }
+
+    OGLE::Entity CreatePrimitiveCube(OGLE::World& world, const std::string& name, const glm::vec3& position, const glm::vec3& scale)
+    {
+        auto model = PrimitiveFactory::CreatePrimitiveModel(OGLE::PrimitiveType::Cube, "");
+        if (!model) {
+            return entt::null;
+        }
+
+        const OGLE::Entity entity = world.AddModel(std::move(model), name);
+        world.SetTransform(entity, position, glm::vec3(0.0f), scale);
+        if (auto* primitive = world.GetPrimitive(entity)) {
+            primitive->type = OGLE::PrimitiveType::Cube;
+            primitive->sourcePath.clear();
+        }
+        return entity;
+    }
 }
 
 ScriptManager::ScriptManager() = default;
@@ -56,7 +105,7 @@ ScriptManager::~ScriptManager()
     Shutdown();
 }
 
-bool ScriptManager::Initialize(WorldManager& worldManager)
+bool ScriptManager::Initialize(IWorldAccess& worldAccess)
 {
     Shutdown();
 
@@ -66,7 +115,7 @@ bool ScriptManager::Initialize(WorldManager& worldManager)
         return false;
     }
 
-    m_worldManager = &worldManager;
+    m_worldAccess = &worldAccess;
 
     duk_push_pointer(m_context, this);
     duk_put_global_string(m_context, kScriptManagerGlobal);
@@ -88,7 +137,7 @@ void ScriptManager::Shutdown()
         m_context = nullptr;
     }
 
-    m_worldManager = nullptr;
+    m_worldAccess = nullptr;
 }
 
 bool ScriptManager::ExecuteFile(const std::string& scriptPath)
@@ -140,6 +189,16 @@ void ScriptManager::Update(float deltaTime)
     CallGlobalFunction("onUpdate", deltaTime);
 }
 
+OGLE::World* ScriptManager::GetWorld()
+{
+    return m_worldAccess ? &m_worldAccess->GetActiveWorld() : nullptr;
+}
+
+const OGLE::World* ScriptManager::GetWorld() const
+{
+    return m_worldAccess ? &m_worldAccess->GetActiveWorld() : nullptr;
+}
+
 ScriptManager* ScriptManager::GetInstance(duk_context* context)
 {
     duk_get_global_string(context, kScriptManagerGlobal);
@@ -158,18 +217,20 @@ duk_ret_t ScriptManager::JsLog(duk_context* context)
 duk_ret_t ScriptManager::JsClearWorld(duk_context* context)
 {
     ScriptManager* manager = GetInstance(context);
-    if (!manager || !manager->m_worldManager) {
+    OGLE::World* world = manager ? manager->GetWorld() : nullptr;
+    if (!world) {
         return DUK_RET_ERROR;
     }
 
-    manager->m_worldManager->ClearWorld();
+    world->Clear();
     return 0;
 }
 
 duk_ret_t ScriptManager::JsSpawnCube(duk_context* context)
 {
     ScriptManager* manager = GetInstance(context);
-    if (!manager || !manager->m_worldManager) {
+    OGLE::World* world = manager ? manager->GetWorld() : nullptr;
+    if (!world) {
         return DUK_RET_ERROR;
     }
 
@@ -181,7 +242,8 @@ duk_ret_t ScriptManager::JsSpawnCube(duk_context* context)
     const float sy = static_cast<float>(duk_opt_number(context, 5, 1.0));
     const float sz = static_cast<float>(duk_opt_number(context, 6, 1.0));
 
-    const OGLE::Entity entity = manager->m_worldManager->CreateCube(
+    const OGLE::Entity entity = CreatePrimitiveCube(
+        *world,
         name ? name : "ScriptCube",
         glm::vec3(x, y, z),
         glm::vec3(sx, sy, sz));
@@ -193,7 +255,8 @@ duk_ret_t ScriptManager::JsSpawnCube(duk_context* context)
 duk_ret_t ScriptManager::JsSetPosition(duk_context* context)
 {
     ScriptManager* manager = GetInstance(context);
-    if (!manager || !manager->m_worldManager) {
+    OGLE::World* world = manager ? manager->GetWorld() : nullptr;
+    if (!world) {
         duk_push_false(context);
         return 1;
     }
@@ -204,14 +267,15 @@ duk_ret_t ScriptManager::JsSetPosition(duk_context* context)
         static_cast<float>(duk_require_number(context, 2)),
         static_cast<float>(duk_require_number(context, 3)));
 
-    duk_push_boolean(context, manager->m_worldManager->SetEntityPosition(entity, position));
+    duk_push_boolean(context, SetEntityTransform(*world, entity, &position, nullptr, nullptr));
     return 1;
 }
 
 duk_ret_t ScriptManager::JsSetRotation(duk_context* context)
 {
     ScriptManager* manager = GetInstance(context);
-    if (!manager || !manager->m_worldManager) {
+    OGLE::World* world = manager ? manager->GetWorld() : nullptr;
+    if (!world) {
         duk_push_false(context);
         return 1;
     }
@@ -222,14 +286,15 @@ duk_ret_t ScriptManager::JsSetRotation(duk_context* context)
         static_cast<float>(duk_require_number(context, 2)),
         static_cast<float>(duk_require_number(context, 3)));
 
-    duk_push_boolean(context, manager->m_worldManager->SetEntityRotation(entity, rotation));
+    duk_push_boolean(context, SetEntityTransform(*world, entity, nullptr, &rotation, nullptr));
     return 1;
 }
 
 duk_ret_t ScriptManager::JsSetScale(duk_context* context)
 {
     ScriptManager* manager = GetInstance(context);
-    if (!manager || !manager->m_worldManager) {
+    OGLE::World* world = manager ? manager->GetWorld() : nullptr;
+    if (!world) {
         duk_push_false(context);
         return 1;
     }
@@ -240,72 +305,74 @@ duk_ret_t ScriptManager::JsSetScale(duk_context* context)
         static_cast<float>(duk_require_number(context, 2)),
         static_cast<float>(duk_require_number(context, 3)));
 
-    duk_push_boolean(context, manager->m_worldManager->SetEntityScale(entity, scale));
+    duk_push_boolean(context, SetEntityTransform(*world, entity, nullptr, nullptr, &scale));
     return 1;
 }
 
 duk_ret_t ScriptManager::JsEntityExists(duk_context* context)
 {
     ScriptManager* manager = GetInstance(context);
-    if (!manager || !manager->m_worldManager) {
+    if (!manager || !manager->m_worldAccess) {
         duk_push_false(context);
         return 1;
     }
 
     const auto entity = ToEntity(duk_require_uint(context, 0));
-    duk_push_boolean(context, manager->m_worldManager->IsEntityValid(entity));
+    duk_push_boolean(context, manager->m_worldAccess->IsEntityValid(entity));
     return 1;
 }
 
 duk_ret_t ScriptManager::JsSetTexture(duk_context* context)
 {
     ScriptManager* manager = GetInstance(context);
-    if (!manager || !manager->m_worldManager) {
+    OGLE::World* world = manager ? manager->GetWorld() : nullptr;
+    if (!world) {
         duk_push_false(context);
         return 1;
     }
 
     const auto entity = ToEntity(duk_require_uint(context, 0));
     const char* texturePath = duk_safe_to_string(context, 1);
-    duk_push_boolean(context, manager->m_worldManager->SetEntityDiffuseTexture(
-        entity,
-        texturePath ? texturePath : ""));
+    duk_push_boolean(context, SetEntityDiffuseTexture(*world, entity, texturePath ? texturePath : ""));
     return 1;
 }
 
 duk_ret_t ScriptManager::JsSaveWorld(duk_context* context)
 {
     ScriptManager* manager = GetInstance(context);
-    if (!manager || !manager->m_worldManager) {
+    OGLE::World* world = manager ? manager->GetWorld() : nullptr;
+    if (!world) {
         return DUK_RET_ERROR;
     }
 
     const char* path = duk_require_string(context, 0);
-    manager->m_worldManager->SaveActiveWorld(path ? path : "");
+    world->Save(path ? path : "");
     return 0;
 }
 
 duk_ret_t ScriptManager::JsLoadWorld(duk_context* context)
 {
     ScriptManager* manager = GetInstance(context);
-    if (!manager || !manager->m_worldManager) {
+    OGLE::World* world = manager ? manager->GetWorld() : nullptr;
+    if (!world) {
         return DUK_RET_ERROR;
     }
 
     const char* path = duk_require_string(context, 0);
-    manager->m_worldManager->LoadActiveWorld(path ? path : "");
+    world->Load(path ? path : "");
     return 0;
 }
 
 duk_ret_t ScriptManager::JsCreateEmpty(duk_context* context)
 {
     ScriptManager* manager = GetInstance(context);
-    if (!manager || !manager->m_worldManager) {
+    OGLE::World* world = manager ? manager->GetWorld() : nullptr;
+    if (!world) {
         return DUK_RET_ERROR;
     }
 
     const char* name = duk_opt_string(context, 0, "ScriptEntity");
-    const OGLE::Entity entity = manager->m_worldManager->CreateWorldObject(
+    const OGLE::Entity entity = world->CreateWorldObject(
         name ? name : "ScriptEntity",
         OGLE::WorldObjectKind::Generic).GetEntity();
     duk_push_uint(context, static_cast<duk_uint_t>(entt::to_integral(entity)));
@@ -315,13 +382,14 @@ duk_ret_t ScriptManager::JsCreateEmpty(duk_context* context)
 duk_ret_t ScriptManager::JsCreateModel(duk_context* context)
 {
     ScriptManager* manager = GetInstance(context);
-    if (!manager || !manager->m_worldManager) {
+    OGLE::World* world = manager ? manager->GetWorld() : nullptr;
+    if (!world) {
         return DUK_RET_ERROR;
     }
 
     const char* path = duk_require_string(context, 0);
     const char* name = duk_opt_string(context, 1, "Model");
-    const OGLE::Entity entity = manager->m_worldManager->CreateModelFromFile(
+    const OGLE::Entity entity = world->CreateModelFromFile(
         path ? path : "",
         OGLE::ModelType::DYNAMIC,
         name ? name : "Model");
@@ -332,7 +400,8 @@ duk_ret_t ScriptManager::JsCreateModel(duk_context* context)
 duk_ret_t ScriptManager::JsCreateDirectionalLight(duk_context* context)
 {
     ScriptManager* manager = GetInstance(context);
-    if (!manager || !manager->m_worldManager) {
+    OGLE::World* world = manager ? manager->GetWorld() : nullptr;
+    if (!world) {
         return DUK_RET_ERROR;
     }
 
@@ -349,13 +418,15 @@ duk_ret_t ScriptManager::JsCreateDirectionalLight(duk_context* context)
     const bool castShadows = duk_opt_boolean(context, 8, true) != 0;
     const bool primary = duk_opt_boolean(context, 9, true) != 0;
 
-    const OGLE::Entity entity = manager->m_worldManager->CreateDirectionalLight(
-        name ? name : "DirectionalLight",
-        rotation,
-        color,
-        intensity,
-        castShadows,
-        primary);
+    const OGLE::Entity entity = world->CreateWorldObject(name ? name : "DirectionalLight", OGLE::WorldObjectKind::Light).GetEntity();
+    world->SetTransform(entity, glm::vec3(0.0f), rotation, glm::vec3(1.0f));
+    auto& light = world->GetRegistry().emplace<OGLE::LightComponent>(entity);
+    light.type = OGLE::LightType::Directional;
+    light.color = color;
+    light.intensity = intensity;
+    light.range = 0.0f;
+    light.castShadows = castShadows;
+    light.primary = primary;
     duk_push_uint(context, static_cast<duk_uint_t>(entt::to_integral(entity)));
     return 1;
 }
@@ -363,7 +434,8 @@ duk_ret_t ScriptManager::JsCreateDirectionalLight(duk_context* context)
 duk_ret_t ScriptManager::JsCreatePointLight(duk_context* context)
 {
     ScriptManager* manager = GetInstance(context);
-    if (!manager || !manager->m_worldManager) {
+    OGLE::World* world = manager ? manager->GetWorld() : nullptr;
+    if (!world) {
         return DUK_RET_ERROR;
     }
 
@@ -379,12 +451,15 @@ duk_ret_t ScriptManager::JsCreatePointLight(duk_context* context)
     const float intensity = static_cast<float>(duk_opt_number(context, 7, 2.0));
     const float range = static_cast<float>(duk_opt_number(context, 8, 8.0));
 
-    const OGLE::Entity entity = manager->m_worldManager->CreatePointLight(
-        name ? name : "PointLight",
-        position,
-        color,
-        intensity,
-        range);
+    const OGLE::Entity entity = world->CreateWorldObject(name ? name : "PointLight", OGLE::WorldObjectKind::Light).GetEntity();
+    world->SetTransform(entity, position, glm::vec3(0.0f), glm::vec3(1.0f));
+    auto& light = world->GetRegistry().emplace<OGLE::LightComponent>(entity);
+    light.type = OGLE::LightType::Point;
+    light.color = color;
+    light.intensity = intensity;
+    light.range = range;
+    light.castShadows = false;
+    light.primary = false;
     duk_push_uint(context, static_cast<duk_uint_t>(entt::to_integral(entity)));
     return 1;
 }
@@ -392,7 +467,7 @@ duk_ret_t ScriptManager::JsCreatePointLight(duk_context* context)
 duk_ret_t ScriptManager::JsDestroyEntity(duk_context* context)
 {
     ScriptManager* manager = GetInstance(context);
-    OGLE::World* world = (manager && manager->m_worldManager) ? &manager->m_worldManager->GetActiveWorld() : nullptr;
+    OGLE::World* world = manager ? manager->GetWorld() : nullptr;
     if (!world) {
         duk_push_false(context);
         return 1;
@@ -412,13 +487,14 @@ duk_ret_t ScriptManager::JsDestroyEntity(duk_context* context)
 duk_ret_t ScriptManager::JsFindEntityByName(duk_context* context)
 {
     ScriptManager* manager = GetInstance(context);
-    if (!manager || !manager->m_worldManager) {
+    OGLE::World* world = manager ? manager->GetWorld() : nullptr;
+    if (!world) {
         duk_push_int(context, -1);
         return 1;
     }
 
     const char* name = duk_require_string(context, 0);
-    const OGLE::Entity entity = manager->m_worldManager->FindEntityByName(name ? name : "");
+    const OGLE::Entity entity = world->FindEntityByName(name ? name : "");
     duk_push_int(context, entity == entt::null ? -1 : static_cast<duk_int_t>(entt::to_integral(entity)));
     return 1;
 }
@@ -426,7 +502,7 @@ duk_ret_t ScriptManager::JsFindEntityByName(duk_context* context)
 duk_ret_t ScriptManager::JsGetAllEntities(duk_context* context)
 {
     ScriptManager* manager = GetInstance(context);
-    OGLE::World* world = (manager && manager->m_worldManager) ? &manager->m_worldManager->GetActiveWorld() : nullptr;
+    OGLE::World* world = manager ? manager->GetWorld() : nullptr;
     const duk_idx_t arrayIndex = duk_push_array(context);
     if (!world) {
         return 1;
@@ -445,7 +521,7 @@ duk_ret_t ScriptManager::JsGetAllEntities(duk_context* context)
 duk_ret_t ScriptManager::JsGetName(duk_context* context)
 {
     ScriptManager* manager = GetInstance(context);
-    OGLE::World* world = (manager && manager->m_worldManager) ? &manager->m_worldManager->GetActiveWorld() : nullptr;
+    OGLE::World* world = manager ? manager->GetWorld() : nullptr;
     if (!world) {
         duk_push_string(context, "");
         return 1;
@@ -459,7 +535,7 @@ duk_ret_t ScriptManager::JsGetName(duk_context* context)
 duk_ret_t ScriptManager::JsSetName(duk_context* context)
 {
     ScriptManager* manager = GetInstance(context);
-    OGLE::World* world = (manager && manager->m_worldManager) ? &manager->m_worldManager->GetActiveWorld() : nullptr;
+    OGLE::World* world = manager ? manager->GetWorld() : nullptr;
     if (!world) {
         duk_push_false(context);
         return 1;
@@ -480,7 +556,7 @@ duk_ret_t ScriptManager::JsSetName(duk_context* context)
 duk_ret_t ScriptManager::JsGetPosition(duk_context* context)
 {
     ScriptManager* manager = GetInstance(context);
-    OGLE::World* world = (manager && manager->m_worldManager) ? &manager->m_worldManager->GetActiveWorld() : nullptr;
+    OGLE::World* world = manager ? manager->GetWorld() : nullptr;
     const OGLE::TransformComponent* transform = world ? world->GetTransform(ToEntity(duk_require_uint(context, 0))) : nullptr;
     PushVec3(context, transform ? transform->position : glm::vec3(0.0f));
     return 1;
@@ -489,7 +565,7 @@ duk_ret_t ScriptManager::JsGetPosition(duk_context* context)
 duk_ret_t ScriptManager::JsGetRotation(duk_context* context)
 {
     ScriptManager* manager = GetInstance(context);
-    OGLE::World* world = (manager && manager->m_worldManager) ? &manager->m_worldManager->GetActiveWorld() : nullptr;
+    OGLE::World* world = manager ? manager->GetWorld() : nullptr;
     const OGLE::TransformComponent* transform = world ? world->GetTransform(ToEntity(duk_require_uint(context, 0))) : nullptr;
     PushVec3(context, transform ? transform->rotation : glm::vec3(0.0f));
     return 1;
@@ -498,7 +574,7 @@ duk_ret_t ScriptManager::JsGetRotation(duk_context* context)
 duk_ret_t ScriptManager::JsGetScale(duk_context* context)
 {
     ScriptManager* manager = GetInstance(context);
-    OGLE::World* world = (manager && manager->m_worldManager) ? &manager->m_worldManager->GetActiveWorld() : nullptr;
+    OGLE::World* world = manager ? manager->GetWorld() : nullptr;
     const OGLE::TransformComponent* transform = world ? world->GetTransform(ToEntity(duk_require_uint(context, 0))) : nullptr;
     PushVec3(context, transform ? transform->scale : glm::vec3(1.0f));
     return 1;
@@ -507,7 +583,7 @@ duk_ret_t ScriptManager::JsGetScale(duk_context* context)
 duk_ret_t ScriptManager::JsGetEnabled(duk_context* context)
 {
     ScriptManager* manager = GetInstance(context);
-    OGLE::World* world = (manager && manager->m_worldManager) ? &manager->m_worldManager->GetActiveWorld() : nullptr;
+    OGLE::World* world = manager ? manager->GetWorld() : nullptr;
     const OGLE::WorldObjectComponent* worldObject = world ? world->GetWorldObjectComponent(ToEntity(duk_require_uint(context, 0))) : nullptr;
     duk_push_boolean(context, worldObject ? worldObject->enabled : false);
     return 1;
@@ -516,7 +592,7 @@ duk_ret_t ScriptManager::JsGetEnabled(duk_context* context)
 duk_ret_t ScriptManager::JsSetEnabled(duk_context* context)
 {
     ScriptManager* manager = GetInstance(context);
-    OGLE::World* world = (manager && manager->m_worldManager) ? &manager->m_worldManager->GetActiveWorld() : nullptr;
+    OGLE::World* world = manager ? manager->GetWorld() : nullptr;
     OGLE::WorldObjectComponent* worldObject = world ? world->GetWorldObjectComponent(ToEntity(duk_require_uint(context, 0))) : nullptr;
     if (!worldObject) {
         duk_push_false(context);
@@ -531,7 +607,7 @@ duk_ret_t ScriptManager::JsSetEnabled(duk_context* context)
 duk_ret_t ScriptManager::JsGetVisible(duk_context* context)
 {
     ScriptManager* manager = GetInstance(context);
-    OGLE::World* world = (manager && manager->m_worldManager) ? &manager->m_worldManager->GetActiveWorld() : nullptr;
+    OGLE::World* world = manager ? manager->GetWorld() : nullptr;
     const OGLE::WorldObjectComponent* worldObject = world ? world->GetWorldObjectComponent(ToEntity(duk_require_uint(context, 0))) : nullptr;
     duk_push_boolean(context, worldObject ? worldObject->visible : false);
     return 1;
@@ -540,7 +616,7 @@ duk_ret_t ScriptManager::JsGetVisible(duk_context* context)
 duk_ret_t ScriptManager::JsSetVisible(duk_context* context)
 {
     ScriptManager* manager = GetInstance(context);
-    OGLE::World* world = (manager && manager->m_worldManager) ? &manager->m_worldManager->GetActiveWorld() : nullptr;
+    OGLE::World* world = manager ? manager->GetWorld() : nullptr;
     OGLE::WorldObjectComponent* worldObject = world ? world->GetWorldObjectComponent(ToEntity(duk_require_uint(context, 0))) : nullptr;
     if (!worldObject) {
         duk_push_false(context);
@@ -555,7 +631,7 @@ duk_ret_t ScriptManager::JsSetVisible(duk_context* context)
 duk_ret_t ScriptManager::JsGetEntityKind(duk_context* context)
 {
     ScriptManager* manager = GetInstance(context);
-    OGLE::World* world = (manager && manager->m_worldManager) ? &manager->m_worldManager->GetActiveWorld() : nullptr;
+    OGLE::World* world = manager ? manager->GetWorld() : nullptr;
     const OGLE::WorldObjectComponent* worldObject = world ? world->GetWorldObjectComponent(ToEntity(duk_require_uint(context, 0))) : nullptr;
     if (!worldObject) {
         duk_push_string(context, "Unknown");
@@ -575,7 +651,7 @@ duk_ret_t ScriptManager::JsGetEntityKind(duk_context* context)
 duk_ret_t ScriptManager::JsGetEntitiesByKind(duk_context* context)
 {
     ScriptManager* manager = GetInstance(context);
-    OGLE::World* world = (manager && manager->m_worldManager) ? &manager->m_worldManager->GetActiveWorld() : nullptr;
+    OGLE::World* world = manager ? manager->GetWorld() : nullptr;
     const duk_idx_t arrayIndex = duk_push_array(context);
     if (!world) {
         return 1;
@@ -605,7 +681,7 @@ duk_ret_t ScriptManager::JsGetEntitiesByKind(duk_context* context)
 duk_ret_t ScriptManager::JsGetEntityCount(duk_context* context)
 {
     ScriptManager* manager = GetInstance(context);
-    OGLE::World* world = (manager && manager->m_worldManager) ? &manager->m_worldManager->GetActiveWorld() : nullptr;
+    OGLE::World* world = manager ? manager->GetWorld() : nullptr;
     if (!world) {
         duk_push_int(context, 0);
         return 1;
@@ -624,7 +700,7 @@ duk_ret_t ScriptManager::JsGetEntityCount(duk_context* context)
 duk_ret_t ScriptManager::JsGetTexture(duk_context* context)
 {
     ScriptManager* manager = GetInstance(context);
-    OGLE::World* world = (manager && manager->m_worldManager) ? &manager->m_worldManager->GetActiveWorld() : nullptr;
+    OGLE::World* world = manager ? manager->GetWorld() : nullptr;
     const OGLE::ModelEntity* model = world ? world->GetModel(ToEntity(duk_require_uint(context, 0))) : nullptr;
     duk_push_string(context, model ? model->GetDiffuseTexturePath().c_str() : "");
     return 1;
@@ -633,7 +709,7 @@ duk_ret_t ScriptManager::JsGetTexture(duk_context* context)
 duk_ret_t ScriptManager::JsGetMaterialBaseColor(duk_context* context)
 {
     ScriptManager* manager = GetInstance(context);
-    OGLE::World* world = (manager && manager->m_worldManager) ? &manager->m_worldManager->GetActiveWorld() : nullptr;
+    OGLE::World* world = manager ? manager->GetWorld() : nullptr;
     const OGLE::ModelEntity* model = world ? world->GetModel(ToEntity(duk_require_uint(context, 0))) : nullptr;
     PushVec3(context, model ? model->GetMaterial().GetBaseColor() : glm::vec3(1.0f));
     return 1;
@@ -642,7 +718,7 @@ duk_ret_t ScriptManager::JsGetMaterialBaseColor(duk_context* context)
 duk_ret_t ScriptManager::JsSetMaterialBaseColor(duk_context* context)
 {
     ScriptManager* manager = GetInstance(context);
-    OGLE::World* world = (manager && manager->m_worldManager) ? &manager->m_worldManager->GetActiveWorld() : nullptr;
+    OGLE::World* world = manager ? manager->GetWorld() : nullptr;
     OGLE::ModelEntity* model = world ? world->GetModel(ToEntity(duk_require_uint(context, 0))) : nullptr;
     if (!model) {
         duk_push_false(context);
@@ -660,7 +736,7 @@ duk_ret_t ScriptManager::JsSetMaterialBaseColor(duk_context* context)
 duk_ret_t ScriptManager::JsGetMaterialEmissiveColor(duk_context* context)
 {
     ScriptManager* manager = GetInstance(context);
-    OGLE::World* world = (manager && manager->m_worldManager) ? &manager->m_worldManager->GetActiveWorld() : nullptr;
+    OGLE::World* world = manager ? manager->GetWorld() : nullptr;
     const OGLE::ModelEntity* model = world ? world->GetModel(ToEntity(duk_require_uint(context, 0))) : nullptr;
     PushVec3(context, model ? model->GetMaterial().GetEmissiveColor() : glm::vec3(0.0f));
     return 1;
@@ -669,7 +745,7 @@ duk_ret_t ScriptManager::JsGetMaterialEmissiveColor(duk_context* context)
 duk_ret_t ScriptManager::JsSetMaterialEmissiveColor(duk_context* context)
 {
     ScriptManager* manager = GetInstance(context);
-    OGLE::World* world = (manager && manager->m_worldManager) ? &manager->m_worldManager->GetActiveWorld() : nullptr;
+    OGLE::World* world = manager ? manager->GetWorld() : nullptr;
     OGLE::ModelEntity* model = world ? world->GetModel(ToEntity(duk_require_uint(context, 0))) : nullptr;
     if (!model) {
         duk_push_false(context);
@@ -687,7 +763,7 @@ duk_ret_t ScriptManager::JsSetMaterialEmissiveColor(duk_context* context)
 duk_ret_t ScriptManager::JsGetMaterialUvTiling(duk_context* context)
 {
     ScriptManager* manager = GetInstance(context);
-    OGLE::World* world = (manager && manager->m_worldManager) ? &manager->m_worldManager->GetActiveWorld() : nullptr;
+    OGLE::World* world = manager ? manager->GetWorld() : nullptr;
     const OGLE::ModelEntity* model = world ? world->GetModel(ToEntity(duk_require_uint(context, 0))) : nullptr;
     PushVec2(context, model ? model->GetMaterial().GetUvTiling() : glm::vec2(1.0f));
     return 1;
@@ -696,7 +772,7 @@ duk_ret_t ScriptManager::JsGetMaterialUvTiling(duk_context* context)
 duk_ret_t ScriptManager::JsSetMaterialUvTiling(duk_context* context)
 {
     ScriptManager* manager = GetInstance(context);
-    OGLE::World* world = (manager && manager->m_worldManager) ? &manager->m_worldManager->GetActiveWorld() : nullptr;
+    OGLE::World* world = manager ? manager->GetWorld() : nullptr;
     OGLE::ModelEntity* model = world ? world->GetModel(ToEntity(duk_require_uint(context, 0))) : nullptr;
     if (!model) {
         duk_push_false(context);
@@ -713,7 +789,7 @@ duk_ret_t ScriptManager::JsSetMaterialUvTiling(duk_context* context)
 duk_ret_t ScriptManager::JsGetMaterialUvOffset(duk_context* context)
 {
     ScriptManager* manager = GetInstance(context);
-    OGLE::World* world = (manager && manager->m_worldManager) ? &manager->m_worldManager->GetActiveWorld() : nullptr;
+    OGLE::World* world = manager ? manager->GetWorld() : nullptr;
     const OGLE::ModelEntity* model = world ? world->GetModel(ToEntity(duk_require_uint(context, 0))) : nullptr;
     PushVec2(context, model ? model->GetMaterial().GetUvOffset() : glm::vec2(0.0f));
     return 1;
@@ -722,7 +798,7 @@ duk_ret_t ScriptManager::JsGetMaterialUvOffset(duk_context* context)
 duk_ret_t ScriptManager::JsSetMaterialUvOffset(duk_context* context)
 {
     ScriptManager* manager = GetInstance(context);
-    OGLE::World* world = (manager && manager->m_worldManager) ? &manager->m_worldManager->GetActiveWorld() : nullptr;
+    OGLE::World* world = manager ? manager->GetWorld() : nullptr;
     OGLE::ModelEntity* model = world ? world->GetModel(ToEntity(duk_require_uint(context, 0))) : nullptr;
     if (!model) {
         duk_push_false(context);
@@ -739,7 +815,7 @@ duk_ret_t ScriptManager::JsSetMaterialUvOffset(duk_context* context)
 duk_ret_t ScriptManager::JsGetMaterialRoughness(duk_context* context)
 {
     ScriptManager* manager = GetInstance(context);
-    OGLE::World* world = (manager && manager->m_worldManager) ? &manager->m_worldManager->GetActiveWorld() : nullptr;
+    OGLE::World* world = manager ? manager->GetWorld() : nullptr;
     const OGLE::ModelEntity* model = world ? world->GetModel(ToEntity(duk_require_uint(context, 0))) : nullptr;
     duk_push_number(context, model ? model->GetMaterial().GetRoughness() : 0.7f);
     return 1;
@@ -748,7 +824,7 @@ duk_ret_t ScriptManager::JsGetMaterialRoughness(duk_context* context)
 duk_ret_t ScriptManager::JsSetMaterialRoughness(duk_context* context)
 {
     ScriptManager* manager = GetInstance(context);
-    OGLE::World* world = (manager && manager->m_worldManager) ? &manager->m_worldManager->GetActiveWorld() : nullptr;
+    OGLE::World* world = manager ? manager->GetWorld() : nullptr;
     OGLE::ModelEntity* model = world ? world->GetModel(ToEntity(duk_require_uint(context, 0))) : nullptr;
     if (!model) {
         duk_push_false(context);
@@ -763,7 +839,7 @@ duk_ret_t ScriptManager::JsSetMaterialRoughness(duk_context* context)
 duk_ret_t ScriptManager::JsGetMaterialMetallic(duk_context* context)
 {
     ScriptManager* manager = GetInstance(context);
-    OGLE::World* world = (manager && manager->m_worldManager) ? &manager->m_worldManager->GetActiveWorld() : nullptr;
+    OGLE::World* world = manager ? manager->GetWorld() : nullptr;
     const OGLE::ModelEntity* model = world ? world->GetModel(ToEntity(duk_require_uint(context, 0))) : nullptr;
     duk_push_number(context, model ? model->GetMaterial().GetMetallic() : 0.0f);
     return 1;
@@ -772,7 +848,7 @@ duk_ret_t ScriptManager::JsGetMaterialMetallic(duk_context* context)
 duk_ret_t ScriptManager::JsSetMaterialMetallic(duk_context* context)
 {
     ScriptManager* manager = GetInstance(context);
-    OGLE::World* world = (manager && manager->m_worldManager) ? &manager->m_worldManager->GetActiveWorld() : nullptr;
+    OGLE::World* world = manager ? manager->GetWorld() : nullptr;
     OGLE::ModelEntity* model = world ? world->GetModel(ToEntity(duk_require_uint(context, 0))) : nullptr;
     if (!model) {
         duk_push_false(context);
@@ -787,7 +863,7 @@ duk_ret_t ScriptManager::JsSetMaterialMetallic(duk_context* context)
 duk_ret_t ScriptManager::JsGetMaterialAlphaCutoff(duk_context* context)
 {
     ScriptManager* manager = GetInstance(context);
-    OGLE::World* world = (manager && manager->m_worldManager) ? &manager->m_worldManager->GetActiveWorld() : nullptr;
+    OGLE::World* world = manager ? manager->GetWorld() : nullptr;
     const OGLE::ModelEntity* model = world ? world->GetModel(ToEntity(duk_require_uint(context, 0))) : nullptr;
     duk_push_number(context, model ? model->GetMaterial().GetAlphaCutoff() : 0.0f);
     return 1;
@@ -796,7 +872,7 @@ duk_ret_t ScriptManager::JsGetMaterialAlphaCutoff(duk_context* context)
 duk_ret_t ScriptManager::JsSetMaterialAlphaCutoff(duk_context* context)
 {
     ScriptManager* manager = GetInstance(context);
-    OGLE::World* world = (manager && manager->m_worldManager) ? &manager->m_worldManager->GetActiveWorld() : nullptr;
+    OGLE::World* world = manager ? manager->GetWorld() : nullptr;
     OGLE::ModelEntity* model = world ? world->GetModel(ToEntity(duk_require_uint(context, 0))) : nullptr;
     if (!model) {
         duk_push_false(context);
@@ -811,7 +887,7 @@ duk_ret_t ScriptManager::JsSetMaterialAlphaCutoff(duk_context* context)
 duk_ret_t ScriptManager::JsGetEmissiveTexture(duk_context* context)
 {
     ScriptManager* manager = GetInstance(context);
-    OGLE::World* world = (manager && manager->m_worldManager) ? &manager->m_worldManager->GetActiveWorld() : nullptr;
+    OGLE::World* world = manager ? manager->GetWorld() : nullptr;
     const OGLE::ModelEntity* model = world ? world->GetModel(ToEntity(duk_require_uint(context, 0))) : nullptr;
     duk_push_string(context, model ? model->GetMaterial().GetEmissiveTexturePath().c_str() : "");
     return 1;
@@ -820,7 +896,7 @@ duk_ret_t ScriptManager::JsGetEmissiveTexture(duk_context* context)
 duk_ret_t ScriptManager::JsSetEmissiveTexture(duk_context* context)
 {
     ScriptManager* manager = GetInstance(context);
-    OGLE::World* world = (manager && manager->m_worldManager) ? &manager->m_worldManager->GetActiveWorld() : nullptr;
+    OGLE::World* world = manager ? manager->GetWorld() : nullptr;
     OGLE::ModelEntity* model = world ? world->GetModel(ToEntity(duk_require_uint(context, 0))) : nullptr;
     if (!model) {
         duk_push_false(context);
@@ -835,7 +911,7 @@ duk_ret_t ScriptManager::JsSetEmissiveTexture(duk_context* context)
 duk_ret_t ScriptManager::JsGetLightColor(duk_context* context)
 {
     ScriptManager* manager = GetInstance(context);
-    OGLE::World* world = (manager && manager->m_worldManager) ? &manager->m_worldManager->GetActiveWorld() : nullptr;
+    OGLE::World* world = manager ? manager->GetWorld() : nullptr;
     const OGLE::LightComponent* light = world ? world->GetLight(ToEntity(duk_require_uint(context, 0))) : nullptr;
     PushVec3(context, light ? light->color : glm::vec3(1.0f));
     return 1;
@@ -844,7 +920,7 @@ duk_ret_t ScriptManager::JsGetLightColor(duk_context* context)
 duk_ret_t ScriptManager::JsSetLightColor(duk_context* context)
 {
     ScriptManager* manager = GetInstance(context);
-    OGLE::World* world = (manager && manager->m_worldManager) ? &manager->m_worldManager->GetActiveWorld() : nullptr;
+    OGLE::World* world = manager ? manager->GetWorld() : nullptr;
     OGLE::LightComponent* light = world ? world->GetLight(ToEntity(duk_require_uint(context, 0))) : nullptr;
     if (!light) {
         duk_push_false(context);
@@ -862,7 +938,7 @@ duk_ret_t ScriptManager::JsSetLightColor(duk_context* context)
 duk_ret_t ScriptManager::JsGetLightIntensity(duk_context* context)
 {
     ScriptManager* manager = GetInstance(context);
-    OGLE::World* world = (manager && manager->m_worldManager) ? &manager->m_worldManager->GetActiveWorld() : nullptr;
+    OGLE::World* world = manager ? manager->GetWorld() : nullptr;
     const OGLE::LightComponent* light = world ? world->GetLight(ToEntity(duk_require_uint(context, 0))) : nullptr;
     duk_push_number(context, light ? light->intensity : 0.0);
     return 1;
@@ -871,7 +947,7 @@ duk_ret_t ScriptManager::JsGetLightIntensity(duk_context* context)
 duk_ret_t ScriptManager::JsSetLightIntensity(duk_context* context)
 {
     ScriptManager* manager = GetInstance(context);
-    OGLE::World* world = (manager && manager->m_worldManager) ? &manager->m_worldManager->GetActiveWorld() : nullptr;
+    OGLE::World* world = manager ? manager->GetWorld() : nullptr;
     OGLE::LightComponent* light = world ? world->GetLight(ToEntity(duk_require_uint(context, 0))) : nullptr;
     if (!light) {
         duk_push_false(context);
@@ -886,7 +962,7 @@ duk_ret_t ScriptManager::JsSetLightIntensity(duk_context* context)
 duk_ret_t ScriptManager::JsGetLightRange(duk_context* context)
 {
     ScriptManager* manager = GetInstance(context);
-    OGLE::World* world = (manager && manager->m_worldManager) ? &manager->m_worldManager->GetActiveWorld() : nullptr;
+    OGLE::World* world = manager ? manager->GetWorld() : nullptr;
     const OGLE::LightComponent* light = world ? world->GetLight(ToEntity(duk_require_uint(context, 0))) : nullptr;
     duk_push_number(context, light ? light->range : 0.0);
     return 1;
@@ -895,7 +971,7 @@ duk_ret_t ScriptManager::JsGetLightRange(duk_context* context)
 duk_ret_t ScriptManager::JsSetLightRange(duk_context* context)
 {
     ScriptManager* manager = GetInstance(context);
-    OGLE::World* world = (manager && manager->m_worldManager) ? &manager->m_worldManager->GetActiveWorld() : nullptr;
+    OGLE::World* world = manager ? manager->GetWorld() : nullptr;
     OGLE::LightComponent* light = world ? world->GetLight(ToEntity(duk_require_uint(context, 0))) : nullptr;
     if (!light) {
         duk_push_false(context);
@@ -910,7 +986,7 @@ duk_ret_t ScriptManager::JsSetLightRange(duk_context* context)
 duk_ret_t ScriptManager::JsGetLightCastShadows(duk_context* context)
 {
     ScriptManager* manager = GetInstance(context);
-    OGLE::World* world = (manager && manager->m_worldManager) ? &manager->m_worldManager->GetActiveWorld() : nullptr;
+    OGLE::World* world = manager ? manager->GetWorld() : nullptr;
     const OGLE::LightComponent* light = world ? world->GetLight(ToEntity(duk_require_uint(context, 0))) : nullptr;
     duk_push_boolean(context, light ? light->castShadows : false);
     return 1;
@@ -919,7 +995,7 @@ duk_ret_t ScriptManager::JsGetLightCastShadows(duk_context* context)
 duk_ret_t ScriptManager::JsSetLightCastShadows(duk_context* context)
 {
     ScriptManager* manager = GetInstance(context);
-    OGLE::World* world = (manager && manager->m_worldManager) ? &manager->m_worldManager->GetActiveWorld() : nullptr;
+    OGLE::World* world = manager ? manager->GetWorld() : nullptr;
     OGLE::LightComponent* light = world ? world->GetLight(ToEntity(duk_require_uint(context, 0))) : nullptr;
     if (!light) {
         duk_push_false(context);
@@ -934,7 +1010,7 @@ duk_ret_t ScriptManager::JsSetLightCastShadows(duk_context* context)
 duk_ret_t ScriptManager::JsGetLightPrimary(duk_context* context)
 {
     ScriptManager* manager = GetInstance(context);
-    OGLE::World* world = (manager && manager->m_worldManager) ? &manager->m_worldManager->GetActiveWorld() : nullptr;
+    OGLE::World* world = manager ? manager->GetWorld() : nullptr;
     const OGLE::LightComponent* light = world ? world->GetLight(ToEntity(duk_require_uint(context, 0))) : nullptr;
     duk_push_boolean(context, light ? light->primary : false);
     return 1;
@@ -943,7 +1019,7 @@ duk_ret_t ScriptManager::JsGetLightPrimary(duk_context* context)
 duk_ret_t ScriptManager::JsSetLightPrimary(duk_context* context)
 {
     ScriptManager* manager = GetInstance(context);
-    OGLE::World* world = (manager && manager->m_worldManager) ? &manager->m_worldManager->GetActiveWorld() : nullptr;
+    OGLE::World* world = manager ? manager->GetWorld() : nullptr;
     OGLE::LightComponent* light = world ? world->GetLight(ToEntity(duk_require_uint(context, 0))) : nullptr;
     if (!light) {
         duk_push_false(context);
@@ -958,7 +1034,7 @@ duk_ret_t ScriptManager::JsSetLightPrimary(duk_context* context)
 duk_ret_t ScriptManager::JsGetLightType(duk_context* context)
 {
     ScriptManager* manager = GetInstance(context);
-    OGLE::World* world = (manager && manager->m_worldManager) ? &manager->m_worldManager->GetActiveWorld() : nullptr;
+    OGLE::World* world = manager ? manager->GetWorld() : nullptr;
     const OGLE::LightComponent* light = world ? world->GetLight(ToEntity(duk_require_uint(context, 0))) : nullptr;
     duk_push_string(context, !light ? "None" : (light->type == OGLE::LightType::Directional ? "Directional" : "Point"));
     return 1;
@@ -967,7 +1043,7 @@ duk_ret_t ScriptManager::JsGetLightType(duk_context* context)
 duk_ret_t ScriptManager::JsSetLightType(duk_context* context)
 {
     ScriptManager* manager = GetInstance(context);
-    OGLE::World* world = (manager && manager->m_worldManager) ? &manager->m_worldManager->GetActiveWorld() : nullptr;
+    OGLE::World* world = manager ? manager->GetWorld() : nullptr;
     OGLE::LightComponent* light = world ? world->GetLight(ToEntity(duk_require_uint(context, 0))) : nullptr;
     if (!light) {
         duk_push_false(context);

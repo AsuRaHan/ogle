@@ -6,7 +6,8 @@ extern "C" {
 #include <duktape.h>
 }
 
-class WorldManager;
+class IWorldAccess;
+namespace OGLE { class World; }
 
 class ScriptManager
 {
@@ -14,13 +15,16 @@ public:
     ScriptManager();
     ~ScriptManager();
 
-    bool Initialize(WorldManager& worldManager);
+    bool Initialize(IWorldAccess& worldAccess);
     void Shutdown();
 
     bool ExecuteFile(const std::string& scriptPath);
     void Update(float deltaTime);
 
 private:
+    OGLE::World* GetWorld();
+    const OGLE::World* GetWorld() const;
+
     static ScriptManager* GetInstance(duk_context* context);
     static duk_ret_t JsLog(duk_context* context);
     static duk_ret_t JsClearWorld(duk_context* context);
@@ -88,5 +92,5 @@ private:
     std::string ResolveScriptPath(const std::string& scriptPath) const;
 
     duk_context* m_context = nullptr;
-    WorldManager* m_worldManager = nullptr;
+    IWorldAccess* m_worldAccess = nullptr;
 };

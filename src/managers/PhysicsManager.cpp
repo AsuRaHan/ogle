@@ -1,7 +1,7 @@
 #include "managers/PhysicsManager.h"
 
 #include "Logger.h"
-#include "managers/WorldManager.h"
+#include "world/IWorldAccess.h"
 #include "world/World.h"
 
 #include <btBulletDynamicsCommon.h>
@@ -54,11 +54,11 @@ PhysicsManager::~PhysicsManager()
     Shutdown();
 }
 
-bool PhysicsManager::Initialize(WorldManager& worldManager)
+bool PhysicsManager::Initialize(IWorldAccess& worldAccess)
 {
     Shutdown();
 
-    m_worldManager = &worldManager;
+    m_worldAccess = &worldAccess;
     m_collisionConfiguration = std::make_unique<btDefaultCollisionConfiguration>();
     m_dispatcher = std::make_unique<btCollisionDispatcher>(m_collisionConfiguration.get());
     m_broadphase = std::make_unique<btDbvtBroadphase>();
@@ -87,7 +87,7 @@ void PhysicsManager::Shutdown()
     m_broadphase.reset();
     m_dispatcher.reset();
     m_collisionConfiguration.reset();
-    m_worldManager = nullptr;
+    m_worldAccess = nullptr;
 }
 
 void PhysicsManager::SetGravity(const glm::vec3& gravity)
@@ -103,13 +103,13 @@ bool PhysicsManager::AddBoxBody(
     OGLE::PhysicsBodyType bodyType,
     float mass)
 {
-    if (!m_worldManager || !m_dynamicsWorld || !m_worldManager->IsEntityValid(entity)) {
+    if (!m_worldAccess || !m_dynamicsWorld || !m_worldAccess->IsEntityValid(entity)) {
         return false;
     }
 
     RemoveBody(entity);
 
-    OGLE::World& world = m_worldManager->GetActiveWorld();
+    OGLE::World& world = m_worldAccess->GetActiveWorld();
     const OGLE::TransformComponent* transform = world.GetTransform(entity);
     if (!transform) {
         return false;
@@ -193,7 +193,7 @@ void PhysicsManager::Clear()
 
 void PhysicsManager::Update(float deltaTime)
 {
-    if (!m_worldManager || !m_dynamicsWorld) {
+    if (!m_worldAccess || !m_dynamicsWorld) {
         return;
     }
 
@@ -220,7 +220,7 @@ std::size_t PhysicsManager::GetBodyCount() const
 
 void PhysicsManager::PruneInvalidBodies()
 {
-    if (!m_worldManager || !m_dynamicsWorld) {
+    if (!m_worldAccess || !m_dynamicsWorld) {
         return;
     }
 
@@ -228,7 +228,7 @@ void PhysicsManager::PruneInvalidBodies()
     invalidIds.reserve(m_bodies.size());
 
     for (const auto& [id, entry] : m_bodies) {
-        if (!m_worldManager->IsEntityValid(static_cast<OGLE::Entity>(id))) {
+        if (!m_worldAccess->IsEntityValid(static_cast<OGLE::Entity>(id))) {
             invalidIds.push_back(id);
         }
     }
@@ -244,7 +244,7 @@ void PhysicsManager::PruneInvalidBodies()
 
 void PhysicsManager::SyncEntityFromBody(OGLE::Entity entity, const btRigidBody& body)
 {
-    if (!m_worldManager || !m_worldManager->IsEntityValid(entity)) {
+    if (!m_worldAccess || !m_worldAccess->IsEntityValid(entity)) {
         return;
     }
 
@@ -255,7 +255,7 @@ void PhysicsManager::SyncEntityFromBody(OGLE::Entity entity, const btRigidBody& 
         worldTransform = body.getWorldTransform();
     }
 
-    OGLE::World& world = m_worldManager->GetActiveWorld();
+    OGLE::World& world = m_worldAccess->GetActiveWorld();
     OGLE::TransformComponent* transform = world.GetTransform(entity);
     if (!transform) {
         return;

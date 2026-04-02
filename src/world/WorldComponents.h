@@ -48,6 +48,10 @@ namespace OGLE {
     enum class PrimitiveType {
         None,           // Нет примитива
         Cube,           // Куб
+        Sphere,         // Сфера
+        Plane,          // Плоскость
+        // Cylinder,       // Цилиндр
+        // Cone,           // Конус
         ModelFile,      // Модель из файла
         ProceduralMesh  // Процедурно сгенерированный меш
     };

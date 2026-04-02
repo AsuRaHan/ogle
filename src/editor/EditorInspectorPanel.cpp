@@ -16,23 +16,12 @@ namespace
         switch (type) {
             case OGLE::PrimitiveType::None: return "None";
             case OGLE::PrimitiveType::Cube: return "Cube";
+            case OGLE::PrimitiveType::Sphere: return "Sphere";
+            case OGLE::PrimitiveType::Plane: return "Plane";
             case OGLE::PrimitiveType::ModelFile: return "Model File";
             case OGLE::PrimitiveType::ProceduralMesh: return "Procedural Mesh";
             default: return "Unknown";
         }
-    }
-
-    void CopyMaterialToModel(OGLE::World& world, OGLE::Entity entity)
-    {
-        OGLE::MaterialComponent* materialComponent = world.GetMaterial(entity);
-        OGLE::ModelEntity* model = world.GetModel(entity);
-        if (!materialComponent || !model) {
-            return;
-        }
-
-        // The runtime renders from MaterialComponent, but we keep ModelEntity in sync
-        // so file-backed data, debug tools, and older code paths still see the same values.
-        model->GetMaterial() = materialComponent->material;
     }
 }
 
@@ -124,13 +113,11 @@ void EditorInspectorPanel::Draw(EditorState& state, WorldManager& worldManager, 
                 materialComponent->material.SetAlphaCutoff(state.alphaCutoffBuffer);
                 materialComponent->material.SetDiffuseTexturePath(state.texturePathBuffer.data());
                 materialComponent->material.SetEmissiveTexturePath(state.emissiveTexturePathBuffer.data());
-                CopyMaterialToModel(world, state.selectedEntity);
             }
             ImGui::SameLine();
             if (ImGui::Button("Clear Textures")) {
                 materialComponent->material.SetDiffuseTexturePath("");
                 materialComponent->material.SetEmissiveTexturePath("");
-                CopyMaterialToModel(world, state.selectedEntity);
                 state.texturePathBuffer.fill('\0');
                 state.emissiveTexturePathBuffer.fill('\0');
             }
@@ -140,7 +127,6 @@ void EditorInspectorPanel::Draw(EditorState& state, WorldManager& worldManager, 
                     const char* assetPath = static_cast<const char*>(payload->Data);
                     if (assetPath && IsEditorTextureAssetPath(assetPath)) {
                         materialComponent->material.SetDiffuseTexturePath(assetPath);
-                        CopyMaterialToModel(world, state.selectedEntity);
                         state.texturePathBuffer.fill('\0');
                         std::strncpy(state.texturePathBuffer.data(), assetPath, state.texturePathBuffer.size() - 1);
                     }

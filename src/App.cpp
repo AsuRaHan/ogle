@@ -120,48 +120,48 @@ int App::Run(HINSTANCE hInstance, int nCmdShow)
         return -1;
     }
 
-    const OGLE::Entity floorEntity = m_worldManager.FindEntityByName("Floor");
-    if (floorEntity != entt::null) {
-        m_physicsManager.AddBoxBody(
-            floorEntity,
-            glm::vec3(12.0f, 0.25f, 12.0f),
-            OGLE::PhysicsBodyType::Static,
-            0.0f);
-    }
+    // const OGLE::Entity floorEntity = m_worldManager.FindEntityByName("Floor");
+    // if (floorEntity != entt::null) {
+    //     m_physicsManager.AddBoxBody(
+    //         floorEntity,
+    //         glm::vec3(12.0f, 0.25f, 12.0f),
+    //         OGLE::PhysicsBodyType::Static,
+    //         0.0f);
+    // }
 
-    for (const char* entityName : { "CenterBlock", "WestBlock", "EastBlock", "MarkerA", "MarkerB" }) {
-        const OGLE::Entity entity = m_worldManager.FindEntityByName(entityName);
-        if (entity != entt::null) {
-            const auto* transform = m_worldManager.GetActiveWorld().GetTransform(entity);
-            if (transform) {
-                m_physicsManager.AddBoxBody(
-                    entity,
-                    transform->scale * 0.5f,
-                    OGLE::PhysicsBodyType::Dynamic,
-                    1.0f);
-            }
-        }
-    }
+    // for (const char* entityName : { "CenterBlock", "WestBlock", "EastBlock", "MarkerA", "MarkerB" }) {
+    //     const OGLE::Entity entity = m_worldManager.FindEntityByName(entityName);
+    //     if (entity != entt::null) {
+    //         const auto* transform = m_worldManager.GetActiveWorld().GetTransform(entity);
+    //         if (transform) {
+    //             m_physicsManager.AddBoxBody(
+    //                 entity,
+    //                 transform->scale * 0.5f,
+    //                 OGLE::PhysicsBodyType::Dynamic,
+    //                 1.0f);
+    //         }
+    //     }
+    // }
 
-    const OGLE::Entity physicsDropA = m_worldManager.CreateCube(
-        "PhysicsDropA",
-        glm::vec3(-1.5f, 6.0f, 0.0f),
-        glm::vec3(0.8f, 0.8f, 0.8f));
-    m_physicsManager.AddBoxBody(
-        physicsDropA,
-        glm::vec3(0.4f, 0.4f, 0.4f),
-        OGLE::PhysicsBodyType::Dynamic,
-        1.0f);
+    // const OGLE::Entity physicsDropA = m_worldManager.CreateCube(
+    //     "PhysicsDropA",
+    //     glm::vec3(-1.5f, 6.0f, 0.0f),
+    //     glm::vec3(0.8f, 0.8f, 0.8f));
+    // m_physicsManager.AddBoxBody(
+    //     physicsDropA,
+    //     glm::vec3(0.4f, 0.4f, 0.4f),
+    //     OGLE::PhysicsBodyType::Dynamic,
+    //     1.0f);
 
-    const OGLE::Entity physicsDropB = m_worldManager.CreateCube(
-        "PhysicsDropB",
-        glm::vec3(1.2f, 8.0f, -0.5f),
-        glm::vec3(1.0f, 1.0f, 1.0f));
-    m_physicsManager.AddBoxBody(
-        physicsDropB,
-        glm::vec3(0.5f, 0.5f, 0.5f),
-        OGLE::PhysicsBodyType::Dynamic,
-        1.0f);
+    // const OGLE::Entity physicsDropB = m_worldManager.CreateCube(
+    //     "PhysicsDropB",
+    //     glm::vec3(1.2f, 8.0f, -0.5f),
+    //     glm::vec3(1.0f, 1.0f, 1.0f));
+    // m_physicsManager.AddBoxBody(
+    //     physicsDropB,
+    //     glm::vec3(0.5f, 0.5f, 0.5f),
+    //     OGLE::PhysicsBodyType::Dynamic,
+    //     1.0f);
 
     m_window->Show(nCmdShow);
     m_timeManager.Reset();

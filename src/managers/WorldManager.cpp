@@ -1,9 +1,9 @@
 #include "managers/WorldManager.h"
 
 #include "core/FileSystem.h"
+#include "managers/PrimitiveFactory.h"
 
 #include <glm/vec3.hpp>
-#include <vector>
 
 WorldManager::WorldManager()
 {
@@ -135,66 +135,33 @@ OGLE::Entity WorldManager::CreateModelFromFile(
     return GetActiveWorld().CreateModelFromFile(filePath, type, name);
 }
 
+OGLE::Entity WorldManager::CreatePrimitive(
+    const std::string& name,
+    OGLE::PrimitiveType type,
+    const glm::vec3& position,
+    const glm::vec3& scale,
+    const std::string& diffuseTexturePath)
+{
+    auto model = PrimitiveFactory::CreatePrimitiveModel(type, diffuseTexturePath);
+    if (!model) {
+        return entt::null;
+    }
+
+    const OGLE::Entity entity = AddModel(std::move(model), name);
+    GetActiveWorld().SetTransform(entity, position, glm::vec3(0.0f, 0.0f, 0.0f), scale);
+    if (auto* primitive = GetActiveWorld().GetPrimitive(entity)) {
+        primitive->type = type;
+        primitive->sourcePath.clear();
+    }
+    return entity;
+}
+
 OGLE::Entity WorldManager::CreateCube(
     const std::string& name,
     const glm::vec3& position,
     const glm::vec3& scale,
     const std::string& diffuseTexturePath) {
-
-    static const std::vector<float> vertices = {
-        -0.5f, -0.5f,  0.5f,   0.0f,  0.0f,  1.0f,   0.0f, 0.0f,
-         0.5f, -0.5f,  0.5f,   0.0f,  0.0f,  1.0f,   1.0f, 0.0f,
-         0.5f,  0.5f,  0.5f,   0.0f,  0.0f,  1.0f,   1.0f, 1.0f,
-        -0.5f,  0.5f,  0.5f,   0.0f,  0.0f,  1.0f,   0.0f, 1.0f,
-
-        -0.5f, -0.5f, -0.5f,   0.0f,  0.0f, -1.0f,   1.0f, 0.0f,
-         0.5f, -0.5f, -0.5f,   0.0f,  0.0f, -1.0f,   0.0f, 0.0f,
-         0.5f,  0.5f, -0.5f,   0.0f,  0.0f, -1.0f,   0.0f, 1.0f,
-        -0.5f,  0.5f, -0.5f,   0.0f,  0.0f, -1.0f,   1.0f, 1.0f,
-
-        -0.5f, -0.5f, -0.5f,  -1.0f,  0.0f,  0.0f,   0.0f, 0.0f,
-        -0.5f, -0.5f,  0.5f,  -1.0f,  0.0f,  0.0f,   1.0f, 0.0f,
-        -0.5f,  0.5f,  0.5f,  -1.0f,  0.0f,  0.0f,   1.0f, 1.0f,
-        -0.5f,  0.5f, -0.5f,  -1.0f,  0.0f,  0.0f,   0.0f, 1.0f,
-
-         0.5f, -0.5f, -0.5f,   1.0f,  0.0f,  0.0f,   1.0f, 0.0f,
-         0.5f, -0.5f,  0.5f,   1.0f,  0.0f,  0.0f,   0.0f, 0.0f,
-         0.5f,  0.5f,  0.5f,   1.0f,  0.0f,  0.0f,   0.0f, 1.0f,
-         0.5f,  0.5f, -0.5f,   1.0f,  0.0f,  0.0f,   1.0f, 1.0f,
-
-        -0.5f,  0.5f, -0.5f,   0.0f,  1.0f,  0.0f,   0.0f, 0.0f,
-        -0.5f,  0.5f,  0.5f,   0.0f,  1.0f,  0.0f,   0.0f, 1.0f,
-         0.5f,  0.5f,  0.5f,   0.0f,  1.0f,  0.0f,   1.0f, 1.0f,
-         0.5f,  0.5f, -0.5f,   0.0f,  1.0f,  0.0f,   1.0f, 0.0f,
-
-        -0.5f, -0.5f, -0.5f,   0.0f, -1.0f,  0.0f,   1.0f, 1.0f,
-        -0.5f, -0.5f,  0.5f,   0.0f, -1.0f,  0.0f,   1.0f, 0.0f,
-         0.5f, -0.5f,  0.5f,   0.0f, -1.0f,  0.0f,   0.0f, 0.0f,
-         0.5f, -0.5f, -0.5f,   0.0f, -1.0f,  0.0f,   0.0f, 1.0f
-    };
-
-    static const std::vector<unsigned int> indices = {
-         0,  1,  2,   2,  3,  0,
-         4,  6,  5,   6,  4,  7,
-         8,  9, 10,  10, 11,  8,
-        12, 14, 13,  14, 12, 15,
-        16, 17, 18,  18, 19, 16,
-        20, 22, 21,  22, 20, 23
-    };
-
-    auto model = std::make_shared<OGLE::ModelEntity>(OGLE::ModelType::STATIC);
-    model->SetMeshData(vertices, indices);
-    if (!diffuseTexturePath.empty()) {
-        model->SetDiffuseTexturePath(diffuseTexturePath);
-    }
-
-    const OGLE::Entity entity = AddModel(model, name);
-    GetActiveWorld().SetTransform(entity, position, glm::vec3(0.0f, 0.0f, 0.0f), scale);
-    if (auto* primitive = GetActiveWorld().GetPrimitive(entity)) {
-        primitive->type = OGLE::PrimitiveType::Cube;
-        primitive->sourcePath.clear();
-    }
-    return entity;
+    return CreatePrimitive(name, OGLE::PrimitiveType::Cube, position, scale, diffuseTexturePath);
 }
 
 OGLE::Entity WorldManager::CreateDirectionalLight(
@@ -290,21 +257,22 @@ bool WorldManager::SetEntityScale(OGLE::Entity entity, const glm::vec3& scale)
 
 bool WorldManager::SetEntityDiffuseTexture(OGLE::Entity entity, const std::string& texturePath)
 {
-    bool updated = false;
+    OGLE::World& world = GetActiveWorld();
 
-    if (OGLE::MaterialComponent* material = GetActiveWorld().GetMaterial(entity)) {
-        updated = material->material.SetDiffuseTexturePath(texturePath);
+    if (OGLE::MaterialComponent* material = world.GetMaterial(entity)) {
+        return material->material.SetDiffuseTexturePath(texturePath);
     }
 
-    OGLE::ModelEntity* model = GetActiveWorld().GetModel(entity);
-    if (model) {
-        updated = model->SetDiffuseTexturePath(texturePath) || updated;
+    // Ensure mesh entities always have authoring material in ECS.
+    if (const OGLE::ModelEntity* model = world.GetModel(entity)) {
+        OGLE::MaterialComponent component;
+        component.material = model->GetMaterial();
+        component.material.SetDiffuseTexturePath(texturePath);
+        world.GetRegistry().emplace<OGLE::MaterialComponent>(entity, component);
+        return true;
     }
 
-    if (!updated) {
-        return false;
-    }
-    return true;
+    return false;
 }
 
 void WorldManager::Update()

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../world/IWorldAccess.h"
 #include "../world/World.h"
 #include "../world/WorldObject.h"
 
@@ -9,6 +10,7 @@
 #include <string>
 
 class WorldManager
+    : public IWorldAccess
 {
 public:
     WorldManager();
@@ -29,6 +31,12 @@ public:
         const std::string& filePath,
         OGLE::ModelType type = OGLE::ModelType::DYNAMIC,
         const std::string& name = "Model");
+    OGLE::Entity CreatePrimitive(
+        const std::string& name,
+        OGLE::PrimitiveType type,
+        const glm::vec3& position,
+        const glm::vec3& scale = glm::vec3(1.0f, 1.0f, 1.0f),
+        const std::string& diffuseTexturePath = "");
     OGLE::Entity CreateCube(
         const std::string& name,
         const glm::vec3& position,
