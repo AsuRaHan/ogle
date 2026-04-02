@@ -10,7 +10,7 @@ WorldManager::WorldManager()
 {
     CreateWorld();
     // Generate default world using dedicated generator
-    WorldGenerator::GenerateDefaultWorld(*this);
+    //WorldGenerator::GenerateDefaultWorld(*this);
 }
 
 void WorldManager::CreateWorld()
@@ -113,22 +113,6 @@ void WorldManager::LoadActiveWorld(const std::string& path)
 {
     GetActiveWorld().Load(path);
 }
-
-// ---------- Stub implementations to satisfy linker (if missing) ----------
-// const OGLE::World& WorldManager::GetActiveWorld() const
-// {
-//     return *m_activeWorld;
-// }
-
-// OGLE::WorldObject WorldManager::GetWorldObject(OGLE::Entity entity)
-// {
-//     return GetActiveWorld().GetWorldObject(entity);
-// }
-
-// void WorldManager::CreateDefaultWorld()
-// {
-//     WorldGenerator::GenerateDefaultWorld(*this);
-// }
 
 // ---------- Additional member function implementations ----------
 // FindEntityByName

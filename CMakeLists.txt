@@ -16,9 +16,6 @@ add_executable(${PROJECT_NAME} WIN32
     src/main.cpp
     src/App.cpp
 
-    src/WorldGenerator.cpp
-    src/WorldGenerator.h
-    
     src/config/AppConfig.h
     src/config/ConfigManager.cpp
     src/config/ConfigManager.h
@@ -53,9 +50,12 @@ add_executable(${PROJECT_NAME} WIN32
     src/opengl/OpenGLRenderer.h
     src/opengl/Camera.cpp
     src/opengl/Camera.h
-    src/opengl/DomoScene.cpp
+    # src/opengl/DomoScene.cpp
+
     src/Logger.cpp
     src/Logger.h
+    src/WorldGenerator.cpp
+    src/WorldGenerator.h
 
     src/models/MeshBuffer.cpp
     src/models/MeshBuffer.h

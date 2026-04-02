@@ -9,6 +9,7 @@ App::App(std::unique_ptr<IWindow> window, ConfigManager configManager)
     : m_window(std::move(window))
     , m_configManager(std::move(configManager))
 {
+	LOG_INFO("App instance created");
 }
 
 CameraManager& App::GetCameraManager()

@@ -4,7 +4,6 @@
 
 #include "GLFunctions.h"
 #include "ShaderManager.h"
-#include "DomoScene.h"
 #include "../world/WorldComponents.h"
 #include <glm/mat4x4.hpp>
 #include <glm/vec3.hpp>
@@ -21,9 +20,11 @@ namespace OGLE {
     using Entity = entt::entity;
 }
 
+class WorldManager;
+
 class OpenGLRenderer {
 public:
-    OpenGLRenderer(int width, int height, ogle::Camera& camera, OGLE::World& world);
+    OpenGLRenderer(int width, int height, ogle::Camera& camera, WorldManager& worldManager);
     ~OpenGLRenderer();
 
     bool Initialize();
@@ -49,7 +50,7 @@ private:
 
     ShaderManager m_shaderManager;
     ogle::Camera& m_camera;
-    OGLE::World& m_world;
+    WorldManager& m_worldManager;
     int m_width;
     int m_height;
     OGLE::Entity m_highlightedEntity;
@@ -57,7 +58,7 @@ private:
     GLuint m_shadowDepthTexture = 0;
     int m_shadowMapSize = 2048;
 
-    std::unique_ptr<DomoScene> m_scene;
+    // std::unique_ptr<DomoScene> m_scene;
     // Time point marking when the renderer was created, used for delta time calculation
     std::chrono::steady_clock::time_point m_startTime;
 };

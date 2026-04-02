@@ -40,7 +40,7 @@ bool RenderManager::Initialize(IWindow& window, CameraManager& cameraManager, Wo
         m_viewportWidth,
         m_viewportHeight,
         cameraManager.GetCamera(),
-        worldManager.GetActiveWorld());
+        worldManager);
     if (!m_renderer->Initialize()) {
         LOG_ERROR("OpenGLRenderer initialization failed");
         return false;

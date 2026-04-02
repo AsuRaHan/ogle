@@ -96,6 +96,7 @@ bool ShaderManager::linkProgram(const std::string& programName, const std::strin
         GL_CHECK(glDeleteProgram(program));
         return false;
     }
+    cacheUniforms(programName, program);
     programs[programName] = program;
     LOG_INFO(std::string("[ShaderManager::linkProgram] Компиляция шейдерной программы programName=") + programName + " завершена ей присвоен ID=" + std::to_string(program));
     return true;
@@ -117,6 +118,7 @@ bool ShaderManager::linkGeometryProgram(const std::string& programName, const st
         GL_CHECK(glDeleteProgram(program));
         return false;
     }
+    cacheUniforms(programName, program);
     programs[programName] = program;
     LOG_INFO(std::string("[ShaderManager::linkGeometryProgram] Компиляция шейдерной программы programName=") + programName + " завершена ей присвоен ID=" + std::to_string(program));
     return true;
@@ -141,6 +143,7 @@ bool ShaderManager::linkTessellationProgram(const std::string& programName, cons
         GL_CHECK(glDeleteProgram(program));
         return false;
     }
+    cacheUniforms(programName, program);
     programs[programName] = program;
     LOG_INFO(std::string("[ShaderManager::linkTessellationProgram] Компиляция шейдерной программы programName=") + programName + " завершена ей присвоен ID=" + std::to_string(program));
     return true;
@@ -163,6 +166,7 @@ bool ShaderManager::linkComputeProgram(const std::string& programName, const std
         GL_CHECK(glDeleteProgram(program));
         return false;
     }
+    cacheUniforms(programName, program);
     programs[programName] = program;
     LOG_INFO(std::string("[ShaderManager::linkComputeProgram] Компиляция шейдерной программы programName=") + programName + " завершена ей присвоен ID=" + std::to_string(program));
     return true;
@@ -180,6 +184,43 @@ bool ShaderManager::useProgram(const std::string& programName) {
 
 GLuint ShaderManager::getProgram(const std::string& programName) const {
     return programs.at(programName);
+}
+
+GLint ShaderManager::getUniformLocation(const std::string& programName, const std::string& uniformName)
+{
+    auto progIt = m_uniformLocations.find(programName);
+    if (progIt != m_uniformLocations.end()) {
+        auto uniformIt = progIt->second.find(uniformName);
+        if (uniformIt != progIt->second.end()) {
+            return uniformIt->second;
+        }
+    }
+
+    // Если в кэше нет, получаем и сохраняем.
+    // Это может произойти, если introspection не нашел все (например, в uniform-блоках)
+    // или для отладки. В релизе можно логировать как предупреждение.
+    GLint location = glGetUniformLocation(getProgram(programName), uniformName.c_str());
+    if (location != -1) {
+        m_uniformLocations[programName][uniformName] = location;
+    }
+    return location;
+}
+
+void ShaderManager::cacheUniforms(const std::string& programName, GLuint programId)
+{
+    GLint numUniforms = 0;
+    glGetProgramiv(programId, GL_ACTIVE_UNIFORMS, &numUniforms);
+
+    GLchar uniformName[256];
+    for (GLint i = 0; i < numUniforms; ++i) {
+        GLint size;
+        GLenum type;
+        glGetActiveUniform(programId, i, 256, NULL, &size, &type, uniformName);
+        GLint location = glGetUniformLocation(programId, uniformName);
+        if (location != -1) {
+            m_uniformLocations[programName][uniformName] = location;
+        }
+    }
 }
 
 bool ShaderManager::compileShader(const char* source, GLenum type, GLuint& shader) {

@@ -1,6 +1,6 @@
 #include "OpenGLRenderer.h"
 #include "Camera.h"
-#include "../world/World.h"
+#include "../managers/WorldManager.h"
 #include "../world/WorldComponents.h"
 #include "../Logger.h"
 
@@ -10,14 +10,13 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <Windows.h>
 
-OpenGLRenderer::OpenGLRenderer(int width, int height, ogle::Camera& camera, OGLE::World& world)
+OpenGLRenderer::OpenGLRenderer(int width, int height, ogle::Camera& camera, WorldManager& worldManager)
     : m_shaderManager()
     , m_camera(camera)
-    , m_world(world)
+    , m_worldManager(worldManager)
     , m_width(width)
     , m_height(height)
     , m_highlightedEntity(entt::null)
-    , m_scene(nullptr)
     , m_startTime(std::chrono::steady_clock::now())
 {
 }
@@ -221,12 +220,6 @@ bool OpenGLRenderer::Initialize()
         return false;
     }
 
-    m_scene = std::make_unique<DomoScene>();
-    if (!m_scene->Initialize()) {
-        LOG_ERROR("OpenGLRenderer: failed to create DomoScene resources");
-        return false;
-    }
-
     return true;
 }
 
@@ -264,23 +257,23 @@ void OpenGLRenderer::Render()
     }
 
     const GLuint program = m_shaderManager.getProgram("default");
-    const GLint mvpLocation = glGetUniformLocation(program, "uMVP");
-    const GLint modelLocation = glGetUniformLocation(program, "uModel");
-    const GLint lightSpaceMatrixLocation = glGetUniformLocation(program, "uLightSpaceMatrix");
-    const GLint viewPositionLocation = glGetUniformLocation(program, "uViewPosition");
-    const GLint hasDirectionalLightLocation = glGetUniformLocation(program, "uHasDirectionalLight");
-    const GLint directionalLightDirectionLocation = glGetUniformLocation(program, "uDirectionalLightDirection");
-    const GLint directionalLightColorLocation = glGetUniformLocation(program, "uDirectionalLightColor");
-    const GLint directionalLightIntensityLocation = glGetUniformLocation(program, "uDirectionalLightIntensity");
-    const GLint directionalLightCastsShadowsLocation = glGetUniformLocation(program, "uDirectionalLightCastsShadows");
-    const GLint pointLightCountLocation = glGetUniformLocation(program, "uPointLightCount");
-    const GLint pointLightPositionsLocation = glGetUniformLocation(program, "uPointLightPositions[0]");
-    const GLint pointLightColorsLocation = glGetUniformLocation(program, "uPointLightColors[0]");
-    const GLint pointLightIntensitiesLocation = glGetUniformLocation(program, "uPointLightIntensities[0]");
-    const GLint pointLightRangesLocation = glGetUniformLocation(program, "uPointLightRanges[0]");
-    const GLint shadowMapLocation = glGetUniformLocation(program, "uShadowMap");
-    const GLint selectionTintLocation = glGetUniformLocation(program, "uSelectionTint");
-    const GLint selectionMixLocation = glGetUniformLocation(program, "uSelectionMix");
+    const GLint mvpLocation = m_shaderManager.getUniformLocation("default", "uMVP");
+    const GLint modelLocation = m_shaderManager.getUniformLocation("default", "uModel");
+    const GLint lightSpaceMatrixLocation = m_shaderManager.getUniformLocation("default", "uLightSpaceMatrix");
+    const GLint viewPositionLocation = m_shaderManager.getUniformLocation("default", "uViewPosition");
+    const GLint hasDirectionalLightLocation = m_shaderManager.getUniformLocation("default", "uHasDirectionalLight");
+    const GLint directionalLightDirectionLocation = m_shaderManager.getUniformLocation("default", "uDirectionalLightDirection");
+    const GLint directionalLightColorLocation = m_shaderManager.getUniformLocation("default", "uDirectionalLightColor");
+    const GLint directionalLightIntensityLocation = m_shaderManager.getUniformLocation("default", "uDirectionalLightIntensity");
+    const GLint directionalLightCastsShadowsLocation = m_shaderManager.getUniformLocation("default", "uDirectionalLightCastsShadows");
+    const GLint pointLightCountLocation = m_shaderManager.getUniformLocation("default", "uPointLightCount");
+    const GLint pointLightPositionsLocation = m_shaderManager.getUniformLocation("default", "uPointLightPositions[0]");
+    const GLint pointLightColorsLocation = m_shaderManager.getUniformLocation("default", "uPointLightColors[0]");
+    const GLint pointLightIntensitiesLocation = m_shaderManager.getUniformLocation("default", "uPointLightIntensities[0]");
+    const GLint pointLightRangesLocation = m_shaderManager.getUniformLocation("default", "uPointLightRanges[0]");
+    const GLint shadowMapLocation = m_shaderManager.getUniformLocation("default", "uShadowMap");
+    const GLint selectionTintLocation = m_shaderManager.getUniformLocation("default", "uSelectionTint");
+    const GLint selectionMixLocation = m_shaderManager.getUniformLocation("default", "uSelectionMix");
     const glm::mat4 viewProjection = m_camera.GetProjectionMatrix() * m_camera.GetViewMatrix();
 
     if (lightSpaceMatrixLocation >= 0) {
@@ -327,7 +320,7 @@ void OpenGLRenderer::Render()
     std::array<float, 4> pointLightRanges{};
     int pointLightCount = 0;
 
-    auto lightView = m_world.GetRegistry().view<OGLE::WorldObjectComponent, OGLE::TransformComponent, OGLE::LightComponent>();
+    auto lightView = m_worldManager.GetActiveWorld().GetRegistry().view<OGLE::WorldObjectComponent, OGLE::TransformComponent, OGLE::LightComponent>();
     for (auto entity : lightView) {
         const auto& worldObject = lightView.get<OGLE::WorldObjectComponent>(entity);
         const auto& transform = lightView.get<OGLE::TransformComponent>(entity);
@@ -365,7 +358,7 @@ void OpenGLRenderer::Render()
         glUniform3f(selectionTintLocation, 1.0f, 0.85f, 0.2f);
     }
 
-    auto worldView = m_world.GetRegistry().view<OGLE::WorldObjectComponent, OGLE::ModelComponent>();
+    auto worldView = m_worldManager.GetActiveWorld().GetRegistry().view<OGLE::WorldObjectComponent, OGLE::ModelComponent>();
     for (auto entity : worldView) {
         auto& worldObjectComponent = worldView.get<OGLE::WorldObjectComponent>(entity);
         auto& modelComponent = worldView.get<OGLE::ModelComponent>(entity);
@@ -384,7 +377,7 @@ void OpenGLRenderer::Render()
             glUniform1f(selectionMixLocation, entity == m_highlightedEntity ? 0.45f : 0.0f);
         }
 
-        if (const OGLE::MaterialComponent* materialComponent = m_world.GetMaterial(entity)) {
+        if (const OGLE::MaterialComponent* materialComponent = m_worldManager.GetActiveWorld().GetMaterial(entity)) {
             materialComponent->material.Bind(program);
         } else {
             modelComponent.model->BindMaterial(program);
@@ -444,7 +437,7 @@ glm::vec3 OpenGLRenderer::RotationToDirection(const glm::vec3& rotationDegrees) 
 
 void OpenGLRenderer::CollectLightingState(LightingState& lightingState)
 {
-    auto lightView = m_world.GetRegistry().view<OGLE::WorldObjectComponent, OGLE::TransformComponent, OGLE::LightComponent>();
+    auto lightView = m_worldManager.GetActiveWorld().GetRegistry().view<OGLE::WorldObjectComponent, OGLE::TransformComponent, OGLE::LightComponent>();
     for (auto entity : lightView) {
         const auto& worldObject = lightView.get<OGLE::WorldObjectComponent>(entity);
         const auto& transform = lightView.get<OGLE::TransformComponent>(entity);
@@ -487,15 +480,15 @@ void OpenGLRenderer::RenderShadowPass(const LightingState& lightingState)
     }
 
     const GLuint program = m_shaderManager.getProgram("shadow_depth");
-    const GLint lightMvpLocation = glGetUniformLocation(program, "uLightMVP");
-    const GLint modelLocation = glGetUniformLocation(program, "uModel");
+    const GLint lightMvpLocation = m_shaderManager.getUniformLocation("shadow_depth", "uLightMVP");
+    const GLint modelLocation = m_shaderManager.getUniformLocation("shadow_depth", "uModel");
 
     glViewport(0, 0, m_shadowMapSize, m_shadowMapSize);
     glBindFramebuffer(GL_FRAMEBUFFER, m_shadowFramebuffer);
     glClear(GL_DEPTH_BUFFER_BIT);
     glCullFace(GL_FRONT);
 
-    auto worldView = m_world.GetRegistry().view<OGLE::WorldObjectComponent, OGLE::ModelComponent>();
+    auto worldView = m_worldManager.GetActiveWorld().GetRegistry().view<OGLE::WorldObjectComponent, OGLE::ModelComponent>();
     for (auto entity : worldView) {
         const auto& worldObjectComponent = worldView.get<OGLE::WorldObjectComponent>(entity);
         const auto& modelComponent = worldView.get<OGLE::ModelComponent>(entity);
