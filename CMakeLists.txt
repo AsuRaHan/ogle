@@ -16,6 +16,9 @@ add_executable(${PROJECT_NAME} WIN32
     src/main.cpp
     src/App.cpp
 
+    src/WorldGenerator.cpp
+    src/WorldGenerator.h
+    
     src/config/AppConfig.h
     src/config/ConfigManager.cpp
     src/config/ConfigManager.h

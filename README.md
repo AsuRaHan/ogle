@@ -324,7 +324,9 @@ Main methods:
 - `CreateWorldObject(...)`
 - `GetWorldObject(entity)`
 - `FindEntityByName(...)`
-- `CreateCube(...)`
+// `CreateCube` has been deprecated in favour of `CreatePrimitive` with `PrimitiveType::Cube`.  The helper is kept only for backward compatibility.
+// Use the following pattern instead:
+//     worldManager.CreatePrimitive("Cube", OGLE::PrimitiveType::Cube, position, scale, texturePath);
 - `CreateModelFromFile(...)`
 - `AddModel(...)`
 - `ClearWorld()`
@@ -338,10 +340,12 @@ Main methods:
 Example:
 
 ```cpp
-auto entity = app.GetWorldManager().CreateCube(
-    "Box",
-    {0.0f, 1.0f, 0.0f},
-    {1.0f, 1.0f, 1.0f});
+// Example using CreatePrimitive with Cube type:
+auto entity = app.GetWorldManager().CreatePrimitive(
+  "Box",
+  OGLE::PrimitiveType::Cube,
+  {0.0f, 1.0f, 0.0f},
+  {1.0f, 1.0f, 1.0f});
 
 app.GetWorldManager().SetEntityPosition(entity, {2.0f, 1.0f, 0.0f});
 ```
