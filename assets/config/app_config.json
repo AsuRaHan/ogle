@@ -1,0 +1,22 @@
+{
+    "window": {
+        "title": "Main window",
+        "width": 900,
+        "height": 600
+    },
+    "editor": {
+        "enabled": true
+    },
+    "world": {
+        "path": "assets/worlds/default_world.json",
+        "loadOnStartup": true,
+        "saveDefaultWorldIfMissing": true
+    },
+    "assets": {
+        "path": "assets"
+    },
+    "scripts": {
+        "runStartupScript": false,
+        "startupScriptPath": "assets/scripts/test_world.js"
+    }
+}

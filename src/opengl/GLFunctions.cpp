@@ -35,6 +35,8 @@ PFNGLDELETEVERTEXARRAYSPROC glDeleteVertexArrays = nullptr;
 PFNGLUNIFORM3FPROC glUniform3f = nullptr;
 PFNGLUNIFORM4FPROC glUniform4f = nullptr;
 PFNGLUNIFORM2FPROC glUniform2f = nullptr;
+PFNGLUNIFORM3FVPROC glUniform3fv = nullptr;
+PFNGLUNIFORM1FVPROC glUniform1fv = nullptr;
 PFNGLMAPBUFFERPROC glMapBuffer = nullptr;
 PFNGLUNMAPBUFFERPROC glUnmapBuffer = nullptr;
 PFNGLUNIFORM2IPROC glUniform2i = nullptr;
@@ -68,6 +70,11 @@ PFNGLGETPROGRAMRESOURCENAMEPROC glGetProgramResourceName = nullptr;
 PFNGLGETUNIFORMIVPROC glGetUniformiv = nullptr;
 PFNGLGETUNIFORMFVPROC glGetUniformfv = nullptr;
 PFNGLGETACTIVEUNIFORMPROC glGetActiveUniform = nullptr;
+PFNGLGENFRAMEBUFFERSPROC glGenFramebuffers = nullptr;
+PFNGLBINDFRAMEBUFFERPROC glBindFramebuffer = nullptr;
+PFNGLDELETEFRAMEBUFFERSPROC glDeleteFramebuffers = nullptr;
+PFNGLFRAMEBUFFERTEXTURE2DPROC glFramebufferTexture2D = nullptr;
+PFNGLCHECKFRAMEBUFFERSTATUSPROC glCheckFramebufferStatus = nullptr;
 
 void LoadOpenGLFunctions() {
         // Загрузка функций для работы с буферами
@@ -139,6 +146,10 @@ void LoadOpenGLFunctions() {
     CHECK_LOAD_FUNCTION(glUniform4f);
     glUniform2f = (PFNGLUNIFORM2FPROC)wglGetProcAddress("glUniform2f");
     CHECK_LOAD_FUNCTION(glUniform2f);
+    glUniform3fv = (PFNGLUNIFORM3FVPROC)wglGetProcAddress("glUniform3fv");
+    CHECK_LOAD_FUNCTION(glUniform3fv);
+    glUniform1fv = (PFNGLUNIFORM1FVPROC)wglGetProcAddress("glUniform1fv");
+    CHECK_LOAD_FUNCTION(glUniform1fv);
     glMapBuffer = (PFNGLMAPBUFFERPROC)wglGetProcAddress("glMapBuffer");
     CHECK_LOAD_FUNCTION(glMapBuffer);
     glUnmapBuffer = (PFNGLUNMAPBUFFERPROC)wglGetProcAddress("glUnmapBuffer");
@@ -202,6 +213,16 @@ void LoadOpenGLFunctions() {
     CHECK_LOAD_FUNCTION(glGetUniformfv);    
     glGetActiveUniform = (PFNGLGETACTIVEUNIFORMPROC)wglGetProcAddress("glGetActiveUniform");
     CHECK_LOAD_FUNCTION(glGetActiveUniform);
+    glGenFramebuffers = (PFNGLGENFRAMEBUFFERSPROC)wglGetProcAddress("glGenFramebuffers");
+    CHECK_LOAD_FUNCTION(glGenFramebuffers);
+    glBindFramebuffer = (PFNGLBINDFRAMEBUFFERPROC)wglGetProcAddress("glBindFramebuffer");
+    CHECK_LOAD_FUNCTION(glBindFramebuffer);
+    glDeleteFramebuffers = (PFNGLDELETEFRAMEBUFFERSPROC)wglGetProcAddress("glDeleteFramebuffers");
+    CHECK_LOAD_FUNCTION(glDeleteFramebuffers);
+    glFramebufferTexture2D = (PFNGLFRAMEBUFFERTEXTURE2DPROC)wglGetProcAddress("glFramebufferTexture2D");
+    CHECK_LOAD_FUNCTION(glFramebufferTexture2D);
+    glCheckFramebufferStatus = (PFNGLCHECKFRAMEBUFFERSTATUSPROC)wglGetProcAddress("glCheckFramebufferStatus");
+    CHECK_LOAD_FUNCTION(glCheckFramebufferStatus);
 
 
 

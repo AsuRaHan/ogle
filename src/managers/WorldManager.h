@@ -34,6 +34,19 @@ public:
         const glm::vec3& position,
         const glm::vec3& scale = glm::vec3(1.0f, 1.0f, 1.0f),
         const std::string& diffuseTexturePath = "");
+    OGLE::Entity CreateDirectionalLight(
+        const std::string& name,
+        const glm::vec3& rotation,
+        const glm::vec3& color = glm::vec3(1.0f),
+        float intensity = 1.0f,
+        bool castShadows = true,
+        bool primary = true);
+    OGLE::Entity CreatePointLight(
+        const std::string& name,
+        const glm::vec3& position,
+        const glm::vec3& color = glm::vec3(1.0f),
+        float intensity = 2.0f,
+        float range = 8.0f);
     void ClearWorld();
     bool IsEntityValid(OGLE::Entity entity) const;
     bool SetEntityPosition(OGLE::Entity entity, const glm::vec3& position);

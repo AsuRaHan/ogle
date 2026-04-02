@@ -80,6 +80,21 @@ void WorldManager::CreateDefaultWorld()
         glm::vec3(2.8f, -0.8f, 3.2f),
         glm::vec3(0.5f, 0.5f, 0.5f),
         sharedTexturePath);
+
+    CreateDirectionalLight(
+        "Sun",
+        glm::vec3(-50.0f, 45.0f, 0.0f),
+        glm::vec3(1.0f, 0.96f, 0.9f),
+        2.2f,
+        true,
+        true);
+
+    CreatePointLight(
+        "WarmLamp",
+        glm::vec3(-2.0f, 1.8f, 1.5f),
+        glm::vec3(1.0f, 0.75f, 0.45f),
+        3.0f,
+        7.0f);
 }
 
 OGLE::World& WorldManager::GetActiveWorld()
@@ -175,6 +190,53 @@ OGLE::Entity WorldManager::CreateCube(
 
     const OGLE::Entity entity = AddModel(model, name);
     GetActiveWorld().SetTransform(entity, position, glm::vec3(0.0f, 0.0f, 0.0f), scale);
+    if (auto* primitive = GetActiveWorld().GetPrimitive(entity)) {
+        primitive->type = OGLE::PrimitiveType::Cube;
+        primitive->sourcePath.clear();
+    }
+    return entity;
+}
+
+OGLE::Entity WorldManager::CreateDirectionalLight(
+    const std::string& name,
+    const glm::vec3& rotation,
+    const glm::vec3& color,
+    float intensity,
+    bool castShadows,
+    bool primary)
+{
+    OGLE::WorldObject lightObject = CreateWorldObject(name, OGLE::WorldObjectKind::Light);
+    const OGLE::Entity entity = lightObject.GetEntity();
+    GetActiveWorld().SetTransform(entity, glm::vec3(0.0f), rotation, glm::vec3(1.0f));
+
+    auto& light = GetActiveWorld().GetRegistry().emplace<OGLE::LightComponent>(entity);
+    light.type = OGLE::LightType::Directional;
+    light.color = color;
+    light.intensity = intensity;
+    light.range = 0.0f;
+    light.castShadows = castShadows;
+    light.primary = primary;
+    return entity;
+}
+
+OGLE::Entity WorldManager::CreatePointLight(
+    const std::string& name,
+    const glm::vec3& position,
+    const glm::vec3& color,
+    float intensity,
+    float range)
+{
+    OGLE::WorldObject lightObject = CreateWorldObject(name, OGLE::WorldObjectKind::Light);
+    const OGLE::Entity entity = lightObject.GetEntity();
+    GetActiveWorld().SetTransform(entity, position, glm::vec3(0.0f), glm::vec3(1.0f));
+
+    auto& light = GetActiveWorld().GetRegistry().emplace<OGLE::LightComponent>(entity);
+    light.type = OGLE::LightType::Point;
+    light.color = color;
+    light.intensity = intensity;
+    light.range = range;
+    light.castShadows = false;
+    light.primary = false;
     return entity;
 }
 
@@ -228,12 +290,21 @@ bool WorldManager::SetEntityScale(OGLE::Entity entity, const glm::vec3& scale)
 
 bool WorldManager::SetEntityDiffuseTexture(OGLE::Entity entity, const std::string& texturePath)
 {
-    OGLE::ModelEntity* model = GetActiveWorld().GetModel(entity);
-    if (!model) {
-        return false;
+    bool updated = false;
+
+    if (OGLE::MaterialComponent* material = GetActiveWorld().GetMaterial(entity)) {
+        updated = material->material.SetDiffuseTexturePath(texturePath);
     }
 
-    return model->SetDiffuseTexturePath(texturePath);
+    OGLE::ModelEntity* model = GetActiveWorld().GetModel(entity);
+    if (model) {
+        updated = model->SetDiffuseTexturePath(texturePath) || updated;
+    }
+
+    if (!updated) {
+        return false;
+    }
+    return true;
 }
 
 void WorldManager::Update()

@@ -23,6 +23,16 @@ add_executable(${PROJECT_NAME} WIN32
     src/core/FileSystem.h
     src/editor/Editor.cpp
     src/editor/Editor.h
+    src/editor/EditorAssetHelpers.cpp
+    src/editor/EditorAssetHelpers.h
+    src/editor/EditorContentBrowserPanel.cpp
+    src/editor/EditorContentBrowserPanel.h
+    src/editor/EditorCreationPanel.cpp
+    src/editor/EditorCreationPanel.h
+    src/editor/EditorHierarchyPanel.cpp
+    src/editor/EditorHierarchyPanel.h
+    src/editor/EditorInspectorPanel.cpp
+    src/editor/EditorInspectorPanel.h
 
     src/ui/Win32Window.cpp
     src/ui/Win32Window.h
@@ -191,9 +201,6 @@ target_include_directories(${PROJECT_NAME} PRIVATE ${assimp_SOURCE_DIR}/include 
 target_link_libraries(${PROJECT_NAME} PRIVATE assimp::assimp nlohmann_json::nlohmann_json OpenMeshCore OpenMeshTools duktape imgui BulletDynamics BulletCollision LinearMath)
 
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/scripts
-        $<TARGET_FILE_DIR:${PROJECT_NAME}>/scripts
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_SOURCE_DIR}/assets
         $<TARGET_FILE_DIR:${PROJECT_NAME}>/assets)

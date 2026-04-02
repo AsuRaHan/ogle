@@ -2,6 +2,15 @@
 #include "../Logger.h"
 
 namespace glm {
+    void to_json(nlohmann::json& j, const vec2& v) {
+        j = {v.x, v.y};
+    }
+
+    void from_json(const nlohmann::json& j, vec2& v) {
+        j.at(0).get_to(v.x);
+        j.at(1).get_to(v.y);
+    }
+
     void to_json(nlohmann::json& j, const vec3& v) {
         j = {v.x, v.y, v.z};
     }
@@ -116,6 +125,7 @@ namespace OGLE {
     }
 
     void ModelEntity::ToJson(nlohmann::json& j) const {
+        const Material& material = m_material;
         j = nlohmann::json{
             {"filePath", m_FilePath},
             {"type", m_Type == ModelType::STATIC ? "STATIC" : "DYNAMIC"},
@@ -123,8 +133,15 @@ namespace OGLE {
             {"rotation", {m_Rotation.x, m_Rotation.y, m_Rotation.z}},
             {"scale", {m_Scale.x, m_Scale.y, m_Scale.z}},
             {"material", {
-                {"baseColor", {m_material.GetBaseColor().x, m_material.GetBaseColor().y, m_material.GetBaseColor().z}},
-                {"diffuseTexturePath", m_material.GetDiffuseTexturePath()}
+                {"baseColor", {material.GetBaseColor().x, material.GetBaseColor().y, material.GetBaseColor().z}},
+                {"emissiveColor", {material.GetEmissiveColor().x, material.GetEmissiveColor().y, material.GetEmissiveColor().z}},
+                {"uvTiling", {material.GetUvTiling().x, material.GetUvTiling().y}},
+                {"uvOffset", {material.GetUvOffset().x, material.GetUvOffset().y}},
+                {"roughness", material.GetRoughness()},
+                {"metallic", material.GetMetallic()},
+                {"alphaCutoff", material.GetAlphaCutoff()},
+                {"diffuseTexturePath", material.GetDiffuseTexturePath()},
+                {"emissiveTexturePath", material.GetEmissiveTexturePath()}
             }}
         };
 
@@ -162,9 +179,33 @@ namespace OGLE {
                 const auto& baseColorJson = materialJson.at("baseColor");
                 m_material.SetBaseColor(glm::vec3(baseColorJson[0], baseColorJson[1], baseColorJson[2]));
             }
+            if (materialJson.contains("emissiveColor")) {
+                const auto& emissiveColorJson = materialJson.at("emissiveColor");
+                m_material.SetEmissiveColor(glm::vec3(emissiveColorJson[0], emissiveColorJson[1], emissiveColorJson[2]));
+            }
+            if (materialJson.contains("uvTiling")) {
+                const auto& uvTilingJson = materialJson.at("uvTiling");
+                m_material.SetUvTiling(glm::vec2(uvTilingJson[0], uvTilingJson[1]));
+            }
+            if (materialJson.contains("uvOffset")) {
+                const auto& uvOffsetJson = materialJson.at("uvOffset");
+                m_material.SetUvOffset(glm::vec2(uvOffsetJson[0], uvOffsetJson[1]));
+            }
+            if (materialJson.contains("roughness")) {
+                m_material.SetRoughness(materialJson.at("roughness").get<float>());
+            }
+            if (materialJson.contains("metallic")) {
+                m_material.SetMetallic(materialJson.at("metallic").get<float>());
+            }
+            if (materialJson.contains("alphaCutoff")) {
+                m_material.SetAlphaCutoff(materialJson.at("alphaCutoff").get<float>());
+            }
 
             if (materialJson.contains("diffuseTexturePath")) {
                 m_material.SetDiffuseTexturePath(materialJson.at("diffuseTexturePath").get<std::string>());
+            }
+            if (materialJson.contains("emissiveTexturePath")) {
+                m_material.SetEmissiveTexturePath(materialJson.at("emissiveTexturePath").get<std::string>());
             }
         } else if (!GetLoadedDiffuseTexturePath().empty()) {
             m_material.SetDiffuseTexturePath(GetLoadedDiffuseTexturePath());

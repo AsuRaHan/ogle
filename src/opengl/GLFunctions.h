@@ -383,6 +383,27 @@
 #ifndef GL_LINEAR_MIPMAP_LINEAR
 #define GL_LINEAR_MIPMAP_LINEAR 0x2703
 #endif
+#ifndef GL_NEAREST
+#define GL_NEAREST 0x2600
+#endif
+#ifndef GL_FRAMEBUFFER
+#define GL_FRAMEBUFFER 0x8D40
+#endif
+#ifndef GL_DEPTH_ATTACHMENT
+#define GL_DEPTH_ATTACHMENT 0x8D00
+#endif
+#ifndef GL_FRAMEBUFFER_COMPLETE
+#define GL_FRAMEBUFFER_COMPLETE 0x8CD5
+#endif
+#ifndef GL_DEPTH_COMPONENT24
+#define GL_DEPTH_COMPONENT24 0x81A6
+#endif
+#ifndef GL_CLAMP_TO_BORDER
+#define GL_CLAMP_TO_BORDER 0x812D
+#endif
+#ifndef GL_TEXTURE_BORDER_COLOR
+#define GL_TEXTURE_BORDER_COLOR 0x1004
+#endif
 #ifndef GL_MAX_IMAGE_UNITS
 #define GL_MAX_IMAGE_UNITS 0x8F38
 #endif
@@ -511,6 +532,8 @@ typedef void (APIENTRY* PFNGLDELETEVERTEXARRAYSPROC)(GLsizei n, const GLuint* ar
 typedef void (APIENTRY* PFNGLUNIFORM3FPROC)(GLint location, GLfloat v0, GLfloat v1, GLfloat v2);
 typedef void (APIENTRY* PFNGLUNIFORM4FPROC)(GLint location, GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3);
 typedef void (APIENTRY* PFNGLUNIFORM2FPROC)(GLint location, GLfloat v0, GLfloat v1);
+typedef void (APIENTRY* PFNGLUNIFORM3FVPROC)(GLint location, GLsizei count, const GLfloat* value);
+typedef void (APIENTRY* PFNGLUNIFORM1FVPROC)(GLint location, GLsizei count, const GLfloat* value);
 
 typedef void* (APIENTRY* PFNGLMAPBUFFERPROC)(GLenum target, GLenum access);
 typedef GLboolean(APIENTRY* PFNGLUNMAPBUFFERPROC)(GLenum target);
@@ -549,6 +572,11 @@ typedef void (APIENTRY* PFNGLGETUNIFORMIVPROC)(GLuint program, GLint location, G
 typedef void (APIENTRY* PFNGLGETUNIFORMFVPROC)(GLuint program, GLint location, GLfloat* params);
 
 typedef void (APIENTRY* PFNGLGETACTIVEUNIFORMPROC)(GLuint program, GLuint index, GLsizei bufSize, GLsizei* length, GLint* size, GLenum* type, GLchar* name);
+typedef void (APIENTRY* PFNGLGENFRAMEBUFFERSPROC)(GLsizei n, GLuint* ids);
+typedef void (APIENTRY* PFNGLBINDFRAMEBUFFERPROC)(GLenum target, GLuint framebuffer);
+typedef void (APIENTRY* PFNGLDELETEFRAMEBUFFERSPROC)(GLsizei n, const GLuint* framebuffers);
+typedef void (APIENTRY* PFNGLFRAMEBUFFERTEXTURE2DPROC)(GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level);
+typedef GLenum (APIENTRY* PFNGLCHECKFRAMEBUFFERSTATUSPROC)(GLenum target);
 
 // Объявление указателей на функции
 extern PFNGLGENBUFFERSPROC glGenBuffers;
@@ -584,6 +612,8 @@ extern PFNGLDELETEVERTEXARRAYSPROC glDeleteVertexArrays;
 extern PFNGLUNIFORM3FPROC glUniform3f;
 extern PFNGLUNIFORM4FPROC glUniform4f;
 extern PFNGLUNIFORM2FPROC glUniform2f;
+extern PFNGLUNIFORM3FVPROC glUniform3fv;
+extern PFNGLUNIFORM1FVPROC glUniform1fv;
 extern PFNGLMAPBUFFERPROC glMapBuffer;
 extern PFNGLUNMAPBUFFERPROC glUnmapBuffer;
 extern PFNGLUNIFORM2IPROC glUniform2i;
@@ -618,6 +648,11 @@ extern PFNGLGETPROGRAMRESOURCENAMEPROC glGetProgramResourceName;
 extern PFNGLGETUNIFORMIVPROC glGetUniformiv;
 extern PFNGLGETUNIFORMFVPROC glGetUniformfv;
 extern PFNGLGETACTIVEUNIFORMPROC glGetActiveUniform;
+extern PFNGLGENFRAMEBUFFERSPROC glGenFramebuffers;
+extern PFNGLBINDFRAMEBUFFERPROC glBindFramebuffer;
+extern PFNGLDELETEFRAMEBUFFERSPROC glDeleteFramebuffers;
+extern PFNGLFRAMEBUFFERTEXTURE2DPROC glFramebufferTexture2D;
+extern PFNGLCHECKFRAMEBUFFERSTATUSPROC glCheckFramebufferStatus;
 
 // Функции для работы с OpenGL
 void LoadOpenGLFunctions();

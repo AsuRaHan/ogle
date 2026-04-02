@@ -49,6 +49,18 @@ namespace OGLE {
 
         TransformComponent* GetTransform(Entity entity);
         const TransformComponent* GetTransform(Entity entity) const;
+        PrimitiveComponent* GetPrimitive(Entity entity);
+        const PrimitiveComponent* GetPrimitive(Entity entity) const;
+        MaterialComponent* GetMaterial(Entity entity);
+        const MaterialComponent* GetMaterial(Entity entity) const;
+        LightComponent* GetLight(Entity entity);
+        const LightComponent* GetLight(Entity entity) const;
+        SkeletonComponent* GetSkeleton(Entity entity);
+        const SkeletonComponent* GetSkeleton(Entity entity) const;
+        AnimationComponent* GetAnimation(Entity entity);
+        const AnimationComponent* GetAnimation(Entity entity) const;
+        ScriptComponent* GetScript(Entity entity);
+        const ScriptComponent* GetScript(Entity entity) const;
         PhysicsBodyComponent* GetPhysicsBody(Entity entity);
         const PhysicsBodyComponent* GetPhysicsBody(Entity entity) const;
 

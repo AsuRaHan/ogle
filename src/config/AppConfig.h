@@ -15,7 +15,7 @@ struct AppConfig
     } editor;
 
     struct WorldSettings {
-        std::string path = "data/worlds/default_world.json";
+        std::string path = "assets/worlds/default_world.json";
         bool loadOnStartup = true;
         bool saveDefaultWorldIfMissing = true;
     } world;
@@ -26,6 +26,6 @@ struct AppConfig
 
     struct ScriptSettings {
         bool runStartupScript = false;
-        std::string startupScriptPath = "scripts/test_world.js";
+        std::string startupScriptPath = "assets/scripts/test_world.js";
     } scripts;
 };

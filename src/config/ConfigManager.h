@@ -21,6 +21,6 @@ public:
 private:
     static AppConfig CreateDefaultConfig();
 
-    std::filesystem::path m_configPath = "config/app_config.json";
+    std::filesystem::path m_configPath = "assets/config/app_config.json";
     AppConfig m_config = CreateDefaultConfig();
 };

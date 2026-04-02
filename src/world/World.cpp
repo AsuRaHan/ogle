@@ -7,6 +7,58 @@
 #include <nlohmann/json.hpp>
 
 namespace OGLE {
+    namespace {
+        nlohmann::json MaterialToJson(const Material& material)
+        {
+            return {
+                {"baseColor", {material.GetBaseColor().x, material.GetBaseColor().y, material.GetBaseColor().z}},
+                {"emissiveColor", {material.GetEmissiveColor().x, material.GetEmissiveColor().y, material.GetEmissiveColor().z}},
+                {"uvTiling", {material.GetUvTiling().x, material.GetUvTiling().y}},
+                {"uvOffset", {material.GetUvOffset().x, material.GetUvOffset().y}},
+                {"roughness", material.GetRoughness()},
+                {"metallic", material.GetMetallic()},
+                {"alphaCutoff", material.GetAlphaCutoff()},
+                {"diffuseTexturePath", material.GetDiffuseTexturePath()},
+                {"emissiveTexturePath", material.GetEmissiveTexturePath()}
+            };
+        }
+
+        void MaterialFromJson(const nlohmann::json& materialJson, Material& material)
+        {
+            if (materialJson.contains("baseColor")) {
+                const auto& baseColorJson = materialJson.at("baseColor");
+                material.SetBaseColor(glm::vec3(baseColorJson[0], baseColorJson[1], baseColorJson[2]));
+            }
+            if (materialJson.contains("emissiveColor")) {
+                const auto& emissiveColorJson = materialJson.at("emissiveColor");
+                material.SetEmissiveColor(glm::vec3(emissiveColorJson[0], emissiveColorJson[1], emissiveColorJson[2]));
+            }
+            if (materialJson.contains("uvTiling")) {
+                const auto& uvTilingJson = materialJson.at("uvTiling");
+                material.SetUvTiling(glm::vec2(uvTilingJson[0], uvTilingJson[1]));
+            }
+            if (materialJson.contains("uvOffset")) {
+                const auto& uvOffsetJson = materialJson.at("uvOffset");
+                material.SetUvOffset(glm::vec2(uvOffsetJson[0], uvOffsetJson[1]));
+            }
+            if (materialJson.contains("roughness")) {
+                material.SetRoughness(materialJson.at("roughness").get<float>());
+            }
+            if (materialJson.contains("metallic")) {
+                material.SetMetallic(materialJson.at("metallic").get<float>());
+            }
+            if (materialJson.contains("alphaCutoff")) {
+                material.SetAlphaCutoff(materialJson.at("alphaCutoff").get<float>());
+            }
+            if (materialJson.contains("diffuseTexturePath")) {
+                material.SetDiffuseTexturePath(materialJson.at("diffuseTexturePath").get<std::string>());
+            }
+            if (materialJson.contains("emissiveTexturePath")) {
+                material.SetEmissiveTexturePath(materialJson.at("emissiveTexturePath").get<std::string>());
+            }
+        }
+    }
+
     World::World() = default;
 
     World::~World() = default;
@@ -60,6 +112,8 @@ namespace OGLE {
         transform.rotation = model ? model->GetRotation() : glm::vec3(0.0f);
         transform.scale = model ? model->GetScale() : glm::vec3(1.0f);
         m_registry.emplace<ModelComponent>(entity, std::move(model));
+        m_registry.emplace<MaterialComponent>(entity, m_registry.get<ModelComponent>(entity).model ? m_registry.get<ModelComponent>(entity).model->GetMaterial() : Material{});
+        m_registry.emplace<PrimitiveComponent>(entity);
         SyncModelTransform(entity);
         return entity;
     }
@@ -73,7 +127,13 @@ namespace OGLE {
         if (!model->GetLoadedDiffuseTexturePath().empty()) {
             model->SetDiffuseTexturePath(model->GetLoadedDiffuseTexturePath());
         }
-        return AddModel(std::move(model), name);
+        const Entity entity = AddModel(std::move(model), name);
+        if (m_registry.all_of<PrimitiveComponent>(entity)) {
+            auto& primitive = m_registry.get<PrimitiveComponent>(entity);
+            primitive.type = PrimitiveType::ModelFile;
+            primitive.sourcePath = filePath;
+        }
+        return entity;
     }
 
     void World::Update() {
@@ -99,25 +159,83 @@ namespace OGLE {
 
     void World::Save(const std::string& path) {
         nlohmann::json j;
-        auto view = m_registry.view<NameComponent, TransformComponent, ModelComponent>();
+        auto view = m_registry.view<NameComponent, TransformComponent, WorldObjectComponent>();
         for (auto entity : view) {
             auto& name = view.get<NameComponent>(entity);
             auto& transform = view.get<TransformComponent>(entity);
-            auto& model = view.get<ModelComponent>(entity);
-
-            if (!model.model) {
-                continue;
-            }
+            auto& worldObject = view.get<WorldObjectComponent>(entity);
 
             nlohmann::json entityJson;
             entityJson["name"] = name.value;
+            entityJson["kind"] = static_cast<int>(worldObject.kind);
+            entityJson["enabled"] = worldObject.enabled;
+            entityJson["visible"] = worldObject.visible;
             entityJson["position"] = { transform.position.x, transform.position.y, transform.position.z };
             entityJson["rotation"] = { transform.rotation.x, transform.rotation.y, transform.rotation.z };
             entityJson["scale"] = { transform.scale.x, transform.scale.y, transform.scale.z };
 
-            nlohmann::json modelJson;
-            model.model->ToJson(modelJson);
-            entityJson["model"] = modelJson;
+            if (m_registry.all_of<ModelComponent>(entity)) {
+                auto& model = m_registry.get<ModelComponent>(entity);
+                if (model.model) {
+                    nlohmann::json modelJson;
+                    model.model->ToJson(modelJson);
+                    entityJson["model"] = modelJson;
+                }
+            }
+
+            if (m_registry.all_of<PrimitiveComponent>(entity)) {
+                const auto& primitive = m_registry.get<PrimitiveComponent>(entity);
+                entityJson["primitive"] = {
+                    {"type", static_cast<int>(primitive.type)},
+                    {"sourcePath", primitive.sourcePath}
+                };
+            }
+
+            if (m_registry.all_of<MaterialComponent>(entity)) {
+                entityJson["materialComponent"] = MaterialToJson(m_registry.get<MaterialComponent>(entity).material);
+            }
+
+            if (m_registry.all_of<LightComponent>(entity)) {
+                const auto& light = m_registry.get<LightComponent>(entity);
+                entityJson["light"] = {
+                    {"type", light.type == LightType::Directional ? "Directional" : "Point"},
+                    {"color", { light.color.x, light.color.y, light.color.z }},
+                    {"intensity", light.intensity},
+                    {"range", light.range},
+                    {"castShadows", light.castShadows},
+                    {"primary", light.primary}
+                };
+            }
+
+            if (m_registry.all_of<SkeletonComponent>(entity)) {
+                const auto& skeleton = m_registry.get<SkeletonComponent>(entity);
+                entityJson["skeleton"] = {
+                    {"enabled", skeleton.enabled},
+                    {"boneCount", skeleton.boneCount},
+                    {"sourcePath", skeleton.sourcePath}
+                };
+            }
+
+            if (m_registry.all_of<AnimationComponent>(entity)) {
+                const auto& animation = m_registry.get<AnimationComponent>(entity);
+                entityJson["animation"] = {
+                    {"enabled", animation.enabled},
+                    {"playing", animation.playing},
+                    {"loop", animation.loop},
+                    {"currentTime", animation.currentTime},
+                    {"playbackSpeed", animation.playbackSpeed},
+                    {"currentClip", animation.currentClip}
+                };
+            }
+
+            if (m_registry.all_of<ScriptComponent>(entity)) {
+                const auto& script = m_registry.get<ScriptComponent>(entity);
+                entityJson["script"] = {
+                    {"enabled", script.enabled},
+                    {"autoStart", script.autoStart},
+                    {"scriptPath", script.scriptPath}
+                };
+            }
 
             j["entities"].push_back(entityJson);
         }
@@ -144,11 +262,13 @@ namespace OGLE {
         }
 
         for (const auto& entityJson : j["entities"]) {
-            auto model = std::make_shared<ModelEntity>();
-            model->FromJson(entityJson.at("model"));
-
             const std::string name = entityJson.value("name", "Model");
-            const Entity entity = AddModel(model, name);
+            const WorldObjectKind kind = static_cast<WorldObjectKind>(entityJson.value("kind", static_cast<int>(WorldObjectKind::Generic)));
+            const Entity entity = CreateWorldObject(name, kind).GetEntity();
+
+            auto& worldObject = m_registry.get<WorldObjectComponent>(entity);
+            worldObject.enabled = entityJson.value("enabled", true);
+            worldObject.visible = entityJson.value("visible", true);
 
             auto& transform = m_registry.get<TransformComponent>(entity);
             const auto& positionJson = entityJson.at("position");
@@ -157,6 +277,79 @@ namespace OGLE {
             transform.position = glm::vec3(positionJson[0], positionJson[1], positionJson[2]);
             transform.rotation = glm::vec3(rotationJson[0], rotationJson[1], rotationJson[2]);
             transform.scale = glm::vec3(scaleJson[0], scaleJson[1], scaleJson[2]);
+
+            if (entityJson.contains("model")) {
+                auto model = std::make_shared<ModelEntity>();
+                model->FromJson(entityJson.at("model"));
+                m_registry.emplace<ModelComponent>(entity, model);
+                m_registry.emplace<MaterialComponent>(entity, model->GetMaterial());
+            }
+
+            if (entityJson.contains("primitive")) {
+                const auto& primitiveJson = entityJson.at("primitive");
+                PrimitiveComponent primitive;
+                primitive.type = static_cast<PrimitiveType>(primitiveJson.value("type", static_cast<int>(PrimitiveType::None)));
+                primitive.sourcePath = primitiveJson.value("sourcePath", std::string());
+                m_registry.emplace<PrimitiveComponent>(entity, primitive);
+            }
+
+            if (entityJson.contains("materialComponent")) {
+                MaterialComponent materialComponent;
+                MaterialFromJson(entityJson.at("materialComponent"), materialComponent.material);
+                if (m_registry.all_of<MaterialComponent>(entity)) {
+                    m_registry.replace<MaterialComponent>(entity, materialComponent);
+                } else {
+                    m_registry.emplace<MaterialComponent>(entity, materialComponent);
+                }
+            }
+
+            if (entityJson.contains("light")) {
+                const auto& lightJson = entityJson.at("light");
+                LightComponent light;
+                light.type = lightJson.value("type", std::string("Directional")) == "Point"
+                    ? LightType::Point
+                    : LightType::Directional;
+                if (lightJson.contains("color")) {
+                    const auto& colorJson = lightJson.at("color");
+                    light.color = glm::vec3(colorJson[0], colorJson[1], colorJson[2]);
+                }
+                light.intensity = lightJson.value("intensity", 1.0f);
+                light.range = lightJson.value("range", 10.0f);
+                light.castShadows = lightJson.value("castShadows", false);
+                light.primary = lightJson.value("primary", false);
+                m_registry.emplace<LightComponent>(entity, light);
+            }
+
+            if (entityJson.contains("skeleton")) {
+                const auto& skeletonJson = entityJson.at("skeleton");
+                SkeletonComponent skeleton;
+                skeleton.enabled = skeletonJson.value("enabled", false);
+                skeleton.boneCount = skeletonJson.value("boneCount", 0);
+                skeleton.sourcePath = skeletonJson.value("sourcePath", std::string());
+                m_registry.emplace<SkeletonComponent>(entity, skeleton);
+            }
+
+            if (entityJson.contains("animation")) {
+                const auto& animationJson = entityJson.at("animation");
+                AnimationComponent animation;
+                animation.enabled = animationJson.value("enabled", false);
+                animation.playing = animationJson.value("playing", false);
+                animation.loop = animationJson.value("loop", true);
+                animation.currentTime = animationJson.value("currentTime", 0.0f);
+                animation.playbackSpeed = animationJson.value("playbackSpeed", 1.0f);
+                animation.currentClip = animationJson.value("currentClip", std::string());
+                m_registry.emplace<AnimationComponent>(entity, animation);
+            }
+
+            if (entityJson.contains("script")) {
+                const auto& scriptJson = entityJson.at("script");
+                ScriptComponent script;
+                script.enabled = scriptJson.value("enabled", true);
+                script.autoStart = scriptJson.value("autoStart", false);
+                script.scriptPath = scriptJson.value("scriptPath", std::string());
+                m_registry.emplace<ScriptComponent>(entity, script);
+            }
+
             SyncModelTransform(entity);
         }
     }
@@ -240,6 +433,92 @@ namespace OGLE {
         }
 
         return &m_registry.get<TransformComponent>(entity);
+    }
+
+    PrimitiveComponent* World::GetPrimitive(Entity entity) {
+        if (!IsValid(entity) || !m_registry.all_of<PrimitiveComponent>(entity)) {
+            return nullptr;
+        }
+        return &m_registry.get<PrimitiveComponent>(entity);
+    }
+
+    const PrimitiveComponent* World::GetPrimitive(Entity entity) const {
+        if (!IsValid(entity) || !m_registry.all_of<PrimitiveComponent>(entity)) {
+            return nullptr;
+        }
+        return &m_registry.get<PrimitiveComponent>(entity);
+    }
+
+    MaterialComponent* World::GetMaterial(Entity entity) {
+        if (!IsValid(entity) || !m_registry.all_of<MaterialComponent>(entity)) {
+            return nullptr;
+        }
+        return &m_registry.get<MaterialComponent>(entity);
+    }
+
+    const MaterialComponent* World::GetMaterial(Entity entity) const {
+        if (!IsValid(entity) || !m_registry.all_of<MaterialComponent>(entity)) {
+            return nullptr;
+        }
+        return &m_registry.get<MaterialComponent>(entity);
+    }
+
+    LightComponent* World::GetLight(Entity entity) {
+        if (!IsValid(entity) || !m_registry.all_of<LightComponent>(entity)) {
+            return nullptr;
+        }
+
+        return &m_registry.get<LightComponent>(entity);
+    }
+
+    SkeletonComponent* World::GetSkeleton(Entity entity) {
+        if (!IsValid(entity) || !m_registry.all_of<SkeletonComponent>(entity)) {
+            return nullptr;
+        }
+        return &m_registry.get<SkeletonComponent>(entity);
+    }
+
+    const SkeletonComponent* World::GetSkeleton(Entity entity) const {
+        if (!IsValid(entity) || !m_registry.all_of<SkeletonComponent>(entity)) {
+            return nullptr;
+        }
+        return &m_registry.get<SkeletonComponent>(entity);
+    }
+
+    AnimationComponent* World::GetAnimation(Entity entity) {
+        if (!IsValid(entity) || !m_registry.all_of<AnimationComponent>(entity)) {
+            return nullptr;
+        }
+        return &m_registry.get<AnimationComponent>(entity);
+    }
+
+    const AnimationComponent* World::GetAnimation(Entity entity) const {
+        if (!IsValid(entity) || !m_registry.all_of<AnimationComponent>(entity)) {
+            return nullptr;
+        }
+        return &m_registry.get<AnimationComponent>(entity);
+    }
+
+    ScriptComponent* World::GetScript(Entity entity) {
+        if (!IsValid(entity) || !m_registry.all_of<ScriptComponent>(entity)) {
+            return nullptr;
+        }
+        return &m_registry.get<ScriptComponent>(entity);
+    }
+
+    const ScriptComponent* World::GetScript(Entity entity) const {
+        if (!IsValid(entity) || !m_registry.all_of<ScriptComponent>(entity)) {
+            return nullptr;
+        }
+        return &m_registry.get<ScriptComponent>(entity);
+    }
+
+    const LightComponent* World::GetLight(Entity entity) const {
+        if (!IsValid(entity) || !m_registry.all_of<LightComponent>(entity)) {
+            return nullptr;
+        }
+
+        return &m_registry.get<LightComponent>(entity);
     }
 
     PhysicsBodyComponent* World::GetPhysicsBody(Entity entity) {
