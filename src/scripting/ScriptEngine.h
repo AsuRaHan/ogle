@@ -20,6 +20,9 @@ namespace OGLE
 
         duk_context* GetContext() { return m_context; }
 
+        // Get detailed error information from the last failed execution
+        std::string GetLastErrorDetails() const { return m_lastError; }
+
         template<typename T>
         void SetGlobalPointer(const char* name, T* ptr)
         {
@@ -29,5 +32,9 @@ namespace OGLE
 
     private:
         duk_context* m_context;
+        std::string m_lastError;
+
+        // Helper to extract detailed error information from Duktape
+        void CaptureErrorDetails();
     };
 }

@@ -37,6 +37,9 @@ bool ScriptManager::Initialize(IWorldAccess& worldAccess, PhysicsManager& physic
     const std::string resolvedBootstrapPath = ResolveScriptPath(apiBootstrapPath);
     if (resolvedBootstrapPath.empty() || !m_engine->ExecuteFile(resolvedBootstrapPath)) {
         LOG_ERROR("Failed to install JS API bootstrap from: " + apiBootstrapPath);
+        if (!resolvedBootstrapPath.empty()) {
+            LOG_ERROR("Bootstrap script error: " + m_engine->GetLastErrorDetails());
+        }
         Shutdown();
         return false;
     }
@@ -66,6 +69,7 @@ bool ScriptManager::ExecuteFile(const std::string& scriptPath)
 
     if (!m_engine->ExecuteFile(resolvedPath)) {
         LOG_ERROR("Failed to execute script: " + resolvedPath);
+        LOG_ERROR("Script execution details: " + m_engine->GetLastErrorDetails());
         return false;
     }
 

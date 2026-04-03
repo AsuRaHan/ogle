@@ -38,6 +38,7 @@ private:
     static ShaderManager* s_globalInstance;
 
 public:
+    // Returns empty string on failure, throws or logs error details
     static std::string LoadShaderSource(const std::string& filename);
 
 private:

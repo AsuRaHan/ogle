@@ -3,6 +3,7 @@
 #include "../managers/WorldManager.h"
 #include "../world/WorldComponents.h"
 #include "../Logger.h"
+#include "../render/ProceduralTexture.h"
 
 #include <array>
 #include <chrono>
@@ -43,10 +44,18 @@ bool OpenGLRenderer::Initialize()
 
     Resize(m_width, m_height);
 
-    const std::string vertexShaderSrc = m_shaderManager.LoadShaderSource("assets/shaders/default.vs");
-    const std::string fragmentShaderSrc = m_shaderManager.LoadShaderSource("assets/shaders/default.fs");
-    const std::string shadowVertexShaderSrc = m_shaderManager.LoadShaderSource("assets/shaders/shadow.vs");
-    const std::string shadowFragmentShaderSrc = m_shaderManager.LoadShaderSource("assets/shaders/shadow.fs");
+    std::string vertexShaderSrc, fragmentShaderSrc, shadowVertexShaderSrc, shadowFragmentShaderSrc;
+    
+    try {
+        vertexShaderSrc = m_shaderManager.LoadShaderSource("assets/shaders/default.vs");
+        fragmentShaderSrc = m_shaderManager.LoadShaderSource("assets/shaders/default.fs");
+        shadowVertexShaderSrc = m_shaderManager.LoadShaderSource("assets/shaders/shadow.vs");
+        shadowFragmentShaderSrc = m_shaderManager.LoadShaderSource("assets/shaders/shadow.fs");
+    }
+    catch (const std::exception& e) {
+        LOG_ERROR("OpenGLRenderer: Failed to load shader sources: " + std::string(e.what()));
+        return false;
+    }
 
     if (!m_shaderManager.loadVertexShader("default_vs", vertexShaderSrc.c_str())) {
         LOG_ERROR("OpenGLRenderer: loadVertexShader failed");
@@ -73,6 +82,11 @@ bool OpenGLRenderer::Initialize()
         return false;
     }
     m_shaderManager.SetGlobalInstance(&m_shaderManager);
+
+    // Инициализация compute shader'ов для процедурной генерации текстур
+    if (!OGLE::ProceduralTexture::InitializeShaders()) {
+        LOG_INFO("OpenGLRenderer: procedural texture shaders initialization completed");
+    }
 
     if (!InitializeShadowResources()) {
         LOG_ERROR("OpenGLRenderer: failed to initialize shadow map resources");

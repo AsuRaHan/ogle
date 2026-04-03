@@ -179,4 +179,22 @@ namespace OGLE {
         LOG_INFO("Loaded texture: " + path);
         return true;
     }
+
+    std::shared_ptr<Texture2D> Texture2D::CreateFromGLuint(GLuint textureId, int width, int height, const std::string& name)
+    {
+        if (textureId == 0 || width <= 0 || height <= 0) {
+            LOG_ERROR("Invalid parameters for CreateFromGLuint: textureId=" + std::to_string(textureId) 
+                    + ", width=" + std::to_string(width) + ", height=" + std::to_string(height));
+            return nullptr;
+        }
+
+        std::shared_ptr<Texture2D> texture(new Texture2D());
+        texture->m_textureId = textureId;
+        texture->m_width = width;
+        texture->m_height = height;
+        texture->m_path = name;
+
+        LOG_INFO("Created texture from GLuint: " + name + " (" + std::to_string(width) + "x" + std::to_string(height) + ")");
+        return texture;
+    }
 }

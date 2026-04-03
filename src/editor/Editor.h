@@ -5,6 +5,7 @@
 #include "editor/EditorCreationPanel.h"
 #include "editor/EditorHierarchyPanel.h"
 #include "editor/EditorInspectorPanel.h"
+#include "editor/EditorProceduralTexturePanel.h"
 #include "editor/EditorState.h"
 #include "world/WorldComponents.h"
 
@@ -61,6 +62,7 @@ private:
     EditorAnimationPanel m_animationPanel{};
     EditorCreationPanel m_creationPanel{};
     EditorContentBrowserPanel m_contentBrowserPanel{};
+    EditorProceduralTexturePanel m_proceduralTexturePanel{};
 
     // Phase 1 of decomposition keeps old member names as aliases so behavior stays stable
     // while editor state now lives in a dedicated EditorState object.

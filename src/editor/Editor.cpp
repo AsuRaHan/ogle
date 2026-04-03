@@ -178,6 +178,7 @@ void Editor::BuildUi(
             ImGui::MenuItem("Inspector", nullptr, &m_showInspectorWindow);
             ImGui::MenuItem("Animation", nullptr, &m_showAnimationWindow);
             ImGui::MenuItem("Content Browser", nullptr, &m_showContentBrowserWindow);
+            ImGui::MenuItem("Procedural Texture", nullptr, &m_state.showProceduralTextureWindow);
             ImGui::EndMenu();
         }
         ImGui::EndMainMenuBar();
@@ -299,6 +300,13 @@ void Editor::BuildUi(
     if (m_showContentBrowserWindow) {
         if (ImGui::Begin("Content Browser", &m_showContentBrowserWindow)) {
             m_contentBrowserPanel.Draw(m_state, worldManager, configManager);
+        }
+        ImGui::End();
+    }
+
+    if (m_state.showProceduralTextureWindow) {
+        if (ImGui::Begin("Procedural Texture Generator", &m_state.showProceduralTextureWindow)) {
+            m_proceduralTexturePanel.Draw(m_state);
         }
         ImGui::End();
     }

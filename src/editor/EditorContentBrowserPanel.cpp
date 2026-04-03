@@ -334,6 +334,25 @@ void EditorContentBrowserPanel::DrawDirectory(
                 HandleFileSelected(state, entryPath, rootPath);
             }
 
+            // Context menu for files
+            if (ImGui::BeginPopupContextItem()) {
+                if (ImGui::MenuItem("Load to Scene")) {
+                    HandleFileSelected(state, entryPath, rootPath);
+                }
+                if (ImGui::MenuItem("Copy Path")) {
+                    ImGui::SetClipboardText(entryPath.generic_string().c_str());
+                }
+                if (ImGui::MenuItem("Delete File")) {
+                    try {
+                        std::filesystem::remove(entryPath);
+                        LOG_INFO("File deleted: " + entryPath.generic_string());
+                    } catch (const std::exception& ex) {
+                        LOG_ERROR("Failed to delete file: " + std::string(ex.what()));
+                    }
+                }
+                ImGui::EndPopup();
+            }
+
             const std::string payloadPath = entryPath.generic_string();
             if (ImGui::BeginDragDropSource()) {
                 ImGui::SetDragDropPayload(

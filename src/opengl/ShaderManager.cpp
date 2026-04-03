@@ -1,4 +1,6 @@
 #include "ShaderManager.h"
+#include "core/FileSystem.h"
+#include <filesystem>
 
 
 ShaderManager::ShaderManager() {}
@@ -284,9 +286,22 @@ bool ShaderManager::checkProgramLinking(GLuint program) {
     return true;
 }
 std::string ShaderManager::LoadShaderSource(const std::string& filename) {
-    std::ifstream file(filename);
-    if (!file.is_open()) {
-        throw std::runtime_error("Не удалось загрузить файл шейдерной программы: " + filename);
+    std::filesystem::path filePath(filename);
+    
+    // Check if file exists
+    if (!FileSystem::Exists(filePath)) {
+        const std::string errorMsg = "Shader file not found: " + filename;
+        LOG_ERROR(errorMsg);
+        throw std::runtime_error(errorMsg);
     }
-    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+
+    // Read the file using FileSystem
+    std::string content;
+    if (!FileSystem::ReadTextFile(filePath, content)) {
+        const std::string errorMsg = "Failed to read shader file: " + filename;
+        LOG_ERROR(errorMsg);
+        throw std::runtime_error(errorMsg);
+    }
+
+    return content;
 }

@@ -29,6 +29,8 @@ add_executable(${PROJECT_NAME} WIN32
     src/editor/EditorContentBrowserPanel.h
     src/editor/EditorCreationPanel.cpp
     src/editor/EditorCreationPanel.h
+    src/editor/EditorProceduralTexturePanel.cpp
+    src/editor/EditorProceduralTexturePanel.h
     src/editor/EditorHierarchyPanel.cpp
     src/editor/EditorHierarchyPanel.h
     src/editor/EditorMeshEditPanel.cpp
@@ -78,6 +80,10 @@ add_executable(${PROJECT_NAME} WIN32
     src/render/MaterialLibrary.h
     src/render/AnimationLibrary.cpp
     src/render/AnimationLibrary.h
+    src/render/ProceduralTexture.cpp
+    src/render/ProceduralTexture.h
+    src/render/TextureGenerator.cpp
+    src/render/TextureGenerator.h
 
     src/input/AxisBinding.cpp
     src/input/AxisBinding.h

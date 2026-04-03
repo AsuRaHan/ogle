@@ -11,6 +11,9 @@ namespace OGLE {
         ~Texture2D();
 
         static std::shared_ptr<Texture2D> LoadShared(const std::string& path);
+        
+        // Создание Texture2D из существующего GLuint (для процедурно-сгенерированных текстур)
+        static std::shared_ptr<Texture2D> CreateFromGLuint(GLuint textureId, int width, int height, const std::string& name = "procedural_texture");
 
         bool IsValid() const { return m_textureId != 0; }
         GLuint GetTextureId() const { return m_textureId; }
