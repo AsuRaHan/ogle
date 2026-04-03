@@ -57,6 +57,8 @@ namespace OGLE {
         const MaterialComponent* GetMaterial(Entity entity) const;
         LightComponent* GetLight(Entity entity);
         const LightComponent* GetLight(Entity entity) const;
+        ShaderComponent* GetShader(Entity entity);
+        const ShaderComponent* GetShader(Entity entity) const;
         SkeletonComponent* GetSkeleton(Entity entity);
         const SkeletonComponent* GetSkeleton(Entity entity) const;
         AnimationComponent* GetAnimation(Entity entity);

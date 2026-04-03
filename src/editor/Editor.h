@@ -84,6 +84,7 @@ private:
     std::array<char, 512>& m_contentSelectionBuffer = m_state.contentSelectionBuffer;
     std::array<char, 512>& m_primitiveSourcePathBuffer = m_state.primitiveSourcePathBuffer;
     std::array<char, 512>& m_skeletonSourcePathBuffer = m_state.skeletonSourcePathBuffer;
+    std::array<char, 512>& m_shaderProgramBuffer = m_state.shaderProgramBuffer;
     std::array<char, 256>& m_animationClipBuffer = m_state.animationClipBuffer;
     std::array<char, 512>& m_scriptPathBuffer = m_state.scriptPathBuffer;
     glm::vec3& m_baseColorBuffer = m_state.baseColorBuffer;

@@ -1,6 +1,7 @@
 #pragma once
 
 class IWorldAccess;
+class PhysicsManager;
 
 namespace OGLE
 {
@@ -8,6 +9,6 @@ namespace OGLE
 
     namespace ScriptBindings
     {
-        void Register(ScriptEngine& engine, IWorldAccess& worldAccess);
+        void Register(ScriptEngine& engine, IWorldAccess& worldAccess, PhysicsManager& physicsManager);
     }
 }

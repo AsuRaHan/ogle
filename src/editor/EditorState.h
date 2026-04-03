@@ -35,6 +35,7 @@ struct EditorState
     std::array<char, 512> contentSelectionBuffer{};
     std::array<char, 512> primitiveSourcePathBuffer{};
     std::array<char, 512> skeletonSourcePathBuffer{};
+    std::array<char, 512> shaderProgramBuffer{};
     std::array<char, 256> animationClipBuffer{};
     std::array<char, 512> scriptPathBuffer{};
     glm::vec3 baseColorBuffer{ 1.0f, 1.0f, 1.0f };

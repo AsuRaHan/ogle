@@ -37,6 +37,9 @@ namespace OGLE {
         bool HasEmissiveTexture() const;
         const std::string& GetEmissiveTexturePath() const;
 
+        void SetShaderProgram(const std::string& shaderProgramName);
+        const std::string& GetShaderProgram() const;
+
     private:
         // Editable surface parameters live here so the editor, serializer, and renderer share one source of truth.
         glm::vec3 m_baseColor{ 1.0f, 1.0f, 1.0f };
@@ -50,5 +53,7 @@ namespace OGLE {
         std::shared_ptr<Texture2D> m_diffuseTexture;
         std::string m_emissiveTexturePath;
         std::shared_ptr<Texture2D> m_emissiveTexture;
+        std::string m_shaderProgramName;
+
     };
 }

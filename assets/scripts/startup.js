@@ -4,27 +4,34 @@
 function onStart() {
     ogle.log("Startup script 'startup.js' is running onStart().");
 
-    // Clear the default world if it exists
-    // ogle.world.clear();
+    ogle.world.clear();
 
-    // Create a floor
-    ogle.world.createCube({
+    // Create a floor and add a static physics body
+    var floor = ogle.world.createCube({
         name: "ScriptedFloor",
         position: { x: 0, y: -0.5, z: 0 },
         scale: { x: 20, y: 0.1, z: 20 }
     });
+    ogle.physics.addBox(floor, { x: 10, y: 0.05, z: 10 }, "Static", 0);
 
-    // Create a few objects
+    // Dynamic cube that falls down
     var cube1 = ogle.world.createCube({
         name: "ScriptedCube1",
-        position: { x: -2, y: 0.5, z: 0 },
+        position: { x: -2, y: 5.0, z: 0 },
         scale: { x: 1, y: 1, z: 1 }
     });
+    ogle.physics.addBox(cube1, { x: 0.5, y: 0.5, z: 0.5 }, "Dynamic", 1.0);
 
+    // Dynamic box that collides with the floor
     var cube2 = ogle.world.createCube({
         name: "ScriptedCube2",
-        position: { x: 2, y: 1.5, z: -1 },
-        scale: { x: 1, y: 3, z: 1 }
+        position: { x: 2, y: 6.0, z: 0 },
+        scale: { x: 0.8, y: 0.8, z: 0.8 }
+    });
+    ogle.physics.addBox(cube2, { x: 0.4, y: 0.4, z: 0.4 }, "Dynamic", 1.0);
+
+    ogle.physics.setCollisionCallback(function (a, b) {
+        ogle.log("Collision callback triggered between " + a + " and " + b);
     });
 
     // Create a light

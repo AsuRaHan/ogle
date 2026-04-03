@@ -8,6 +8,7 @@
 #include "world/World.h"
 #include "world/WorldComponents.h"
 #include "world/IWorldAccess.h"
+#include "../managers/PhysicsManager.h"
 
 #include <duktape.h>
 #include <glm/vec2.hpp>
@@ -16,6 +17,8 @@
 namespace
 {
     constexpr const char* kWorldAccessPtr = "__worldAccess";
+    constexpr const char* kPhysicsManagerPtr = "__physicsManager";
+    constexpr const char* kCollisionCallback = "__collisionCallback";
     constexpr const char* kNativeObjectName = "__ogleNative";
 
     IWorldAccess* GetWorldAccess(duk_context* ctx)
@@ -25,6 +28,15 @@ namespace
         auto* worldAccess = static_cast<IWorldAccess*>(duk_to_pointer(ctx, -1));
         duk_pop_2(ctx);
         return worldAccess;
+    }
+
+    PhysicsManager* GetPhysicsManager(duk_context* ctx)
+    {
+        duk_push_global_stash(ctx);
+        duk_get_prop_string(ctx, -1, kPhysicsManagerPtr);
+        auto* physicsManager = static_cast<PhysicsManager*>(duk_to_pointer(ctx, -1));
+        duk_pop_2(ctx);
+        return physicsManager;
     }
 
     OGLE::World* GetWorld(duk_context* ctx)
@@ -213,6 +225,120 @@ namespace
 
         const auto entity = ToEntity(duk_require_uint(context, 0));
         duk_push_boolean(context, worldAccess->IsEntityValid(entity));
+        return 1;
+    }
+
+    static bool ParseBodyType(duk_context* context, int index, OGLE::PhysicsBodyType& outType)
+    {
+        if (duk_is_string(context, index)) {
+            std::string typeName = duk_get_string(context, index);
+            if (typeName == "Static") { outType = OGLE::PhysicsBodyType::Static; return true; }
+            if (typeName == "Dynamic") { outType = OGLE::PhysicsBodyType::Dynamic; return true; }
+            if (typeName == "Kinematic") { outType = OGLE::PhysicsBodyType::Kinematic; return true; }
+            return false;
+        }
+
+        if (duk_is_number(context, index)) {
+            int t = static_cast<int>(duk_get_int(context, index));
+            if (t < 0 || t > 2) return false;
+            outType = static_cast<OGLE::PhysicsBodyType>(t);
+            return true;
+        }
+
+        return false;
+    }
+
+    duk_ret_t JsPhysicsAddBox(duk_context* context)
+    {
+        PhysicsManager* physics = GetPhysicsManager(context);
+        if (!physics) {
+            return DUK_RET_ERROR;
+        }
+
+        const OGLE::Entity entity = ToEntity(duk_require_uint(context, 0));
+        const float hx = static_cast<float>(duk_require_number(context, 1));
+        const float hy = static_cast<float>(duk_require_number(context, 2));
+        const float hz = static_cast<float>(duk_require_number(context, 3));
+
+        OGLE::PhysicsBodyType bodyType;
+        if (!ParseBodyType(context, 4, bodyType)) {
+            bodyType = OGLE::PhysicsBodyType::Dynamic;
+        }
+
+        const float mass = static_cast<float>(duk_opt_number(context, 5, 1.0));
+        bool result = physics->AddBoxBody(entity, glm::vec3(hx, hy, hz), bodyType, mass);
+        duk_push_boolean(context, result);
+        return 1;
+    }
+
+    duk_ret_t JsPhysicsAddSphere(duk_context* context)
+    {
+        PhysicsManager* physics = GetPhysicsManager(context);
+        if (!physics) {
+            return DUK_RET_ERROR;
+        }
+
+        const OGLE::Entity entity = ToEntity(duk_require_uint(context, 0));
+        const float radius = static_cast<float>(duk_require_number(context, 1));
+
+        OGLE::PhysicsBodyType bodyType;
+        if (!ParseBodyType(context, 2, bodyType)) {
+            bodyType = OGLE::PhysicsBodyType::Dynamic;
+        }
+
+        const float mass = static_cast<float>(duk_opt_number(context, 3, 1.0));
+        bool result = physics->AddSphereBody(entity, radius, bodyType, mass);
+        duk_push_boolean(context, result);
+        return 1;
+    }
+
+    duk_ret_t JsPhysicsAddCapsule(duk_context* context)
+    {
+        PhysicsManager* physics = GetPhysicsManager(context);
+        if (!physics) {
+            return DUK_RET_ERROR;
+        }
+
+        const OGLE::Entity entity = ToEntity(duk_require_uint(context, 0));
+        const float radius = static_cast<float>(duk_require_number(context, 1));
+        const float height = static_cast<float>(duk_require_number(context, 2));
+
+        OGLE::PhysicsBodyType bodyType;
+        if (!ParseBodyType(context, 3, bodyType)) {
+            bodyType = OGLE::PhysicsBodyType::Dynamic;
+        }
+
+        const float mass = static_cast<float>(duk_opt_number(context, 4, 1.0));
+        bool result = physics->AddCapsuleBody(entity, radius, height, bodyType, mass);
+        duk_push_boolean(context, result);
+        return 1;
+    }
+
+    duk_ret_t JsPhysicsRemoveBody(duk_context* context)
+    {
+        PhysicsManager* physics = GetPhysicsManager(context);
+        if (!physics) {
+            return DUK_RET_ERROR;
+        }
+
+        const OGLE::Entity entity = ToEntity(duk_require_uint(context, 0));
+        physics->RemoveBody(entity);
+        duk_push_true(context);
+        return 1;
+    }
+
+    duk_ret_t JsPhysicsSetCollisionCallback(duk_context* context)
+    {
+        if (!duk_is_function(context, 0)) {
+            return DUK_RET_TYPE_ERROR;
+        }
+
+        duk_push_global_stash(context);
+        duk_dup(context, 0);
+        duk_put_prop_string(context, -2, kCollisionCallback);
+        duk_pop(context);
+
+        duk_push_true(context);
         return 1;
     }
 
@@ -904,13 +1030,15 @@ namespace OGLE
 {
     namespace ScriptBindings
     {
-        void Register(ScriptEngine& engine, IWorldAccess& worldAccess)
+        void Register(ScriptEngine& engine, IWorldAccess& worldAccess, PhysicsManager& physicsManager)
         {
             duk_context* ctx = engine.GetContext();
 
             duk_push_global_stash(ctx);
             duk_push_pointer(ctx, &worldAccess);
             duk_put_prop_string(ctx, -2, kWorldAccessPtr);
+            duk_push_pointer(ctx, &physicsManager);
+            duk_put_prop_string(ctx, -2, kPhysicsManagerPtr);
             duk_pop(ctx);
 
             duk_idx_t nativeIndex = duk_push_object(ctx);
@@ -978,6 +1106,13 @@ namespace OGLE
             bindNative("setLightPrimary", JsSetLightPrimary, 2);
             bindNative("getLightType", JsGetLightType, 1);
             bindNative("setLightType", JsSetLightType, 2);
+
+            bindNative("physicsAddBox", JsPhysicsAddBox, 6);
+            bindNative("physicsAddSphere", JsPhysicsAddSphere, 4);
+            bindNative("physicsAddCapsule", JsPhysicsAddCapsule, 5);
+            bindNative("physicsRemoveBody", JsPhysicsRemoveBody, 1);
+            bindNative("physicsSetCollisionCallback", JsPhysicsSetCollisionCallback, 1);
+
             duk_put_global_string(ctx, kNativeObjectName);
         }
     }

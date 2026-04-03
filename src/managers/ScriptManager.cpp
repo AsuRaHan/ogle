@@ -2,6 +2,7 @@
 
 #include "scripting/ScriptEngine.h"
 #include "scripting/ScriptBindings.h"
+#include <entt/entt.hpp>
 #include "Logger.h"
 #include "world/IWorldAccess.h"
 
@@ -19,7 +20,7 @@ ScriptManager::~ScriptManager()
     Shutdown();
 }
 
-bool ScriptManager::Initialize(IWorldAccess& worldAccess, const std::string& apiBootstrapPath)
+bool ScriptManager::Initialize(IWorldAccess& worldAccess, PhysicsManager& physicsManager, const std::string& apiBootstrapPath)
 {
     Shutdown();
     m_worldAccess = &worldAccess;
@@ -31,7 +32,7 @@ bool ScriptManager::Initialize(IWorldAccess& worldAccess, const std::string& api
         return false;
     }
 
-    OGLE::ScriptBindings::Register(*m_engine, *m_worldAccess);
+    OGLE::ScriptBindings::Register(*m_engine, *m_worldAccess, physicsManager);
 
     const std::string resolvedBootstrapPath = ResolveScriptPath(apiBootstrapPath);
     if (resolvedBootstrapPath.empty() || !m_engine->ExecuteFile(resolvedBootstrapPath)) {
@@ -83,6 +84,35 @@ void ScriptManager::Update(float deltaTime)
     }
 
     CallGlobalFunction("onUpdate", deltaTime);
+}
+
+void ScriptManager::NotifyCollision(OGLE::Entity a, OGLE::Entity b)
+{
+    if (!m_engine) {
+        return;
+    }
+
+    duk_context* ctx = m_engine->GetContext();
+    if (!ctx) {
+        return;
+    }
+
+    duk_push_global_stash(ctx);
+    duk_get_prop_string(ctx, -1, "__collisionCallback");
+    if (!duk_is_function(ctx, -1)) {
+        duk_pop_2(ctx);
+        return;
+    }
+
+    duk_push_uint(ctx, static_cast<duk_uint_t>(entt::to_integral(a)));
+    duk_push_uint(ctx, static_cast<duk_uint_t>(entt::to_integral(b)));
+
+    if (duk_pcall(ctx, 2) != 0) {
+        LOG_ERROR("Collision callback script failed: " + std::string(duk_safe_to_string(ctx, -1)));
+        duk_pop(ctx);
+    }
+
+    duk_pop_2(ctx);
 }
 
 bool ScriptManager::CallGlobalFunction(const char* functionName, float argument)

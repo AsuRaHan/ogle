@@ -215,4 +215,14 @@ namespace OGLE {
     {
         return m_emissiveTexturePath;
     }
+
+    void Material::SetShaderProgram(const std::string& shaderProgramName)
+    {
+        m_shaderProgramName = shaderProgramName;
+    }
+
+    const std::string& Material::GetShaderProgram() const
+    {
+        return m_shaderProgramName;
+    }
 }

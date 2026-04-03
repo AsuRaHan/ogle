@@ -72,6 +72,8 @@ add_executable(${PROJECT_NAME} WIN32
     src/render/Texture2D.h
     src/render/Material.cpp
     src/render/Material.h
+    src/render/MaterialLibrary.cpp
+    src/render/MaterialLibrary.h
 
     src/input/AxisBinding.cpp
     src/input/AxisBinding.h

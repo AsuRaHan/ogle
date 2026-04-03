@@ -19,7 +19,8 @@ namespace OGLE {
                 {"metallic", material.GetMetallic()},
                 {"alphaCutoff", material.GetAlphaCutoff()},
                 {"diffuseTexturePath", material.GetDiffuseTexturePath()},
-                {"emissiveTexturePath", material.GetEmissiveTexturePath()}
+                {"emissiveTexturePath", material.GetEmissiveTexturePath()},
+                {"shaderProgram", material.GetShaderProgram()}
             };
         }
 
@@ -55,6 +56,9 @@ namespace OGLE {
             }
             if (materialJson.contains("emissiveTexturePath")) {
                 material.SetEmissiveTexturePath(materialJson.at("emissiveTexturePath").get<std::string>());
+            }
+            if (materialJson.contains("shaderProgram")) {
+                material.SetShaderProgram(materialJson.at("shaderProgram").get<std::string>());
             }
         }
     }
@@ -195,6 +199,13 @@ namespace OGLE {
                 entityJson["materialComponent"] = MaterialToJson(m_registry.get<MaterialComponent>(entity).material);
             }
 
+            if (m_registry.all_of<ShaderComponent>(entity)) {
+                const auto& shader = m_registry.get<ShaderComponent>(entity);
+                entityJson["shader"] = {
+                    {"programName", shader.programName}
+                };
+            }
+
             if (m_registry.all_of<LightComponent>(entity)) {
                 const auto& light = m_registry.get<LightComponent>(entity);
                 entityJson["light"] = {
@@ -301,6 +312,13 @@ namespace OGLE {
                 } else {
                     m_registry.emplace<MaterialComponent>(entity, materialComponent);
                 }
+            }
+
+            if (entityJson.contains("shader")) {
+                const auto& shaderJson = entityJson.at("shader");
+                ShaderComponent shader;
+                shader.programName = shaderJson.value("programName", std::string("default"));
+                m_registry.emplace<ShaderComponent>(entity, shader);
             }
 
             if (entityJson.contains("light")) {
@@ -469,6 +487,22 @@ namespace OGLE {
         }
 
         return &m_registry.get<LightComponent>(entity);
+    }
+
+    ShaderComponent* World::GetShader(Entity entity) {
+        if (!IsValid(entity) || !m_registry.all_of<ShaderComponent>(entity)) {
+            return nullptr;
+        }
+
+        return &m_registry.get<ShaderComponent>(entity);
+    }
+
+    const ShaderComponent* World::GetShader(Entity entity) const {
+        if (!IsValid(entity) || !m_registry.all_of<ShaderComponent>(entity)) {
+            return nullptr;
+        }
+
+        return &m_registry.get<ShaderComponent>(entity);
     }
 
     SkeletonComponent* World::GetSkeleton(Entity entity) {

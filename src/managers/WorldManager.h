@@ -81,6 +81,7 @@ public:
     bool SetEntityScale(OGLE::Entity entity, const glm::vec3& scale);
     /// <summary>Assigns a diffuse texture to an entity.</summary>
     bool SetEntityDiffuseTexture(OGLE::Entity entity, const std::string& texturePath);
+    bool SetEntityShaderProgram(OGLE::Entity entity, const std::string& shaderProgramName);
 
     /// <summary>Updates the world state (physics, animations, etc.).</summary>
     void Update();

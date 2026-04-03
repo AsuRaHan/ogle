@@ -351,6 +351,8 @@ void Editor::SyncSelectedBuffers(WorldManager& worldManager)
             m_roughnessBuffer = material.GetRoughness();
             m_metallicBuffer = material.GetMetallic();
             m_alphaCutoffBuffer = material.GetAlphaCutoff();
+            m_shaderProgramBuffer.fill('\0');
+            std::strncpy(m_shaderProgramBuffer.data(), material.GetShaderProgram().c_str(), m_shaderProgramBuffer.size() - 1);
         } else if (OGLE::ModelEntity* model = selectedObject.GetModel()) {
             m_textureEditingEntity = m_selectedEntity;
             const OGLE::Material& material = model->GetMaterial();
@@ -365,10 +367,13 @@ void Editor::SyncSelectedBuffers(WorldManager& worldManager)
             m_roughnessBuffer = material.GetRoughness();
             m_metallicBuffer = material.GetMetallic();
             m_alphaCutoffBuffer = material.GetAlphaCutoff();
+            m_shaderProgramBuffer.fill('\0');
+            std::strncpy(m_shaderProgramBuffer.data(), material.GetShaderProgram().c_str(), m_shaderProgramBuffer.size() - 1);
         } else {
             m_textureEditingEntity = entt::null;
             m_texturePathBuffer.fill('\0');
             m_emissiveTexturePathBuffer.fill('\0');
+            m_shaderProgramBuffer.fill('\0');
         }
     }
 }
@@ -404,19 +409,18 @@ bool Editor::TrySelectObject(const ogle::Camera& camera, WorldManager& worldMana
     float closestHit = std::numeric_limits<float>::max();
     OGLE::Entity closestEntity = entt::null;
 
-    auto view = worldManager.GetActiveWorld().GetRegistry().view<OGLE::NameComponent, OGLE::TransformComponent>();
-    for (auto entity : view) {
-        const auto& transform = view.get<OGLE::TransformComponent>(entity);
-        const glm::vec3 halfExtents = glm::max(transform.scale * 0.5f, glm::vec3(0.05f));
-        const glm::vec3 boxMin = transform.position - halfExtents;
-        const glm::vec3 boxMax = transform.position + halfExtents;
+    worldManager.GetActiveWorld().GetRegistry().view<OGLE::NameComponent, OGLE::TransformComponent>().each(
+        [&](auto entity, const OGLE::NameComponent&, const OGLE::TransformComponent& transform) {
+            const glm::vec3 halfExtents = glm::max(transform.scale * 0.5f, glm::vec3(0.05f));
+            const glm::vec3 boxMin = transform.position - halfExtents;
+            const glm::vec3 boxMax = transform.position + halfExtents;
 
-        float hitDistance = 0.0f;
-        if (IntersectRayWithAabb(rayOrigin, rayDirection, boxMin, boxMax, hitDistance) && hitDistance < closestHit) {
-            closestHit = hitDistance;
-            closestEntity = entity;
-        }
-    }
+            float hitDistance = 0.0f;
+            if (IntersectRayWithAabb(rayOrigin, rayDirection, boxMin, boxMax, hitDistance) && hitDistance < closestHit) {
+                closestHit = hitDistance;
+                closestEntity = entity;
+            }
+        });
 
     m_selectedEntity = closestEntity;
     return closestEntity != entt::null;

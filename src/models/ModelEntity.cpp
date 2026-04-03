@@ -166,7 +166,8 @@ namespace OGLE {
                 {"metallic", material.GetMetallic()},
                 {"alphaCutoff", material.GetAlphaCutoff()},
                 {"diffuseTexturePath", material.GetDiffuseTexturePath()},
-                {"emissiveTexturePath", material.GetEmissiveTexturePath()}
+                {"emissiveTexturePath", material.GetEmissiveTexturePath()},
+                {"shaderProgram", material.GetShaderProgram()}
             }}
         };
 
@@ -231,6 +232,9 @@ namespace OGLE {
             }
             if (materialJson.contains("emissiveTexturePath")) {
                 m_material.SetEmissiveTexturePath(materialJson.at("emissiveTexturePath").get<std::string>());
+            }
+            if (materialJson.contains("shaderProgram")) {
+                m_material.SetShaderProgram(materialJson.at("shaderProgram").get<std::string>());
             }
         } else if (!GetLoadedDiffuseTexturePath().empty()) {
             m_material.SetDiffuseTexturePath(GetLoadedDiffuseTexturePath());

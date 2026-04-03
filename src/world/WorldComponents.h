@@ -69,6 +69,10 @@ namespace OGLE {
         Material material; // Структура с параметрами материала (цвет, текстуры и т.д.)
     };
 
+    struct ShaderComponent {
+        std::string programName = "default"; // Имя шейдерной программы, выбранной для объекта
+    };
+
     // Типы источников света.
     enum class LightType {
         Directional, // Направленный (как солнце)

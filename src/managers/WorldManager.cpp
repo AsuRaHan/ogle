@@ -99,6 +99,22 @@ bool WorldManager::SetEntityDiffuseTexture(OGLE::Entity entity, const std::strin
     return false;
 }
 
+bool WorldManager::SetEntityShaderProgram(OGLE::Entity entity, const std::string& shaderProgramName)
+{
+    OGLE::World& world = GetActiveWorld();
+    if (OGLE::MaterialComponent* material = world.GetMaterial(entity)) {
+        material->material.SetShaderProgram(shaderProgramName);
+        return true;
+    }
+
+    if (OGLE::ModelEntity* model = world.GetModel(entity)) {
+        model->GetMaterial().SetShaderProgram(shaderProgramName);
+        return true;
+    }
+
+    return false;
+}
+
 void WorldManager::Update()
 {
     GetActiveWorld().Update();

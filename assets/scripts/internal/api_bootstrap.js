@@ -103,6 +103,20 @@
             setPrimary: native.setLightPrimary,
             getType: native.getLightType,
             setType: native.setLightType
+        },
+        physics: {
+            addBox: function (entity, halfExtents, bodyType, mass) {
+                halfExtents = halfExtents || { x: 0.5, y: 0.5, z: 0.5 };
+                return native.physicsAddBox(entity, halfExtents.x, halfExtents.y, halfExtents.z, bodyType || 'Dynamic', mass || 1.0);
+            },
+            addSphere: function (entity, radius, bodyType, mass) {
+                return native.physicsAddSphere(entity, radius || 0.5, bodyType || 'Dynamic', mass || 1.0);
+            },
+            addCapsule: function (entity, radius, height, bodyType, mass) {
+                return native.physicsAddCapsule(entity, radius || 0.5, height || 1.0, bodyType || 'Dynamic', mass || 1.0);
+            },
+            removeBody: native.physicsRemoveBody,
+            setCollisionCallback: native.physicsSetCollisionCallback
         }
     };
 

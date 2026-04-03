@@ -106,7 +106,19 @@ int App::Run(HINSTANCE hInstance, int nCmdShow)
 
     InitializeWorldFromConfig();
 
-    if (!m_scriptManager.Initialize(m_worldManager, "assets/scripts/internal/api_bootstrap.js")) {
+    if (!m_physicsManager.Initialize(m_worldManager)) {
+        LOG_ERROR("Physics system initialization failed");
+        return -1;
+    }
+
+    m_physicsManager.SetCollisionCallback([this](OGLE::Entity a, OGLE::Entity b) {
+        const auto eidA = static_cast<unsigned int>(entt::to_integral(a));
+        const auto eidB = static_cast<unsigned int>(entt::to_integral(b));
+        LOG_INFO("Collision detected between entities " + std::to_string(eidA) + " and " + std::to_string(eidB));
+        m_scriptManager.NotifyCollision(a, b);
+    });
+
+    if (!m_scriptManager.Initialize(m_worldManager, m_physicsManager, "assets/scripts/internal/api_bootstrap.js")) {
         LOG_ERROR("Script system initialization failed");
         return -1;
     }
@@ -117,17 +129,6 @@ int App::Run(HINSTANCE hInstance, int nCmdShow)
         !m_scriptManager.ExecuteFile(config.scripts.startupScriptPath)) {
         LOG_WARN("Startup script was not executed");
     }
-
-    if (!m_physicsManager.Initialize(m_worldManager)) {
-        LOG_ERROR("Physics system initialization failed");
-        return -1;
-    }
-
-    m_physicsManager.SetCollisionCallback([](OGLE::Entity a, OGLE::Entity b) {
-        const auto eidA = static_cast<unsigned int>(entt::to_integral(a));
-        const auto eidB = static_cast<unsigned int>(entt::to_integral(b));
-        LOG_INFO("Collision detected between entities " + std::to_string(eidA) + " and " + std::to_string(eidB));
-    });
 
     m_window->Show(nCmdShow);
     // Save window state after closing

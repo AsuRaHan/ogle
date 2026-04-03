@@ -8,6 +8,8 @@
 #include "managers/PhysicsManager.h"
 #include "managers/WorldManager.h"
 #include "opengl/Camera.h"
+#include "opengl/ShaderManager.h"
+#include "render/MaterialLibrary.h"
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -144,6 +146,31 @@ void EditorInspectorPanel::Draw(EditorState& state, WorldManager& worldManager, 
             ImGui::InputText("Diffuse Texture", state.texturePathBuffer.data(), state.texturePathBuffer.size());
             ImGui::InputText("Emissive Texture", state.emissiveTexturePathBuffer.data(), state.emissiveTexturePathBuffer.size());
 
+            // Shader selection combo: loaded shader programs from ShaderManager
+            ShaderManager* shaderManager = ShaderManager::GetGlobalInstance();
+            std::vector<std::string> programNames = shaderManager ? shaderManager->GetProgramNames() : std::vector<std::string>{"default"};
+            if (programNames.empty()) {
+                programNames.push_back("default");
+            }
+
+            // Ensure current buffer has some valid content
+            if (state.shaderProgramBuffer[0] == '\0' && !programNames.empty()) {
+                std::strncpy(state.shaderProgramBuffer.data(), programNames[0].c_str(), state.shaderProgramBuffer.size() - 1);
+            }
+
+            if (ImGui::BeginCombo("Shader Program", state.shaderProgramBuffer.data())) {
+                for (const std::string& programName : programNames) {
+                    bool selected = std::strcmp(state.shaderProgramBuffer.data(), programName.c_str()) == 0;
+                    if (ImGui::Selectable(programName.c_str(), selected)) {
+                        std::strncpy(state.shaderProgramBuffer.data(), programName.c_str(), state.shaderProgramBuffer.size() - 1);
+                    }
+                    if (selected) {
+                        ImGui::SetItemDefaultFocus();
+                    }
+                }
+                ImGui::EndCombo();
+            }
+
             if (ImGui::Button("Apply Material")) {
                 materialComponent->material.SetBaseColor(state.baseColorBuffer);
                 materialComponent->material.SetEmissiveColor(state.emissiveColorBuffer);
@@ -154,6 +181,31 @@ void EditorInspectorPanel::Draw(EditorState& state, WorldManager& worldManager, 
                 materialComponent->material.SetAlphaCutoff(state.alphaCutoffBuffer);
                 materialComponent->material.SetDiffuseTexturePath(state.texturePathBuffer.data());
                 materialComponent->material.SetEmissiveTexturePath(state.emissiveTexturePathBuffer.data());
+                materialComponent->material.SetShaderProgram(state.shaderProgramBuffer.data());
+
+                // Apply new or existing material asset name if it exists
+                if (OGLE::Material* assetMaterial = OGLE::MaterialLibrary::Instance().GetMaterial(state.shaderProgramBuffer.data())) {
+                    materialComponent->material = *assetMaterial;
+                }
+
+                // RHS: if scene has shader component, sync too
+                OGLE::ShaderComponent* shaderComp = world.GetShader(state.selectedEntity);
+                if (!shaderComp) {
+                    world.GetRegistry().emplace<OGLE::ShaderComponent>(state.selectedEntity, OGLE::ShaderComponent{std::string(state.shaderProgramBuffer.data())});
+                } else {
+                    shaderComp->programName = state.shaderProgramBuffer.data();
+                }
+            }
+
+            ImGui::SameLine();
+            if (ImGui::Button("Save As Material Asset")) {
+                const std::string assetName = std::string(state.shaderProgramBuffer.data());
+                OGLE::MaterialLibrary::Instance().AddMaterial(assetName, materialComponent->material);
+            }
+
+            ImGui::SameLine();
+            if (ImGui::Button("Clear Material Asset")) {
+                OGLE::MaterialLibrary::Instance().RemoveMaterial(state.shaderProgramBuffer.data());
             }
             ImGui::SameLine();
             if (ImGui::Button("Clear Textures")) {

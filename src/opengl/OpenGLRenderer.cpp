@@ -72,6 +72,8 @@ bool OpenGLRenderer::Initialize()
         LOG_ERROR("OpenGLRenderer: shadow program link failed");
         return false;
     }
+    m_shaderManager.SetGlobalInstance(&m_shaderManager);
+
     if (!InitializeShadowResources()) {
         LOG_ERROR("OpenGLRenderer: failed to initialize shadow map resources");
         return false;
@@ -177,6 +179,67 @@ void OpenGLRenderer::Render()
     std::array<float, 4> pointLightRanges{};
     int pointLightCount = 0;
 
+    auto SetProgramGlobalUniforms = [&](const std::string& programName) {
+        const GLint hasDirectionalLightLocation = m_shaderManager.getUniformLocation(programName, "uHasDirectionalLight");
+        const GLint directionalLightDirectionLocation = m_shaderManager.getUniformLocation(programName, "uDirectionalLightDirection");
+        const GLint directionalLightColorLocation = m_shaderManager.getUniformLocation(programName, "uDirectionalLightColor");
+        const GLint directionalLightIntensityLocation = m_shaderManager.getUniformLocation(programName, "uDirectionalLightIntensity");
+        const GLint directionalLightCastsShadowsLocation = m_shaderManager.getUniformLocation(programName, "uDirectionalLightCastsShadows");
+        const GLint pointLightCountLocation = m_shaderManager.getUniformLocation(programName, "uPointLightCount");
+        const GLint pointLightPositionsLocation = m_shaderManager.getUniformLocation(programName, "uPointLightPositions[0]");
+        const GLint pointLightColorsLocation = m_shaderManager.getUniformLocation(programName, "uPointLightColors[0]");
+        const GLint pointLightIntensitiesLocation = m_shaderManager.getUniformLocation(programName, "uPointLightIntensities[0]");
+        const GLint pointLightRangesLocation = m_shaderManager.getUniformLocation(programName, "uPointLightRanges[0]");
+        const GLint shadowMapLocationLocal = m_shaderManager.getUniformLocation(programName, "uShadowMap");
+        const GLint viewPositionLocationLocal = m_shaderManager.getUniformLocation(programName, "uViewPosition");
+
+        if (shadowMapLocationLocal >= 0) {
+            glUniform1i(shadowMapLocationLocal, 2);
+        }
+        if (viewPositionLocationLocal >= 0) {
+            const glm::vec3 cameraPosition = m_camera.GetPosition();
+            glUniform3f(viewPositionLocationLocal, cameraPosition.x, cameraPosition.y, cameraPosition.z);
+        }
+        if (hasDirectionalLightLocation >= 0) {
+            glUniform1i(hasDirectionalLightLocation, lightingState.hasDirectionalLight ? 1 : 0);
+        }
+        if (directionalLightDirectionLocation >= 0) {
+            glUniform3f(
+                directionalLightDirectionLocation,
+                lightingState.directionalDirection.x,
+                lightingState.directionalDirection.y,
+                lightingState.directionalDirection.z);
+        }
+        if (directionalLightColorLocation >= 0) {
+            glUniform3f(
+                directionalLightColorLocation,
+                lightingState.directionalColor.x,
+                lightingState.directionalColor.y,
+                lightingState.directionalColor.z);
+        }
+        if (directionalLightIntensityLocation >= 0) {
+            glUniform1f(directionalLightIntensityLocation, lightingState.directionalIntensity);
+        }
+        if (directionalLightCastsShadowsLocation >= 0) {
+            glUniform1i(directionalLightCastsShadowsLocation, lightingState.castsShadows ? 1 : 0);
+        }
+        if (pointLightCountLocation >= 0) {
+            glUniform1i(pointLightCountLocation, pointLightCount);
+        }
+        if (pointLightPositionsLocation >= 0 && pointLightCount > 0) {
+            glUniform3fv(pointLightPositionsLocation, pointLightCount, glm::value_ptr(pointLightPositions[0]));
+        }
+        if (pointLightColorsLocation >= 0 && pointLightCount > 0) {
+            glUniform3fv(pointLightColorsLocation, pointLightCount, glm::value_ptr(pointLightColors[0]));
+        }
+        if (pointLightIntensitiesLocation >= 0 && pointLightCount > 0) {
+            glUniform1fv(pointLightIntensitiesLocation, pointLightCount, pointLightIntensities.data());
+        }
+        if (pointLightRangesLocation >= 0 && pointLightCount > 0) {
+            glUniform1fv(pointLightRangesLocation, pointLightCount, pointLightRanges.data());
+        }
+    };
+
     auto lightView = m_worldManager.GetActiveWorld().GetRegistry().view<OGLE::WorldObjectComponent, OGLE::TransformComponent, OGLE::LightComponent>();
     for (auto entity : lightView) {
         const auto& worldObject = lightView.get<OGLE::WorldObjectComponent>(entity);
@@ -215,6 +278,10 @@ void OpenGLRenderer::Render()
         glUniform3f(selectionTintLocation, 1.0f, 0.85f, 0.2f);
     }
 
+    // Default program gets initial lighting and scene uniforms.
+    std::string currentProgramName = "default";
+    SetProgramGlobalUniforms(currentProgramName);
+
     auto worldView = m_worldManager.GetActiveWorld().GetRegistry().view<OGLE::WorldObjectComponent, OGLE::ModelComponent>();
     for (auto entity : worldView) {
         auto& worldObjectComponent = worldView.get<OGLE::WorldObjectComponent>(entity);
@@ -223,22 +290,53 @@ void OpenGLRenderer::Render()
             continue;
         }
 
-        if (mvpLocation >= 0) {
-            const glm::mat4 mvp = viewProjection * modelComponent.model->GetModelMatrix();
-            glUniformMatrix4fv(mvpLocation, 1, GL_FALSE, glm::value_ptr(mvp));
-        }
-        if (modelLocation >= 0) {
-            glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(modelComponent.model->GetModelMatrix()));
-        }
-        if (selectionMixLocation >= 0) {
-            glUniform1f(selectionMixLocation, entity == m_highlightedEntity ? 0.45f : 0.0f);
+        const OGLE::Material* materialForRender = nullptr;
+        if (const OGLE::MaterialComponent* materialComponent = m_worldManager.GetActiveWorld().GetMaterial(entity)) {
+            materialForRender = &materialComponent->material;
+        } else {
+            materialForRender = &modelComponent.model->GetMaterial();
         }
 
-        if (const OGLE::MaterialComponent* materialComponent = m_worldManager.GetActiveWorld().GetMaterial(entity)) {
-            materialComponent->material.Bind(program);
-        } else {
-            modelComponent.model->BindMaterial(program);
+        std::string requestedProgramName = "default";
+        if (const OGLE::ShaderComponent* shaderComp = m_worldManager.GetActiveWorld().GetShader(entity)) {
+            requestedProgramName = shaderComp->programName.empty() ? "default" : shaderComp->programName;
+        } else if (materialForRender && !materialForRender->GetShaderProgram().empty()) {
+            requestedProgramName = materialForRender->GetShaderProgram();
         }
+
+        if (!m_shaderManager.hasProgram(requestedProgramName)) {
+            requestedProgramName = "default";
+        }
+
+        if (requestedProgramName != currentProgramName) {
+            if (!m_shaderManager.useProgram(requestedProgramName)) {
+                m_shaderManager.useProgram("default");
+                requestedProgramName = "default";
+            }
+            currentProgramName = requestedProgramName;
+            SetProgramGlobalUniforms(currentProgramName);
+        }
+
+        const GLuint programHandle = m_shaderManager.getProgram(currentProgramName);
+        const GLint locationMVP = m_shaderManager.getUniformLocation(currentProgramName, "uMVP");
+        const GLint locationModel = m_shaderManager.getUniformLocation(currentProgramName, "uModel");
+        const GLint locationSelectionMix = m_shaderManager.getUniformLocation(currentProgramName, "uSelectionMix");
+
+        if (locationMVP >= 0) {
+            const glm::mat4 mvp = viewProjection * modelComponent.model->GetModelMatrix();
+            glUniformMatrix4fv(locationMVP, 1, GL_FALSE, glm::value_ptr(mvp));
+        }
+        if (locationModel >= 0) {
+            glUniformMatrix4fv(locationModel, 1, GL_FALSE, glm::value_ptr(modelComponent.model->GetModelMatrix()));
+        }
+        if (locationSelectionMix >= 0) {
+            glUniform1f(locationSelectionMix, entity == m_highlightedEntity ? 0.45f : 0.0f);
+        }
+
+        if (materialForRender) {
+            materialForRender->Bind(programHandle);
+        }
+
         modelComponent.model->Draw();
     }
 

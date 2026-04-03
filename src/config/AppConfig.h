@@ -25,7 +25,7 @@ struct AppConfig
     } assets;
 
     struct ScriptSettings {
-        bool runStartupScript = false;
-        std::string startupScriptPath = "assets/scripts/test_world.js";
+        bool runStartupScript = true;
+        std::string startupScriptPath = "assets/scripts/startup.js";
     } scripts;
 };

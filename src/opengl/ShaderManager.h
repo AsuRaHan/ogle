@@ -27,8 +27,17 @@ public:
 
     bool useProgram(const std::string& programName);
     GLuint getProgram(const std::string& programName) const;
+    bool hasProgram(const std::string& programName) const;
+    std::vector<std::string> GetProgramNames() const;
     GLint getUniformLocation(const std::string& programName, const std::string& uniformName);
 
+    static void SetGlobalInstance(ShaderManager* instance);
+    static ShaderManager* GetGlobalInstance();
+
+private:
+    static ShaderManager* s_globalInstance;
+
+public:
     static std::string LoadShaderSource(const std::string& filename);
 
 private:

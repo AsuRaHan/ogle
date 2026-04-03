@@ -4,6 +4,10 @@
 ShaderManager::ShaderManager() {}
 
 ShaderManager::~ShaderManager() {
+    if (s_globalInstance == this) {
+        s_globalInstance = nullptr;
+    }
+
     for (auto& pair : shaders) {
         if (pair.second != 0) { // Проверяем, что шейдер существует
             GL_CHECK(glDeleteShader(pair.second));
@@ -172,6 +176,8 @@ bool ShaderManager::linkComputeProgram(const std::string& programName, const std
     return true;
 }
 
+ShaderManager* ShaderManager::s_globalInstance = nullptr;
+
 bool ShaderManager::useProgram(const std::string& programName) {
     auto it = programs.find(programName);
     if (it == programs.end()) {
@@ -184,6 +190,30 @@ bool ShaderManager::useProgram(const std::string& programName) {
 
 GLuint ShaderManager::getProgram(const std::string& programName) const {
     return programs.at(programName);
+}
+
+void ShaderManager::SetGlobalInstance(ShaderManager* instance)
+{
+    s_globalInstance = instance;
+}
+
+ShaderManager* ShaderManager::GetGlobalInstance()
+{
+    return s_globalInstance;
+}
+
+std::vector<std::string> ShaderManager::GetProgramNames() const
+{
+    std::vector<std::string> names;
+    names.reserve(programs.size());
+    for (const auto& kv : programs) {
+        names.push_back(kv.first);
+    }
+    return names;
+}
+
+bool ShaderManager::hasProgram(const std::string& programName) const {
+    return programs.find(programName) != programs.end();
 }
 
 GLint ShaderManager::getUniformLocation(const std::string& programName, const std::string& uniformName)
