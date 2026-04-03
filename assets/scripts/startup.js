@@ -43,7 +43,7 @@ function onUpdate(dt) {
     time += dt;
     var cube1 = ogle.world.findByName("ScriptedCube1");
     if (ogle.entity.exists(cube1)) {
-        var newY = 0.5 + Math.sin(time * 2.0) * 0.5;
+        var newY = 1.5 + Math.sin(time * 2.0) * 1.5;
         ogle.entity.setPosition(cube1, -2, newY, 0);
     }
 }

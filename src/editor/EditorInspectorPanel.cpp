@@ -214,28 +214,55 @@ void EditorInspectorPanel::Draw(EditorState& state, WorldManager& worldManager, 
     if (physicsBody) {
         if (ImGui::CollapsingHeader("Physics", ImGuiTreeNodeFlags_DefaultOpen)) {
             int bodyType = static_cast<int>(physicsBody->type);
+            int shapeType = static_cast<int>(physicsBody->shape);
             float mass = physicsBody->mass;
             glm::vec3 halfExtents = physicsBody->halfExtents;
+            float radius = physicsBody->radius;
+            float height = physicsBody->height;
             bool simulate = physicsBody->simulate;
+            bool isTrigger = physicsBody->isTrigger;
+            float friction = physicsBody->friction;
+            float restitution = physicsBody->restitution;
 
             const char* bodyTypeLabels[] = { "Static", "Dynamic", "Kinematic" };
+            const char* shapeLabels[] = { "Box", "Sphere", "Capsule" };
+
             ImGui::Combo("Body Type", &bodyType, bodyTypeLabels, IM_ARRAYSIZE(bodyTypeLabels));
+            ImGui::Combo("Shape", &shapeType, shapeLabels, IM_ARRAYSIZE(shapeLabels));
             ImGui::DragFloat("Mass", &mass, 0.1f, 0.0f, 1000.0f);
-            ImGui::DragFloat3("Half Extents", glm::value_ptr(halfExtents), 0.05f, 0.01f, 1000.0f);
+            if (shapeType == static_cast<int>(OGLE::PhysicsShapeType::Box)) {
+                ImGui::DragFloat3("Half Extents", glm::value_ptr(halfExtents), 0.05f, 0.01f, 1000.0f);
+            } else if (shapeType == static_cast<int>(OGLE::PhysicsShapeType::Sphere)) {
+                ImGui::DragFloat("Radius", &radius, 0.01f, 0.01f, 1000.0f);
+            } else if (shapeType == static_cast<int>(OGLE::PhysicsShapeType::Capsule)) {
+                ImGui::DragFloat("Radius", &radius, 0.01f, 0.01f, 1000.0f);
+                ImGui::DragFloat("Height", &height, 0.01f, 0.01f, 1000.0f);
+            }
             ImGui::Checkbox("Simulate", &simulate);
+            ImGui::Checkbox("Is Trigger", &isTrigger);
+            ImGui::DragFloat("Friction", &friction, 0.01f, 0.0f, 10.0f);
+            ImGui::DragFloat("Restitution", &restitution, 0.01f, 0.0f, 1.0f);
 
             if (ImGui::Button("Apply Physics")) {
                 physicsBody->type = static_cast<OGLE::PhysicsBodyType>(bodyType);
+                physicsBody->shape = static_cast<OGLE::PhysicsShapeType>(shapeType);
                 physicsBody->mass = mass;
                 physicsBody->halfExtents = halfExtents;
+                physicsBody->radius = radius;
+                physicsBody->height = height;
                 physicsBody->simulate = simulate;
+                physicsBody->isTrigger = isTrigger;
+                physicsBody->friction = friction;
+                physicsBody->restitution = restitution;
 
                 if (simulate) {
-                    physicsManager.AddBoxBody(
-                        state.selectedEntity,
-                        halfExtents,
-                        physicsBody->type,
-                        mass);
+                    if (physicsBody->shape == OGLE::PhysicsShapeType::Box) {
+                        physicsManager.AddBoxBody(state.selectedEntity, halfExtents, physicsBody->type, mass);
+                    } else if (physicsBody->shape == OGLE::PhysicsShapeType::Sphere) {
+                        physicsManager.AddSphereBody(state.selectedEntity, radius, physicsBody->type, mass);
+                    } else if (physicsBody->shape == OGLE::PhysicsShapeType::Capsule) {
+                        physicsManager.AddCapsuleBody(state.selectedEntity, radius, height, physicsBody->type, mass);
+                    }
                 } else {
                     physicsManager.RemoveBody(state.selectedEntity);
                 }

@@ -1,53 +1,11 @@
 #include "managers/PhysicsManager.h"
-
-#include "Logger.h"
+#include "../physics/BulletPhysicsEngine.h"
 #include "world/IWorldAccess.h"
-#include "world/World.h"
 
-#include <btBulletDynamicsCommon.h>
-#include <glm/geometric.hpp>
-#include <glm/trigonometric.hpp>
-
-#include <vector>
-
-namespace
+PhysicsManager::PhysicsManager()
+    : m_engine(std::make_unique<OGLE::BulletPhysicsEngine>())
 {
-    unsigned int ToEntityId(OGLE::Entity entity)
-    {
-        return static_cast<unsigned int>(entt::to_integral(entity));
-    }
-
-    btVector3 ToBulletVector(const glm::vec3& value)
-    {
-        return btVector3(value.x, value.y, value.z);
-    }
-
-    glm::vec3 ToGlmVector(const btVector3& value)
-    {
-        return glm::vec3(value.x(), value.y(), value.z());
-    }
-
-    btQuaternion ToBulletQuaternionDegrees(const glm::vec3& degrees)
-    {
-        btQuaternion rotation;
-        rotation.setEulerZYX(
-            glm::radians(degrees.z),
-            glm::radians(degrees.y),
-            glm::radians(degrees.x));
-        return rotation;
-    }
-
-    glm::vec3 ToEulerDegrees(const btQuaternion& rotation)
-    {
-        btScalar yaw = 0.0f;
-        btScalar pitch = 0.0f;
-        btScalar roll = 0.0f;
-        btMatrix3x3(rotation).getEulerYPR(yaw, pitch, roll);
-        return glm::degrees(glm::vec3(pitch, yaw, roll));
-    }
 }
-
-PhysicsManager::PhysicsManager() = default;
 
 PhysicsManager::~PhysicsManager()
 {
@@ -56,44 +14,23 @@ PhysicsManager::~PhysicsManager()
 
 bool PhysicsManager::Initialize(IWorldAccess& worldAccess)
 {
-    Shutdown();
-
-    m_worldAccess = &worldAccess;
-    m_collisionConfiguration = std::make_unique<btDefaultCollisionConfiguration>();
-    m_dispatcher = std::make_unique<btCollisionDispatcher>(m_collisionConfiguration.get());
-    m_broadphase = std::make_unique<btDbvtBroadphase>();
-    m_solver = std::make_unique<btSequentialImpulseConstraintSolver>();
-    m_dynamicsWorld = std::make_unique<btDiscreteDynamicsWorld>(
-        m_dispatcher.get(),
-        m_broadphase.get(),
-        m_solver.get(),
-        m_collisionConfiguration.get());
-
-    if (!m_dynamicsWorld) {
-        LOG_ERROR("Failed to create Bullet dynamics world");
-        return false;
+    if (m_engine) {
+        return m_engine->Initialize(worldAccess);
     }
-
-    SetGravity(glm::vec3(0.0f, -9.81f, 0.0f));
-    LOG_INFO("PhysicsManager initialized");
-    return true;
+    return false;
 }
 
 void PhysicsManager::Shutdown()
 {
-    Clear();
-    m_dynamicsWorld.reset();
-    m_solver.reset();
-    m_broadphase.reset();
-    m_dispatcher.reset();
-    m_collisionConfiguration.reset();
-    m_worldAccess = nullptr;
+    if (m_engine) {
+        m_engine->Shutdown();
+    }
 }
 
 void PhysicsManager::SetGravity(const glm::vec3& gravity)
 {
-    if (m_dynamicsWorld) {
-        m_dynamicsWorld->setGravity(ToBulletVector(gravity));
+    if (m_engine) {
+        m_engine->SetGravity(gravity);
     }
 }
 
@@ -103,164 +40,70 @@ bool PhysicsManager::AddBoxBody(
     OGLE::PhysicsBodyType bodyType,
     float mass)
 {
-    if (!m_worldAccess || !m_dynamicsWorld || !m_worldAccess->IsEntityValid(entity)) {
-        return false;
+    if (m_engine) {
+        return m_engine->AddBoxBody(entity, halfExtents, bodyType, mass);
     }
+    return false;
+}
 
-    RemoveBody(entity);
-
-    OGLE::World& world = m_worldAccess->GetActiveWorld();
-    const OGLE::TransformComponent* transform = world.GetTransform(entity);
-    if (!transform) {
-        return false;
+bool PhysicsManager::AddSphereBody(
+    OGLE::Entity entity,
+    float radius,
+    OGLE::PhysicsBodyType bodyType,
+    float mass)
+{
+    if (m_engine) {
+        return m_engine->AddSphereBody(entity, radius, bodyType, mass);
     }
+    return false;
+}
 
-    RigidBodyEntry entry;
-    entry.shape = std::make_unique<btBoxShape>(ToBulletVector(halfExtents));
-
-    btTransform startTransform;
-    startTransform.setIdentity();
-    startTransform.setOrigin(ToBulletVector(transform->position));
-    startTransform.setRotation(ToBulletQuaternionDegrees(transform->rotation));
-
-    const bool isDynamic = bodyType == OGLE::PhysicsBodyType::Dynamic;
-    const btScalar effectiveMass = isDynamic ? btScalar(mass) : btScalar(0.0f);
-    btVector3 localInertia(0.0f, 0.0f, 0.0f);
-    if (isDynamic) {
-        entry.shape->calculateLocalInertia(effectiveMass, localInertia);
+bool PhysicsManager::AddCapsuleBody(
+    OGLE::Entity entity,
+    float radius,
+    float height,
+    OGLE::PhysicsBodyType bodyType,
+    float mass)
+{
+    if (m_engine) {
+        return m_engine->AddCapsuleBody(entity, radius, height, bodyType, mass);
     }
-
-    entry.motionState = std::make_unique<btDefaultMotionState>(startTransform);
-    btRigidBody::btRigidBodyConstructionInfo bodyInfo(
-        effectiveMass,
-        entry.motionState.get(),
-        entry.shape.get(),
-        localInertia);
-
-    entry.body = std::make_unique<btRigidBody>(bodyInfo);
-    entry.body->setUserIndex(static_cast<int>(ToEntityId(entity)));
-
-    if (bodyType == OGLE::PhysicsBodyType::Kinematic) {
-        entry.body->setCollisionFlags(entry.body->getCollisionFlags() | btCollisionObject::CF_KINEMATIC_OBJECT);
-        entry.body->setActivationState(DISABLE_DEACTIVATION);
-    }
-
-    if (auto* existingPhysics = world.GetPhysicsBody(entity)) {
-        existingPhysics->type = bodyType;
-        existingPhysics->mass = mass;
-        existingPhysics->halfExtents = halfExtents;
-        existingPhysics->simulate = true;
-    } else {
-        OGLE::PhysicsBodyComponent physicsComponent;
-        physicsComponent.type = bodyType;
-        physicsComponent.mass = mass;
-        physicsComponent.halfExtents = halfExtents;
-        physicsComponent.simulate = true;
-        world.GetRegistry().emplace<OGLE::PhysicsBodyComponent>(entity, physicsComponent);
-    }
-
-    m_dynamicsWorld->addRigidBody(entry.body.get());
-    m_bodies.emplace(ToEntityId(entity), std::move(entry));
-    return true;
+    return false;
 }
 
 void PhysicsManager::RemoveBody(OGLE::Entity entity)
 {
-    if (!m_dynamicsWorld) {
-        return;
+    if (m_engine) {
+        m_engine->RemoveBody(entity);
     }
-
-    const auto id = ToEntityId(entity);
-    auto it = m_bodies.find(id);
-    if (it == m_bodies.end()) {
-        return;
-    }
-
-    m_dynamicsWorld->removeRigidBody(it->second.body.get());
-    m_bodies.erase(it);
 }
 
 void PhysicsManager::Clear()
 {
-    if (m_dynamicsWorld) {
-        for (auto& [id, entry] : m_bodies) {
-            m_dynamicsWorld->removeRigidBody(entry.body.get());
-        }
+    if (m_engine) {
+        m_engine->Clear();
     }
-
-    m_bodies.clear();
 }
 
 void PhysicsManager::Update(float deltaTime)
 {
-    if (!m_worldAccess || !m_dynamicsWorld) {
-        return;
-    }
-
-    PruneInvalidBodies();
-    if (m_bodies.empty()) {
-        return;
-    }
-
-    m_dynamicsWorld->stepSimulation(deltaTime, 10);
-
-    for (auto& [id, entry] : m_bodies) {
-        if (!entry.body) {
-            continue;
-        }
-
-        SyncEntityFromBody(static_cast<OGLE::Entity>(id), *entry.body);
+    if (m_engine) {
+        m_engine->Update(deltaTime);
     }
 }
 
 std::size_t PhysicsManager::GetBodyCount() const
 {
-    return m_bodies.size();
+    if (m_engine) {
+        return m_engine->GetBodyCount();
+    }
+    return 0;
 }
 
-void PhysicsManager::PruneInvalidBodies()
+void PhysicsManager::SetCollisionCallback(const std::function<void(OGLE::Entity, OGLE::Entity)>& callback)
 {
-    if (!m_worldAccess || !m_dynamicsWorld) {
-        return;
-    }
-
-    std::vector<unsigned int> invalidIds;
-    invalidIds.reserve(m_bodies.size());
-
-    for (const auto& [id, entry] : m_bodies) {
-        if (!m_worldAccess->IsEntityValid(static_cast<OGLE::Entity>(id))) {
-            invalidIds.push_back(id);
-        }
-    }
-
-    for (unsigned int id : invalidIds) {
-        auto it = m_bodies.find(id);
-        if (it != m_bodies.end()) {
-            m_dynamicsWorld->removeRigidBody(it->second.body.get());
-            m_bodies.erase(it);
-        }
+    if (m_engine) {
+        m_engine->SetCollisionCallback(callback);
     }
 }
 
-void PhysicsManager::SyncEntityFromBody(OGLE::Entity entity, const btRigidBody& body)
-{
-    if (!m_worldAccess || !m_worldAccess->IsEntityValid(entity)) {
-        return;
-    }
-
-    btTransform worldTransform;
-    if (body.getMotionState()) {
-        body.getMotionState()->getWorldTransform(worldTransform);
-    } else {
-        worldTransform = body.getWorldTransform();
-    }
-
-    OGLE::World& world = m_worldAccess->GetActiveWorld();
-    OGLE::TransformComponent* transform = world.GetTransform(entity);
-    if (!transform) {
-        return;
-    }
-
-    transform->position = ToGlmVector(worldTransform.getOrigin());
-    transform->rotation = ToEulerDegrees(worldTransform.getRotation());
-}

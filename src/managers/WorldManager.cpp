@@ -2,7 +2,7 @@
 #include "WorldGenerator.h"
 
 #include "core/FileSystem.h"
-#include "managers/PrimitiveFactory.h"
+#include "../models/PrimitiveFactory.h"
 
 #include <glm/vec3.hpp>
 

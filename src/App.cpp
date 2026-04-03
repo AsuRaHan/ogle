@@ -4,6 +4,8 @@
 #include "core/FileSystem.h"
 #include "ui/IWindow.h"
 #include <glm/vec3.hpp>
+#include <entt/entt.hpp>
+#include <string>
 
 App::App(std::unique_ptr<IWindow> window, ConfigManager configManager)
     : m_window(std::move(window))
@@ -120,6 +122,12 @@ int App::Run(HINSTANCE hInstance, int nCmdShow)
         LOG_ERROR("Physics system initialization failed");
         return -1;
     }
+
+    m_physicsManager.SetCollisionCallback([](OGLE::Entity a, OGLE::Entity b) {
+        const auto eidA = static_cast<unsigned int>(entt::to_integral(a));
+        const auto eidB = static_cast<unsigned int>(entt::to_integral(b));
+        LOG_INFO("Collision detected between entities " + std::to_string(eidA) + " and " + std::to_string(eidB));
+    });
 
     m_window->Show(nCmdShow);
     // Save window state after closing

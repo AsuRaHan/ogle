@@ -119,12 +119,27 @@ namespace OGLE {
         Kinematic  // Кинематическое (управляется вручную, но влияет на другие)
     };
 
+    // Типы сопутствующих коллизионных примитивов.
+    enum class PhysicsShapeType {
+        Box,
+        Sphere,
+        Capsule
+    };
+
     // Компонент для описания физического тела объекта.
     struct PhysicsBodyComponent {
         PhysicsBodyType type = PhysicsBodyType::Static; // Тип тела
-        float mass = 0.0f;                              // Масса (для динамических тел)
-        glm::vec3 halfExtents{ 0.5f, 0.5f, 0.5f };      // Полуразмеры (для примитивных форм вроде куба)
+        PhysicsShapeType shape = PhysicsShapeType::Box; // Форма коллайдера
+        float mass = 1.0f;                              // Масса (для динамических тел)
+        glm::vec3 halfExtents{ 0.5f, 0.5f, 0.5f };      // Полуразмеры (для box)
+        float radius = 0.5f;                            // Радиус (для sphere/capsule)
+        float height = 1.0f;                            // Высота (для capsule)
         bool simulate = true;                           // Включена ли симуляция для этого тела
+        bool isTrigger = false;                         // Триггерный ли коллайдер
+        float friction = 0.5f;
+        float restitution = 0.0f;
+        int collisionGroup = 1;
+        int collisionMask = -1;
     };
 
     // Псевдоним для типа сущности из библиотеки EnTT для удобства.

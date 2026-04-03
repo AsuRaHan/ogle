@@ -1,21 +1,11 @@
 #pragma once
 
-#include "world/WorldComponents.h"
-
+#include "../physics/IPhysicsEngine.h"
 #include <glm/vec3.hpp>
-
 #include <memory>
-#include <unordered_map>
+#include <functional>
 
 class IWorldAccess;
-class btBroadphaseInterface;
-class btCollisionDispatcher;
-class btConstraintSolver;
-class btDefaultCollisionConfiguration;
-class btDiscreteDynamicsWorld;
-class btCollisionShape;
-class btDefaultMotionState;
-class btRigidBody;
 
 class PhysicsManager
 {
@@ -32,27 +22,25 @@ public:
         const glm::vec3& halfExtents,
         OGLE::PhysicsBodyType bodyType,
         float mass = 1.0f);
+    bool AddSphereBody(
+        OGLE::Entity entity,
+        float radius,
+        OGLE::PhysicsBodyType bodyType,
+        float mass = 1.0f);
+    bool AddCapsuleBody(
+        OGLE::Entity entity,
+        float radius,
+        float height,
+        OGLE::PhysicsBodyType bodyType,
+        float mass = 1.0f);
     void RemoveBody(OGLE::Entity entity);
     void Clear();
     void Update(float deltaTime);
 
     std::size_t GetBodyCount() const;
 
+    void SetCollisionCallback(const std::function<void(OGLE::Entity, OGLE::Entity)>& callback);
+
 private:
-    struct RigidBodyEntry {
-        std::unique_ptr<btCollisionShape> shape;
-        std::unique_ptr<btDefaultMotionState> motionState;
-        std::unique_ptr<btRigidBody> body;
-    };
-
-    void PruneInvalidBodies();
-    void SyncEntityFromBody(OGLE::Entity entity, const btRigidBody& body);
-
-    IWorldAccess* m_worldAccess = nullptr;
-    std::unique_ptr<btDefaultCollisionConfiguration> m_collisionConfiguration;
-    std::unique_ptr<btCollisionDispatcher> m_dispatcher;
-    std::unique_ptr<btBroadphaseInterface> m_broadphase;
-    std::unique_ptr<btConstraintSolver> m_solver;
-    std::unique_ptr<btDiscreteDynamicsWorld> m_dynamicsWorld;
-    std::unordered_map<unsigned int, RigidBodyEntry> m_bodies;
+    std::unique_ptr<OGLE::IPhysicsEngine> m_engine;
 };

@@ -58,6 +58,10 @@ add_executable(${PROJECT_NAME} WIN32
     src/WorldGenerator.cpp
     src/WorldGenerator.h
 
+
+    src/models/PrimitiveFactory.cpp
+    src/models/PrimitiveFactory.h
+
     src/models/MeshBuffer.cpp
     src/models/MeshBuffer.h
     src/models/BaseModel.cpp
@@ -81,10 +85,10 @@ add_executable(${PROJECT_NAME} WIN32
     src/managers/InputManager.h
     src/managers/ImGuiManager.cpp
     src/managers/ImGuiManager.h
-    src/managers/PrimitiveFactory.cpp
-    src/managers/PrimitiveFactory.h
     src/managers/PhysicsManager.cpp
     src/managers/PhysicsManager.h
+    src/physics/BulletPhysicsEngine.cpp
+    src/physics/BulletPhysicsEngine.h
     src/managers/CameraManager.cpp
     src/managers/CameraManager.h
     src/managers/InputActionsManager.cpp

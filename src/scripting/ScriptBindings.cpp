@@ -2,7 +2,7 @@
 #include "scripting/ScriptEngine.h"
 
 #include "Logger.h"
-#include "managers/PrimitiveFactory.h"
+#include "models/PrimitiveFactory.h"
 #include "models/ModelEntity.h"
 #include "render/Material.h"
 #include "world/World.h"
