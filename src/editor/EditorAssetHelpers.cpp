@@ -25,7 +25,8 @@ bool IsEditorModelAssetPath(const std::string& path)
         extension == ".fbx" ||
         extension == ".glb" ||
         extension == ".gltf" ||
-        extension == ".stl";
+        extension == ".stl" ||
+        extension == ".omdl";
 }
 
 bool IsEditorTextureAssetPath(const std::string& path)

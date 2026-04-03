@@ -5,6 +5,7 @@
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 
+#include <nlohmann/json.hpp>
 #include <memory>
 #include <string>
 
@@ -39,6 +40,9 @@ namespace OGLE {
 
         void SetShaderProgram(const std::string& shaderProgramName);
         const std::string& GetShaderProgram() const;
+
+        nlohmann::json ToJson() const;
+        bool FromJson(const nlohmann::json& j);
 
     private:
         // Editable surface parameters live here so the editor, serializer, and renderer share one source of truth.

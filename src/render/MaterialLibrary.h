@@ -17,6 +17,9 @@ namespace OGLE {
         const Material* GetMaterial(const std::string& name) const;
         std::vector<std::string> GetMaterialNames() const;
 
+        bool SaveToFile(const std::string& path) const;
+        bool LoadFromFile(const std::string& path);
+
     private:
         MaterialLibrary() = default;
         std::unordered_map<std::string, Material> m_materials;

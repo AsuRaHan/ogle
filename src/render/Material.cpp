@@ -216,6 +216,62 @@ namespace OGLE {
         return m_emissiveTexturePath;
     }
 
+    nlohmann::json Material::ToJson() const
+    {
+        return nlohmann::json{
+            {"baseColor", {m_baseColor.x, m_baseColor.y, m_baseColor.z}},
+            {"emissiveColor", {m_emissiveColor.x, m_emissiveColor.y, m_emissiveColor.z}},
+            {"uvTiling", {m_uvTiling.x, m_uvTiling.y}},
+            {"uvOffset", {m_uvOffset.x, m_uvOffset.y}},
+            {"roughness", m_roughness},
+            {"metallic", m_metallic},
+            {"alphaCutoff", m_alphaCutoff},
+            {"diffuseTexturePath", m_diffuseTexturePath},
+            {"emissiveTexturePath", m_emissiveTexturePath},
+            {"shaderProgram", m_shaderProgramName}
+        };
+    }
+
+    bool Material::FromJson(const nlohmann::json& j)
+    {
+        if (j.contains("baseColor")) {
+            auto c = j.at("baseColor");
+            SetBaseColor(glm::vec3(c[0], c[1], c[2]));
+        }
+        if (j.contains("emissiveColor")) {
+            auto c = j.at("emissiveColor");
+            SetEmissiveColor(glm::vec3(c[0], c[1], c[2]));
+        }
+        if (j.contains("uvTiling")) {
+            auto v = j.at("uvTiling");
+            SetUvTiling(glm::vec2(v[0], v[1]));
+        }
+        if (j.contains("uvOffset")) {
+            auto v = j.at("uvOffset");
+            SetUvOffset(glm::vec2(v[0], v[1]));
+        }
+        if (j.contains("roughness")) {
+            SetRoughness(j.at("roughness").get<float>());
+        }
+        if (j.contains("metallic")) {
+            SetMetallic(j.at("metallic").get<float>());
+        }
+        if (j.contains("alphaCutoff")) {
+            SetAlphaCutoff(j.at("alphaCutoff").get<float>());
+        }
+        if (j.contains("diffuseTexturePath")) {
+            SetDiffuseTexturePath(j.at("diffuseTexturePath").get<std::string>());
+        }
+        if (j.contains("emissiveTexturePath")) {
+            SetEmissiveTexturePath(j.at("emissiveTexturePath").get<std::string>());
+        }
+        if (j.contains("shaderProgram")) {
+            SetShaderProgram(j.at("shaderProgram").get<std::string>());
+        }
+
+        return true;
+    }
+
     void Material::SetShaderProgram(const std::string& shaderProgramName)
     {
         m_shaderProgramName = shaderProgramName;

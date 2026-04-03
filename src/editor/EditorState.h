@@ -19,6 +19,7 @@ struct EditorState
     bool showHierarchyWindow = true;
     bool showInspectorWindow = true;
     bool showContentBrowserWindow = true;
+    bool showAnimationWindow = true;
     EditorSimulationState simulationState = EditorSimulationState::Playing;
     bool stepSimulationRequested = false;
     OGLE::Entity selectedEntity = entt::null;

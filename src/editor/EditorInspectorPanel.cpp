@@ -10,6 +10,7 @@
 #include "opengl/Camera.h"
 #include "opengl/ShaderManager.h"
 #include "render/MaterialLibrary.h"
+#include "render/AnimationLibrary.h"
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -215,6 +216,16 @@ void EditorInspectorPanel::Draw(EditorState& state, WorldManager& worldManager, 
                 state.emissiveTexturePathBuffer.fill('\0');
             }
 
+            ImGui::InputText("Material Library Path", state.assetsPathBuffer.data(), state.assetsPathBuffer.size());
+            ImGui::SameLine();
+            if (ImGui::Button("Save Materials")) {
+                OGLE::MaterialLibrary::Instance().SaveToFile(state.assetsPathBuffer.data());
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Load Materials")) {
+                OGLE::MaterialLibrary::Instance().LoadFromFile(state.assetsPathBuffer.data());
+            }
+
             if (ImGui::BeginDragDropTarget()) {
                 if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(GetContentBrowserAssetPayload())) {
                     const char* assetPath = static_cast<const char*>(payload->Data);
@@ -361,10 +372,35 @@ void EditorInspectorPanel::Draw(EditorState& state, WorldManager& worldManager, 
                     animation->playbackSpeed = 0.0f;
                 }
             }
+
+            ImGui::SameLine();
+            if (ImGui::Button("Save As Animation Asset")) {
+                const std::string assetName = std::string(state.animationClipBuffer.data());
+                OGLE::AnimationLibrary::Instance().AddAnimation(assetName, *animation);
+            }
+
+            ImGui::SameLine();
+            if (ImGui::Button("Apply Animation Asset")) {
+                const std::string assetName = std::string(state.animationClipBuffer.data());
+                if (OGLE::AnimationComponent* asset = OGLE::AnimationLibrary::Instance().GetAnimation(assetName)) {
+                    *animation = *asset;
+                }
+            }
+
             ImGui::SameLine();
             if (ImGui::Button("Remove Animation")) {
                 world.GetRegistry().remove<OGLE::AnimationComponent>(state.selectedEntity);
                 state.animationClipBuffer.fill('\0');
+            }
+
+            ImGui::InputText("Animation Library Path", state.assetsPathBuffer.data(), state.assetsPathBuffer.size());
+            ImGui::SameLine();
+            if (ImGui::Button("Save Animations")) {
+                OGLE::AnimationLibrary::Instance().SaveToFile(state.assetsPathBuffer.data());
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Load Animations")) {
+                OGLE::AnimationLibrary::Instance().LoadFromFile(state.assetsPathBuffer.data());
             }
         }
     }

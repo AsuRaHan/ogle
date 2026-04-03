@@ -5,6 +5,8 @@
 #include "models/PrimitiveFactory.h"
 #include "models/ModelEntity.h"
 #include "render/Material.h"
+#include "render/MaterialLibrary.h"
+#include "render/AnimationLibrary.h"
 #include "world/World.h"
 #include "world/WorldComponents.h"
 #include "world/IWorldAccess.h"
@@ -356,6 +358,195 @@ namespace
         return 1;
     }
 
+    duk_ret_t JsGetShaderProgram(duk_context* context)
+    {
+        OGLE::World* world = GetWorld(context);
+        if (!world) {
+            duk_push_string(context, "");
+            return 1;
+        }
+
+        const auto entity = ToEntity(duk_require_uint(context, 0));
+        const OGLE::ShaderComponent* shaderComp = world->GetShader(entity);
+        if (shaderComp) {
+            duk_push_string(context, shaderComp->programName.c_str());
+            return 1;
+        }
+
+        const OGLE::ModelEntity* model = world->GetModel(entity);
+        if (model) {
+            duk_push_string(context, model->GetMaterial().GetShaderProgram().c_str());
+            return 1;
+        }
+
+        duk_push_string(context, "");
+        return 1;
+    }
+
+    duk_ret_t JsSetShaderProgram(duk_context* context)
+    {
+        OGLE::World* world = GetWorld(context);
+        if (!world) {
+            duk_push_false(context);
+            return 1;
+        }
+
+        const auto entity = ToEntity(duk_require_uint(context, 0));
+        const char* programName = duk_safe_to_string(context, 1);
+        if (!programName) {
+            duk_push_false(context);
+            return 1;
+        }
+
+        OGLE::ShaderComponent* shaderComp = world->GetShader(entity);
+        if (!shaderComp) {
+            shaderComp = &world->GetRegistry().emplace<OGLE::ShaderComponent>(entity, OGLE::ShaderComponent{ programName });
+        } else {
+            shaderComp->programName = programName;
+        }
+
+        if (OGLE::ModelEntity* model = world->GetModel(entity)) {
+            model->GetMaterial().SetShaderProgram(programName);
+        }
+
+        if (OGLE::MaterialComponent* matComp = world->GetMaterial(entity)) {
+            matComp->material.SetShaderProgram(programName);
+        }
+
+        duk_push_true(context);
+        return 1;
+    }
+
+    duk_ret_t JsCreateMaterialAsset(duk_context* context)
+    {
+        const char* name = duk_require_string(context, 0);
+        const auto entity = ToEntity(duk_require_uint(context, 1));
+
+        OGLE::World* world = GetWorld(context);
+        if (!world || !name) {
+            duk_push_false(context);
+            return 1;
+        }
+
+        OGLE::Material material;
+        if (OGLE::MaterialComponent* matComp = world->GetMaterial(entity)) {
+            material = matComp->material;
+        } else if (OGLE::ModelEntity* model = world->GetModel(entity)) {
+            material = model->GetMaterial();
+        } else {
+            duk_push_false(context);
+            return 1;
+        }
+
+        bool saved = OGLE::MaterialLibrary::Instance().AddMaterial(name, material);
+        duk_push_boolean(context, saved);
+        return 1;
+    }
+
+    duk_ret_t JsApplyMaterialAsset(duk_context* context)
+    {
+        const char* name = duk_require_string(context, 0);
+        const auto entity = ToEntity(duk_require_uint(context, 1));
+
+        OGLE::World* world = GetWorld(context);
+        if (!world || !name) {
+            duk_push_false(context);
+            return 1;
+        }
+
+        OGLE::Material* asset = OGLE::MaterialLibrary::Instance().GetMaterial(name);
+        if (!asset) {
+            duk_push_false(context);
+            return 1;
+        }
+
+        if (OGLE::MaterialComponent* matComp = world->GetMaterial(entity)) {
+            matComp->material = *asset;
+        } else if (OGLE::ModelEntity* model = world->GetModel(entity)) {
+            model->GetMaterial() = *asset;
+        } else {
+            duk_push_false(context);
+            return 1;
+        }
+
+        OGLE::ShaderComponent* shaderComp = world->GetShader(entity);
+        if (!shaderComp) {
+            world->GetRegistry().emplace<OGLE::ShaderComponent>(entity, OGLE::ShaderComponent{ asset->GetShaderProgram() });
+        } else {
+            shaderComp->programName = asset->GetShaderProgram();
+        }
+
+        duk_push_true(context);
+        return 1;
+    }
+
+    duk_ret_t JsCreateAnimationAsset(duk_context* context)
+    {
+        const char* name = duk_require_string(context, 0);
+        const auto entity = ToEntity(duk_require_uint(context, 1));
+
+        OGLE::World* world = GetWorld(context);
+        if (!world || !name) {
+            duk_push_false(context);
+            return 1;
+        }
+
+        OGLE::AnimationComponent animation;
+        if (OGLE::AnimationComponent* animComp = world->GetAnimation(entity)) {
+            animation = *animComp;
+        } else {
+            duk_push_false(context);
+            return 1;
+        }
+
+        bool saved = OGLE::AnimationLibrary::Instance().AddAnimation(name, animation);
+        duk_push_boolean(context, saved);
+        return 1;
+    }
+
+    duk_ret_t JsApplyAnimationAsset(duk_context* context)
+    {
+        const char* name = duk_require_string(context, 0);
+        const auto entity = ToEntity(duk_require_uint(context, 1));
+
+        OGLE::World* world = GetWorld(context);
+        if (!world || !name) {
+            duk_push_false(context);
+            return 1;
+        }
+
+        OGLE::AnimationComponent* asset = OGLE::AnimationLibrary::Instance().GetAnimation(name);
+        if (!asset) {
+            duk_push_false(context);
+            return 1;
+        }
+
+        if (OGLE::AnimationComponent* animationComp = world->GetAnimation(entity)) {
+            *animationComp = *asset;
+        } else {
+            world->GetRegistry().emplace<OGLE::AnimationComponent>(entity, *asset);
+        }
+
+        duk_push_true(context);
+        return 1;
+    }
+
+    duk_ret_t JsSaveAnimationLibrary(duk_context* context)
+    {
+        const char* path = duk_require_string(context, 0);
+        bool success = OGLE::AnimationLibrary::Instance().SaveToFile(path ? path : "");
+        duk_push_boolean(context, success);
+        return 1;
+    }
+
+    duk_ret_t JsLoadAnimationLibrary(duk_context* context)
+    {
+        const char* path = duk_require_string(context, 0);
+        bool success = OGLE::AnimationLibrary::Instance().LoadFromFile(path ? path : "");
+        duk_push_boolean(context, success);
+        return 1;
+    }
+
     duk_ret_t JsSaveWorld(duk_context* context)
     {
         OGLE::World* world = GetWorld(context);
@@ -378,6 +569,22 @@ namespace
         const char* path = duk_require_string(context, 0);
         world->Load(path ? path : "");
         return 0;
+    }
+
+    duk_ret_t JsSaveMaterialLibrary(duk_context* context)
+    {
+        const char* path = duk_require_string(context, 0);
+        bool success = OGLE::MaterialLibrary::Instance().SaveToFile(path ? path : "");
+        duk_push_boolean(context, success);
+        return 1;
+    }
+
+    duk_ret_t JsLoadMaterialLibrary(duk_context* context)
+    {
+        const char* path = duk_require_string(context, 0);
+        bool success = OGLE::MaterialLibrary::Instance().LoadFromFile(path ? path : "");
+        duk_push_boolean(context, success);
+        return 1;
     }
 
     duk_ret_t JsCreateEmpty(duk_context* context)
@@ -1078,6 +1285,16 @@ namespace OGLE
             bindNative("setVisible", JsSetVisible, 2);
             bindNative("getTexture", JsGetTexture, 1);
             bindNative("setTexture", JsSetTexture, 2);
+            bindNative("getShaderProgram", JsGetShaderProgram, 1);
+            bindNative("setShaderProgram", JsSetShaderProgram, 2);
+            bindNative("createMaterialAsset", JsCreateMaterialAsset, 2);
+            bindNative("applyMaterialAsset", JsApplyMaterialAsset, 2);
+            bindNative("saveMaterialLibrary", JsSaveMaterialLibrary, 1);
+            bindNative("loadMaterialLibrary", JsLoadMaterialLibrary, 1);
+            bindNative("createAnimationAsset", JsCreateAnimationAsset, 2);
+            bindNative("applyAnimationAsset", JsApplyAnimationAsset, 2);
+            bindNative("saveAnimationLibrary", JsSaveAnimationLibrary, 1);
+            bindNative("loadAnimationLibrary", JsLoadAnimationLibrary, 1);
             bindNative("getMaterialBaseColor", JsGetMaterialBaseColor, 1);
             bindNative("setMaterialBaseColor", JsSetMaterialBaseColor, 4);
             bindNative("getMaterialEmissiveColor", JsGetMaterialEmissiveColor, 1);

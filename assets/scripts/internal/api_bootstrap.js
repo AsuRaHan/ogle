@@ -63,6 +63,12 @@
         material: {
             getTexture: native.getTexture,
             setTexture: native.setTexture,
+            getShaderProgram: native.getShaderProgram,
+            setShaderProgram: native.setShaderProgram,
+            createAsset: native.createMaterialAsset,
+            applyAsset: native.applyMaterialAsset,
+            saveLibrary: native.saveMaterialLibrary,
+            loadLibrary: native.loadMaterialLibrary,
             getBaseColor: native.getMaterialBaseColor,
             setBaseColor: function (entity, a, b, c) { var v = unpackVec3(a, b, c); return native.setMaterialBaseColor(entity, v[0], v[1], v[2]); },
             getEmissiveColor: native.getMaterialEmissiveColor,
@@ -89,6 +95,12 @@
             setAlphaCutoff: native.setMaterialAlphaCutoff,
             getEmissiveTexture: native.getEmissiveTexture,
             setEmissiveTexture: native.setEmissiveTexture
+        },
+        animation: {
+            createAsset: native.createAnimationAsset,
+            applyAsset: native.applyAnimationAsset,
+            saveLibrary: native.saveAnimationLibrary,
+            loadLibrary: native.loadAnimationLibrary
         },
         light: {
             getColor: native.getLightColor,

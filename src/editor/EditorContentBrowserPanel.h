@@ -4,11 +4,12 @@
 
 struct EditorState;
 class ConfigManager;
+class WorldManager;
 
 class EditorContentBrowserPanel
 {
 public:
-    void Draw(EditorState& state, ConfigManager& configManager);
+    void Draw(EditorState& state, WorldManager& worldManager, ConfigManager& configManager);
 
 private:
     void DrawDirectory(

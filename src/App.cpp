@@ -173,7 +173,7 @@ int App::Run(HINSTANCE hInstance, int nCmdShow)
             const float simulationDeltaTime = stepSimulation ? (1.0f / 60.0f) : deltaTime;
             m_scriptManager.Update(simulationDeltaTime);
             m_physicsManager.Update(simulationDeltaTime);
-            m_worldManager.Update();
+            m_worldManager.Update(simulationDeltaTime);
         }
         m_cameraManager.Update(deltaTime);
         m_renderManager.RenderFrame(*m_window, &m_imguiManager);

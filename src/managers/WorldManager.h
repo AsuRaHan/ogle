@@ -84,7 +84,7 @@ public:
     bool SetEntityShaderProgram(OGLE::Entity entity, const std::string& shaderProgramName);
 
     /// <summary>Updates the world state (physics, animations, etc.).</summary>
-    void Update();
+    void Update(float deltaTime);
     /// <summary>Saves the active world to a file.</summary>
     void SaveActiveWorld(const std::string& path);
     /// <summary>Loads a world from a file.</summary>

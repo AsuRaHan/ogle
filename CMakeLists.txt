@@ -35,6 +35,8 @@ add_executable(${PROJECT_NAME} WIN32
     src/editor/EditorMeshEditPanel.h
     src/editor/EditorInspectorPanel.cpp
     src/editor/EditorInspectorPanel.h
+    src/editor/EditorAnimationPanel.cpp
+    src/editor/EditorAnimationPanel.h
 
     src/ui/Win32Window.cpp
     src/ui/Win32Window.h
@@ -74,6 +76,8 @@ add_executable(${PROJECT_NAME} WIN32
     src/render/Material.h
     src/render/MaterialLibrary.cpp
     src/render/MaterialLibrary.h
+    src/render/AnimationLibrary.cpp
+    src/render/AnimationLibrary.h
 
     src/input/AxisBinding.cpp
     src/input/AxisBinding.h

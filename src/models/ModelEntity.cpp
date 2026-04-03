@@ -99,6 +99,14 @@ namespace OGLE {
         return m_material.GetDiffuseTexturePath();
     }
 
+    const std::vector<AnimationClip>& ModelEntity::GetAnimationClips() const {
+        return m_animationClips;
+    }
+
+    void ModelEntity::SetAnimationClips(std::vector<AnimationClip> clips) {
+        m_animationClips = std::move(clips);
+    }
+
     Material& ModelEntity::GetMaterial()
     {
         return m_material;
@@ -171,6 +179,37 @@ namespace OGLE {
             }}
         };
 
+        if (!m_animationClips.empty()) {
+            nlohmann::json clipsJson = nlohmann::json::array();
+            for (const auto& clip : m_animationClips) {
+                nlohmann::json clipJson;
+                clipJson["name"] = clip.name;
+                clipJson["duration"] = clip.duration;
+                clipJson["ticksPerSecond"] = clip.ticksPerSecond;
+                clipJson["tracks"] = nlohmann::json::array();
+
+                for (const auto& track : clip.tracks) {
+                    nlohmann::json trackJson;
+                    trackJson["nodeName"] = track.nodeName;
+                    trackJson["keyframes"] = nlohmann::json::array();
+
+                    for (const auto& key : track.keyframes) {
+                        trackJson["keyframes"].push_back({
+                            {"time", key.time},
+                            {"translation", {key.translation.x, key.translation.y, key.translation.z}},
+                            {"rotation", {key.rotation.w, key.rotation.x, key.rotation.y, key.rotation.z}},
+                            {"scale", {key.scale.x, key.scale.y, key.scale.z}}
+                        });
+                    }
+
+                    clipJson["tracks"].push_back(trackJson);
+                }
+
+                clipsJson.push_back(clipJson);
+            }
+            j["animationClips"] = clipsJson;
+        }
+
         if (m_FilePath.empty() && !m_vertices.empty() && !m_indices.empty()) {
             j["geometry"] = {
                 {"vertices", m_vertices},
@@ -235,6 +274,52 @@ namespace OGLE {
             }
             if (materialJson.contains("shaderProgram")) {
                 m_material.SetShaderProgram(materialJson.at("shaderProgram").get<std::string>());
+            }
+        }
+
+        if (j.contains("animationClips")) {
+            m_animationClips.clear();
+            for (const auto& clipJson : j.at("animationClips")) {
+                AnimationClip clip;
+                clip.name = clipJson.value("name", std::string(""));
+                clip.duration = clipJson.value("duration", 1.0f);
+                clip.ticksPerSecond = clipJson.value("ticksPerSecond", 24.0f);
+
+                if (clipJson.contains("tracks") && clipJson["tracks"].is_array()) {
+                    for (const auto& trackJson : clipJson["tracks"]) {
+                        AnimationTrack track;
+                        track.nodeName = trackJson.value("nodeName", std::string(""));
+                        if (trackJson.contains("keyframes") && trackJson["keyframes"].is_array()) {
+                            for (const auto& keyJson : trackJson["keyframes"]) {
+                                AnimationKeyframe key;
+                                key.time = keyJson.value("time", 0.0f);
+                                if (keyJson.contains("translation") && keyJson["translation"].is_array() && keyJson["translation"].size() == 3) {
+                                    key.translation = glm::vec3(
+                                        keyJson["translation"][0].get<float>(),
+                                        keyJson["translation"][1].get<float>(),
+                                        keyJson["translation"][2].get<float>());
+                                }
+                                if (keyJson.contains("rotation") && keyJson["rotation"].is_array() && keyJson["rotation"].size() == 4) {
+                                    key.rotation = glm::quat(
+                                        keyJson["rotation"][0].get<float>(),
+                                        keyJson["rotation"][1].get<float>(),
+                                        keyJson["rotation"][2].get<float>(),
+                                        keyJson["rotation"][3].get<float>());
+                                }
+                                if (keyJson.contains("scale") && keyJson["scale"].is_array() && keyJson["scale"].size() == 3) {
+                                    key.scale = glm::vec3(
+                                        keyJson["scale"][0].get<float>(),
+                                        keyJson["scale"][1].get<float>(),
+                                        keyJson["scale"][2].get<float>());
+                                }
+                                track.keyframes.push_back(std::move(key));
+                            }
+                        }
+                        clip.tracks.push_back(std::move(track));
+                    }
+                }
+
+                m_animationClips.push_back(std::move(clip));
             }
         } else if (!GetLoadedDiffuseTexturePath().empty()) {
             m_material.SetDiffuseTexturePath(GetLoadedDiffuseTexturePath());

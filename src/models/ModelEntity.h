@@ -36,6 +36,9 @@ namespace OGLE {
         void SetPosition(const glm::vec3& position);
         void SetRotation(const glm::vec3& rotation);
         void SetScale(const glm::vec3& scale);
+
+        const std::vector<AnimationClip>& GetAnimationClips() const; // Клипы, загруженные из FBX/Assimp
+        void SetAnimationClips(std::vector<AnimationClip> clips);
         const glm::vec3& GetPosition() const;
         const glm::vec3& GetRotation() const;
         const glm::vec3& GetScale() const;
@@ -56,5 +59,6 @@ namespace OGLE {
         glm::mat4 m_ModelMatrix;
         std::string m_FilePath;
         Material m_material;
+        std::vector<AnimationClip> m_animationClips;
     };
 }

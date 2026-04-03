@@ -2,6 +2,7 @@
 
 #include <entt/entt.hpp>
 #include <glm/vec3.hpp>
+#include <glm/gtc/quaternion.hpp>
 
 #include "../render/Material.h"
 
@@ -97,6 +98,25 @@ namespace OGLE {
         std::string sourcePath;    // Путь к файлу, откуда был загружен скелет
     };
 
+    struct AnimationKeyframe {
+        float time = 0.0f;
+        glm::vec3 translation{0.0f, 0.0f, 0.0f};
+        glm::quat rotation{1.0f, 0.0f, 0.0f, 0.0f};
+        glm::vec3 scale{1.0f, 1.0f, 1.0f};
+    };
+
+    struct AnimationTrack {
+        std::string nodeName;
+        std::vector<AnimationKeyframe> keyframes;
+    };
+
+    struct AnimationClip {
+        std::string name;
+        float duration = 1.0f;
+        float ticksPerSecond = 24.0f;
+        std::vector<AnimationTrack> tracks;
+    };
+
     // Компонент для управления состоянием анимации.
     // Хранится отдельно от модели, чтобы можно было гибко управлять проигрыванием.
     struct AnimationComponent {
@@ -105,7 +125,10 @@ namespace OGLE {
         bool loop = true;            // Зациклена ли анимация
         float currentTime = 0.0f;    // Текущее время проигрывания
         float playbackSpeed = 1.0f;  // Скорость воспроизведения
+        float duration = 1.0f;       // Длительность клипа в секундах
         std::string currentClip;     // Название текущего анимационного клипа
+        std::vector<AnimationClip> clips; // Список доступных клипов для сущности
+        int currentClipIndex = 0;    // Индекс текущего клипа
     };
 
     // Компонент для привязки скрипта к сущности.

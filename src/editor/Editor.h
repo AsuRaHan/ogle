@@ -1,5 +1,6 @@
 #pragma once
 
+#include "editor/EditorAnimationPanel.h"
 #include "editor/EditorContentBrowserPanel.h"
 #include "editor/EditorCreationPanel.h"
 #include "editor/EditorHierarchyPanel.h"
@@ -57,6 +58,7 @@ private:
     EditorState m_state{};
     EditorHierarchyPanel m_hierarchyPanel{};
     EditorInspectorPanel m_inspectorPanel{};
+    EditorAnimationPanel m_animationPanel{};
     EditorCreationPanel m_creationPanel{};
     EditorContentBrowserPanel m_contentBrowserPanel{};
 
@@ -67,6 +69,7 @@ private:
     bool& m_showWorldWindow = m_state.showWorldWindow;
     bool& m_showHierarchyWindow = m_state.showHierarchyWindow;
     bool& m_showInspectorWindow = m_state.showInspectorWindow;
+    bool& m_showAnimationWindow = m_state.showAnimationWindow;
     bool& m_showContentBrowserWindow = m_state.showContentBrowserWindow;
     SimulationState& m_simulationState = m_state.simulationState;
     bool& m_stepSimulationRequested = m_state.stepSimulationRequested;

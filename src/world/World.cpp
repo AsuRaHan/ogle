@@ -2,6 +2,7 @@
 
 #include "core/FileSystem.h"
 
+#include <cmath>
 #include <fstream>
 
 #include <nlohmann/json.hpp>
@@ -137,13 +138,69 @@ namespace OGLE {
             primitive.type = PrimitiveType::ModelFile;
             primitive.sourcePath = filePath;
         }
+
+        const ModelEntity* loadedModel = GetModel(entity);
+        if (loadedModel) {
+            const auto& modelClips = loadedModel->GetAnimationClips();
+            if (!modelClips.empty()) {
+                if (!m_registry.all_of<AnimationComponent>(entity)) {
+                    m_registry.emplace<AnimationComponent>(entity);
+                }
+                auto& animation = m_registry.get<AnimationComponent>(entity);
+                animation.clips = modelClips;
+                animation.currentClipIndex = 0;
+                animation.currentClip = modelClips[0].name;
+                animation.duration = modelClips[0].duration;
+                animation.currentTime = 0.0f;
+                animation.enabled = true;
+            }
+
+            if (loadedModel->GetBoneCount() > 0) {
+                SkeletonComponent skeleton;
+                skeleton.enabled = true;
+                skeleton.boneCount = loadedModel->GetBoneCount();
+                skeleton.sourcePath = filePath;
+                m_registry.emplace<SkeletonComponent>(entity, skeleton);
+            }
+        }
+
         return entity;
     }
 
-    void World::Update() {
+    void World::Update(float deltaTime) {
         auto view = m_registry.view<TransformComponent, ModelComponent>();
         for (auto entity : view) {
             SyncModelTransform(entity);
+        }
+
+        auto animationView = m_registry.view<AnimationComponent>();
+        for (auto entity : animationView) {
+            auto& animation = animationView.get<AnimationComponent>(entity);
+            if (!animation.enabled || !animation.playing) {
+                continue;
+            }
+
+            animation.currentTime += animation.playbackSpeed * deltaTime;
+
+            float maxTime = animation.duration > 0.0f ? animation.duration : 3600.0f;
+            if (animation.currentClipIndex >= 0 && animation.currentClipIndex < static_cast<int>(animation.clips.size())) {
+                maxTime = animation.clips[animation.currentClipIndex].duration;
+            }
+
+            if (animation.loop) {
+                if (animation.currentTime >= maxTime) {
+                    animation.currentTime = fmod(animation.currentTime, maxTime);
+                }
+            } else {
+                if (animation.currentTime >= maxTime) {
+                    animation.currentTime = maxTime;
+                    animation.playing = false;
+                }
+            }
+
+            if (animation.currentTime < 0.0f) {
+                animation.currentTime = 0.0f;
+            }
         }
     }
 
@@ -235,6 +292,7 @@ namespace OGLE {
                     {"loop", animation.loop},
                     {"currentTime", animation.currentTime},
                     {"playbackSpeed", animation.playbackSpeed},
+                    {"duration", animation.duration},
                     {"currentClip", animation.currentClip}
                 };
             }
@@ -355,7 +413,21 @@ namespace OGLE {
                 animation.loop = animationJson.value("loop", true);
                 animation.currentTime = animationJson.value("currentTime", 0.0f);
                 animation.playbackSpeed = animationJson.value("playbackSpeed", 1.0f);
+                animation.duration = animationJson.value("duration", 1.0f);
                 animation.currentClip = animationJson.value("currentClip", std::string());
+
+                if (m_registry.all_of<ModelComponent>(entity)) {
+                    const ModelEntity* model = m_registry.get<ModelComponent>(entity).model.get();
+                    if (model) {
+                        animation.clips = model->GetAnimationClips();
+                        if (!animation.clips.empty() && animation.currentClip.empty()) {
+                            animation.currentClipIndex = 0;
+                            animation.currentClip = animation.clips[0].name;
+                            animation.duration = animation.clips[0].duration;
+                        }
+                    }
+                }
+
                 m_registry.emplace<AnimationComponent>(entity, animation);
             }
 

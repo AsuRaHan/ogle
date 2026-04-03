@@ -176,6 +176,7 @@ void Editor::BuildUi(
             ImGui::MenuItem("World", nullptr, &m_showWorldWindow);
             ImGui::MenuItem("Hierarchy", nullptr, &m_showHierarchyWindow);
             ImGui::MenuItem("Inspector", nullptr, &m_showInspectorWindow);
+            ImGui::MenuItem("Animation", nullptr, &m_showAnimationWindow);
             ImGui::MenuItem("Content Browser", nullptr, &m_showContentBrowserWindow);
             ImGui::EndMenu();
         }
@@ -288,9 +289,16 @@ void Editor::BuildUi(
         ImGui::End();
     }
 
+    if (m_showAnimationWindow) {
+        if (ImGui::Begin("Animation", &m_showAnimationWindow)) {
+            m_animationPanel.Draw(m_state, worldManager);
+        }
+        ImGui::End();
+    }
+
     if (m_showContentBrowserWindow) {
         if (ImGui::Begin("Content Browser", &m_showContentBrowserWindow)) {
-            m_contentBrowserPanel.Draw(m_state, configManager);
+            m_contentBrowserPanel.Draw(m_state, worldManager, configManager);
         }
         ImGui::End();
     }

@@ -115,9 +115,9 @@ bool WorldManager::SetEntityShaderProgram(OGLE::Entity entity, const std::string
     return false;
 }
 
-void WorldManager::Update()
+void WorldManager::Update(float deltaTime)
 {
-    GetActiveWorld().Update();
+    GetActiveWorld().Update(deltaTime);
 }
 
 void WorldManager::SaveActiveWorld(const std::string& path)

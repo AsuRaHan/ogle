@@ -28,7 +28,7 @@ namespace OGLE {
             ModelType type = ModelType::DYNAMIC,
             const std::string& name = "Model");
 
-        void Update();
+        void Update(float deltaTime);
         void Draw();
         void Clear();
 
