@@ -34,16 +34,6 @@ bool ScriptManager::Initialize(IWorldAccess& worldAccess, PhysicsManager& physic
 
     OGLE::ScriptBindings::Register(*m_engine, *m_worldAccess, physicsManager);
 
-    const std::string resolvedBootstrapPath = ResolveScriptPath(apiBootstrapPath);
-    if (resolvedBootstrapPath.empty() || !m_engine->ExecuteFile(resolvedBootstrapPath)) {
-        LOG_ERROR("Failed to install JS API bootstrap from: " + apiBootstrapPath);
-        if (!resolvedBootstrapPath.empty()) {
-            LOG_ERROR("Bootstrap script error: " + m_engine->GetLastErrorDetails());
-        }
-        Shutdown();
-        return false;
-    }
-
     LOG_INFO("ScriptManager initialized");
     return true;
 }
@@ -92,10 +82,8 @@ void ScriptManager::Update(float deltaTime)
 
 void ScriptManager::NotifyCollision(OGLE::Entity a, OGLE::Entity b)
 {
-    if (!m_engine) {
-        return;
-    }
-
+    if (!m_engine) return;
+    
     duk_context* ctx = m_engine->GetContext();
     if (!ctx) {
         return;
@@ -113,10 +101,9 @@ void ScriptManager::NotifyCollision(OGLE::Entity a, OGLE::Entity b)
 
     if (duk_pcall(ctx, 2) != 0) {
         LOG_ERROR("Collision callback script failed: " + std::string(duk_safe_to_string(ctx, -1)));
-        duk_pop(ctx);
     }
 
-    duk_pop_2(ctx);
+    duk_pop_2(ctx); // pop result and stash
 }
 
 bool ScriptManager::CallGlobalFunction(const char* functionName, float argument)

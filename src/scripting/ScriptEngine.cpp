@@ -1,6 +1,7 @@
 #include "scripting/ScriptEngine.h"
 #include "core/FileSystem.h"
 #include "Logger.h"
+#include <duktape.h>
 #include <sstream>
 #include <stdexcept>
 
@@ -33,13 +34,11 @@ namespace OGLE
 
         std::ostringstream oss;
         
-        // Get error message
         duk_get_prop_string(m_context, -1, "message");
         const char* message = duk_to_string(m_context, -1);
         oss << "Error: " << (message ? message : "Unknown error");
         duk_pop(m_context);
 
-        // Get stack trace if available
         duk_get_prop_string(m_context, -1, "stack");
         const char* stack = duk_to_string(m_context, -1);
         if (stack) {
@@ -47,7 +46,6 @@ namespace OGLE
         }
         duk_pop(m_context);
 
-        // Get line number if available
         duk_get_prop_string(m_context, -1, "lineNumber");
         if (duk_is_number(m_context, -1)) {
             oss << "\nLine: " << duk_to_number(m_context, -1);
@@ -100,8 +98,6 @@ namespace OGLE
             return false;
         }
 
-        // Execute the script content
         return ExecuteString(content, filepath);
     }
-
 }

@@ -1,4 +1,4 @@
-#include "managers/PrimitiveFactory.h"
+#include "models/PrimitiveFactory.h"
 
 #include "models/ModelEntity.h"
 
@@ -157,4 +157,3 @@ std::shared_ptr<OGLE::ModelEntity> PrimitiveFactory::CreatePrimitiveModel(
         return nullptr;
     }
 }
-

@@ -119,6 +119,21 @@ add_executable(${PROJECT_NAME} WIN32
     src/scripting/ScriptEngine.cpp
     src/scripting/ScriptEngine.h
 
+    src/scripting/bindings/Common.cpp
+    src/scripting/bindings/Common.h
+    src/scripting/bindings/LogBindings.cpp
+    src/scripting/bindings/LogBindings.h
+    src/scripting/bindings/WorldBindings.cpp
+    src/scripting/bindings/WorldBindings.h
+    src/scripting/bindings/EntityBindings.cpp
+    src/scripting/bindings/EntityBindings.h
+    src/scripting/bindings/MaterialBindings.cpp
+    src/scripting/bindings/MaterialBindings.h
+    src/scripting/bindings/LightBindings.cpp
+    src/scripting/bindings/LightBindings.h
+    src/scripting/bindings/PhysicsBindings.cpp
+    src/scripting/bindings/PhysicsBindings.h
+
     src/world/World.cpp
     src/world/World.h
     src/world/WorldComponents.h

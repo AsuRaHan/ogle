@@ -3,8 +3,7 @@
 class IWorldAccess;
 class PhysicsManager;
 
-namespace OGLE
-{
+namespace OGLE {
     class ScriptEngine;
 
     namespace ScriptBindings
