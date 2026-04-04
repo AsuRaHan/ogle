@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 4.2)
 if(CMAKE_VERSION VERSION_GREATER_EQUAL "4.0")
     set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
 endif()
@@ -150,12 +150,28 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(glm)
 
-target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/src/ui ${glm_SOURCE_DIR})
+# Подключаем библиотеку quickjspp
+# FetchContent_Declare(
+#     quickjspp
+#     GIT_REPOSITORY https://github.com/c-smile/quickjspp.git
+#     GIT_TAG master
+#     GIT_PROGRESS TRUE
+# )
+# FetchContent_MakeAvailable(quickjspp)
 
-target_link_libraries(${PROJECT_NAME} PRIVATE user32 gdi32 opengl32 ole32 windowscodecs)
-
-# Подключаем библиотеки assimp и nlohmann/json
-
+# Подключаем библиотеку Duktape
+FetchContent_Declare(
+    duktape
+    URL https://duktape.org/duktape-2.7.0.tar.xz
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+)
+FetchContent_GetProperties(duktape)
+if(NOT duktape_POPULATED)
+    FetchContent_MakeAvailable(duktape)
+    add_library(duktape STATIC ${duktape_SOURCE_DIR}/src/duktape.c)
+    target_include_directories(duktape PUBLIC ${duktape_SOURCE_DIR}/src)
+endif()
+# Подключаем библиотеки assimp nlohmann/json и OpenMesh 
 FetchContent_Declare(
     assimp
     GIT_REPOSITORY https://github.com/assimp/assimp.git
@@ -185,22 +201,11 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(nlohmann_json)
 
-FetchContent_Declare(
-    duktape
-    URL https://duktape.org/duktape-2.7.0.tar.xz
-    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
-)
-FetchContent_GetProperties(duktape)
-if(NOT duktape_POPULATED)
-    FetchContent_MakeAvailable(duktape)
-    add_library(duktape STATIC ${duktape_SOURCE_DIR}/src/duktape.c)
-    target_include_directories(duktape PUBLIC ${duktape_SOURCE_DIR}/src)
-endif()
-
+# Подключаем библиотеки ImGui и ImGuizmo
 FetchContent_Declare(
     imgui
     GIT_REPOSITORY https://github.com/ocornut/imgui.git
-    GIT_TAG v1.92.5
+    GIT_TAG master
     GIT_PROGRESS TRUE
 )
 FetchContent_GetProperties(imgui)
@@ -256,8 +261,39 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(bullet)
 
-target_include_directories(${PROJECT_NAME} PRIVATE ${assimp_SOURCE_DIR}/include ${openmesh_SOURCE_DIR}/src ${entt_SOURCE_DIR}/src ${bullet_SOURCE_DIR}/src ${imguizmo_SOURCE_DIR})
-target_link_libraries(${PROJECT_NAME} PRIVATE assimp::assimp nlohmann_json::nlohmann_json OpenMeshCore OpenMeshTools duktape imgui imguizmo BulletDynamics BulletCollision LinearMath)
+# target_sources(${PROJECT_NAME} PRIVATE ${quickjspp_SOURCE_DIR}/quickjs.c)
+
+# Исправленные инклюды
+target_include_directories(${PROJECT_NAME} PRIVATE 
+    # ${quickjspp_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/src 
+    ${CMAKE_SOURCE_DIR}/src/ui
+    ${assimp_SOURCE_DIR}/include 
+    ${openmesh_SOURCE_DIR}/src 
+    ${entt_SOURCE_DIR}/src 
+    ${bullet_SOURCE_DIR}/src 
+    ${imguizmo_SOURCE_DIR}
+    ${glm_SOURCE_DIR}
+)
+
+# Исправленная линковка (добавлены системные либы и EnTT)
+target_link_libraries(${PROJECT_NAME} PRIVATE 
+    assimp::assimp 
+    nlohmann_json::nlohmann_json 
+    OpenMeshCore 
+    OpenMeshTools 
+    EnTT::EnTT
+    duktape 
+    imgui 
+    imguizmo 
+    BulletDynamics 
+    BulletCollision 
+    LinearMath 
+    shlwapi
+    user32 gdi32 opengl32 ole32 windowscodecs
+)
+
+
 
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
