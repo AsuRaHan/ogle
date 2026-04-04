@@ -150,15 +150,6 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(glm)
 
-# Подключаем библиотеку quickjspp
-# FetchContent_Declare(
-#     quickjspp
-#     GIT_REPOSITORY https://github.com/c-smile/quickjspp.git
-#     GIT_TAG master
-#     GIT_PROGRESS TRUE
-# )
-# FetchContent_MakeAvailable(quickjspp)
-
 # Подключаем библиотеку Duktape
 FetchContent_Declare(
     duktape
@@ -261,34 +252,26 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(bullet)
 
-# target_sources(${PROJECT_NAME} PRIVATE ${quickjspp_SOURCE_DIR}/quickjs.c)
 
-# Исправленные инклюды
-target_include_directories(${PROJECT_NAME} PRIVATE 
-    # ${quickjspp_SOURCE_DIR}
+target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/src 
-    ${CMAKE_SOURCE_DIR}/src/ui
-    ${assimp_SOURCE_DIR}/include 
-    ${openmesh_SOURCE_DIR}/src 
-    ${entt_SOURCE_DIR}/src 
-    ${bullet_SOURCE_DIR}/src 
-    ${imguizmo_SOURCE_DIR}
-    ${glm_SOURCE_DIR}
+    ${bullet_SOURCE_DIR}/src
 )
 
-# Исправленная линковка (добавлены системные либы и EnTT)
+
 target_link_libraries(${PROJECT_NAME} PRIVATE 
     assimp::assimp 
-    nlohmann_json::nlohmann_json 
-    OpenMeshCore 
-    OpenMeshTools 
+    nlohmann_json::nlohmann_json
     EnTT::EnTT
+    glm::glm
+    OpenMeshCore 
+    OpenMeshTools
     duktape 
     imgui 
     imguizmo 
-    BulletDynamics 
-    BulletCollision 
-    LinearMath 
+    BulletDynamics
+    BulletCollision
+    LinearMath
     shlwapi
     user32 gdi32 opengl32 ole32 windowscodecs
 )
