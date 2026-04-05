@@ -1,103 +1,163 @@
-# API документация для скриптового движка
+﻿# API документация для скриптового движка
 
-В проекте **OGLE** скрипты пишутся на JavaScript и работают через публичный API, доступный в глобальном объекте `ogle`.  Ниже перечислены основные функции и пространства имён, которые можно использовать в пользовательских скриптах.
+В проекте **OGLE** скрипты пишутся на JavaScript и работают через публичный API, доступный в глобальном объекте `ogle`. Ниже описаны функции, которые реально доступны в текущей реализации.
 
 ## Общие сведения
-- Скрипты загружаются через `ScriptManager` (см. `src/App.cpp`).  По умолчанию запускается файл, указанный в `app_config.json → scripts.startupScriptPath`.
-- Внутри скрипта можно обращаться к объекту `ogle` – это интерфейс к движку, который предоставляет доступ к миру, сущностям, материалам, источникам света и утилитам.
-- Функции работают асинхронно в основном цикле приложения, но все операции с API выполняются в одной потоке, поэтому синхронизации не требуется.
+- Скрипты загружаются через `ScriptManager` (см. `src/App.cpp`). По умолчанию запускается файл, указанный в `app_config.json → scripts.startupScriptPath`.
+- Внутри скрипта доступен глобальный объект `ogle`, через который вызываются функции движка.
+- C++ классы можно экспортировать в JavaScript через `ScriptEngine::RegisterConstructor` и `RegisterMethod`.
+- Вся работа с API выполняется в одном потоке движка, поэтому дополнительных механизмов синхронизации в JS обычно не требуется.
 
-## Пространства имён
-| Имя      | Описание |
-|----------|----------|
-| `ogle.world`   | Создание и управление объектами в мире (кубы, сферы, источники света и т.д.). |
-| `ogle.entity`  | Управление существующими сущностями: позиция, вращение, масштаб, проверка существования, удаление. |
-| `ogle.material`| Установка базовых свойств материалов (цвет, отражённость и т.д.). |
-| `ogle.light`   | Управление точечными и направленными источниками света (интенсивность, цвет, диапазон). |
-| `ogle.log`     | Утилита для вывода логов в консоль движка. |
-| `ogle.input`   | (не используется в примере, но доступно) Получение и установка входных событий. |
-| `ogle.math`    | Базовые математические функции и типы (v3, quaternion). |
+## Доступные пространства имён
+| Имя | Описание |
+| --- | --- |
+| `ogle.world` | Создание и управление объектами мира (кубы, сферы, источники света). |
+| `ogle.entity` | Получение и изменение состояния сущностей: позиция, вращение, проверка существования, имя. |
+| `ogle.material` | Настройка материала объектов: цвет, эмиссия, шероховатость, металличность, отражение. |
+| `ogle.light` | Изменение параметров освещения. |
+| `ogle.physics` | Физика тел и коллизии. |
+| `ogle.log` | Логирование сообщений в консоль движка. |
 
-## Основные функции `ogle.world`
-| Функция            | Параметры | Возвращаемое значение |
-|--------------------|-----------|------------------------|
-| `createCube(params)`   | `{name, position, scale}` – позиция и размер в виде объектов `{x,y,z}` | ID созданной сущности (целое число) |
-| `createSphere(params)` | `{name, position, radius}` | ID сферы (целое число) |
-| `createPlane(params)`  | `{name, position, normal}` | ID плоскости (целое число) |
-| `createPointLight(params)` | `{name, position, color, intensity, range}` | ID источника света (целое число) |
-| `createDirectionalLight(params)` | `{name, rotation, color, intensity, castShadows, primary}` | ID источника света (целое число) |
-| `createModel(params)` | `{path, name}` – путь к модели, имя | ID модели (целое число) |
-| `createEmpty(name)`   | `name` – строка | ID пустой сущности (целое число) |
-| `spawnCube(params)`   | Параметры аналогичны `createCube` | ID созданной сущности (целое число) |
-| `clearWorld()`        | Пустой | Очищает мир от всех сущностей |
-| `saveWorld(path)`     | `path` – строка | Сохраняет состояние мира в файл |
-| `loadWorld(path)`     | `path` – строка | Загружает состояние мира из файла |
+## `ogle.world`
+| Функция | Параметры | Описание |
+| --- | --- | --- |
+| `clear()` | нет | Очищает мир от всех сущностей. |
+| `createCube(options)` | `{name, position, scale}` | Создаёт куб и возвращает ID сущности. |
+| `createSphere(options)` | `{name, position, radius}` | Создаёт сферу и возвращает ID сущности. |
+| `createDirectionalLight(options)` | `{name, rotation, color, intensity, castShadows, primary}` | Создаёт направленный свет. |
+| `createPointLight(options)` | `{name, position, color, intensity, range}` | Создаёт точечный свет. |
 
-## Управление сущностями `ogle.entity`
-| Функция            | Параметры | Пример |
-|--------------------|-----------|--------|
-| `setPosition(id, {x,y,z})` | ID, координаты | `ogle.entity.setPosition(entityId, {x:0,y:1.2,z:4})` |
-| `setRotation(id, {x,y,z})` | ID, углы в градусах | `ogle.entity.setRotation(id, {x:0,y:45,z:0})` |
-| `setScale(id, {x,y,z})`    | ID, масштаб | `ogle.entity.setScale(id, {x:1.5,y:1.5,z:1.5})` |
-| `exists(id)`                | ID | `ogle.entity.exists(id) → true/false` |
-| `delete(id)`                | ID | Удаляет сущность из мира |
-| `setName(id, name)`         | ID, строка | `ogle.entity.setName(entityId, "NewName")` |
-| `getName(id)`               | ID | `ogle.entity.getName(entityId) → "Cube"` |
-| `setKind(id, kind)`         | ID, строка | `ogle.entity.setKind(entityId, "Enemy")` |
-| `getKind(id)`               | ID | `ogle.entity.getKind(entityId) → "Enemy"` |
+## `ogle.entity`
+| Функция | Параметры | Описание |
+| --- | --- | --- |
+| `exists(id)` | `id` | Возвращает `true`, если сущность существует. |
+| `getPosition(id)` | `id` | Возвращает `{x,y,z}` позицию сущности. |
+| `setPosition(id, vec3)` | `id`, `{x,y,z}` | Устанавливает позицию сущности. |
+| `getRotation(id)` | `id` | Возвращает `{x,y,z}` поворот сущности. |
+| `setRotation(id, vec3)` | `id`, `{x,y,z}` | Устанавливает поворот сущности. |
+| `getName(id)` | `id` | Возвращает имя сущности. |
 
-## Материалы `ogle.material`
-| Функция               | Параметры | Пример |
-|-----------------------|-----------|--------|
-| `setBaseColor(id, {x,y,z})` | ID, цвет в диапазоне 0–1 | `ogle.material.setBaseColor(id, {x:0.9,y:0.95,z:1.0})` |
-| `setReflectivity(id, value)` | ID, значение 0–1 | `ogle.material.setReflectivity(id, 0.3)` |
-| `setEmissiveColor(id, {x,y,z})` | ID, цвет | `ogle.material.setEmissiveColor(id, {x:1,y:1,z:1})` |
+## `ogle.material`
+| Функция | Параметры | Описание |
+| --- | --- | --- |
+| `setBaseColor(id, color)` | `id`, `{x,y,z}` | Устанавливает основной цвет материала. |
+| `setEmissiveColor(id, color)` | `id`, `{x,y,z}` | Устанавливает эмиссионный цвет. |
+| `setRoughness(id, value)` | `id`, число | Устанавливает шероховатость материала. |
+| `setMetallic(id, value)` | `id`, число | Устанавливает металличность материала. |
+| `setReflectivity(id, value)` | `id`, число | Устанавливает отражательность материала. |
 
-## Свет `ogle.light`
-| Функция               | Параметры | Пример |
-|-----------------------|-----------|--------|
-| `setIntensity(id, value)` | ID, интенсивность | `ogle.light.setIntensity(lamp, 2.0)` |
-| `setColor(id, {x,y,z})`   | ID, цвет | `ogle.light.setColor(lamp, {x:1.0,y:0.7,z:0.35})` |
-| `setRange(id, value)`     | ID, диапазон | `ogle.light.setRange(lamp, 10.0)` |
-| `setCastShadows(id, flag)`| ID, булево | `ogle.light.setCastShadows(lamp, true)` |
-| `setPrimary(id, flag)`    | ID, булево | `ogle.light.setPrimary(lamp, true)` |
-| `setType(id, type)`       | ID, строка `"Point"` или `"Directional"` | `ogle.light.setType(lamp, "Point")` |
+## `ogle.light`
+| Функция | Параметры | Описание |
+| --- | --- | --- |
+| `setIntensity(id, value)` | `id`, число | Устанавливает интенсивность света. |
 
-## Логирование `ogle.log`
-| Функция | Параметры | Пример |
-|----------|-----------|--------|
-| `ogle.log(message)` | Строка | `ogle.log("Скрипт запущен")` |
+## `ogle.physics`
+| Функция | Параметры | Описание |
+| --- | --- | --- |
+| `addBox(id, halfExtents, bodyType, mass)` | `id`, `{x,y,z}`, строка, число | Добавляет физическое тело коробки. |
+| `setCollisionCallback(fn)` | `fn(entityA, entityB)` | Устанавливает JS-коллбэк на столкновения. |
 
-## Пример скрипта (test_world.js)
+## `ogle.log`
+| Функция | Параметры | Описание |
+| --- | --- | --- |
+| `ogle.log(message)` | строка | Печатает сообщение в лог движка. |
+
+## Пример скрипта
 ```js
+var elapsedTime = 0;
+var cubeId = null;
+
 function onStart() {
-    const cube = ogle.world.createCube({name:"Cube", position:{x:-2.5,y:0.5,z:-2.5}, scale:{x:0.9,y:0.9,z:0.9}});
-    ogle.material.setBaseColor(cube, {x:0.9,y:0.95,z:1.0});
-    const lamp = ogle.world.createPointLight({name:"Lamp", position:{x:-2.0,y:2.5,z:-2.0}, color:{x:1.0,y:0.7,z:0.35}, intensity:2.5, range:6.0});
+    cubeId = ogle.world.createCube({
+        name: "DemoCube",
+        position: { x: 0, y: 1, z: 0 },
+        scale: { x: 1, y: 1, z: 1 }
+    });
+    ogle.material.setBaseColor(cubeId, { x: 0.4, y: 0.7, z: 1.0 });
+    ogle.physics.addBox(cubeId, { x: 0.5, y: 0.5, z: 0.5 }, "Dynamic", 1.0);
+    ogle.world.createPointLight({
+        name: "Lamp",
+        position: { x: 2, y: 3, z: 0 },
+        color: { x: 1.0, y: 0.8, z: 0.6 },
+        intensity: 2.5,
+        range: 8.0
+    });
+    ogle.physics.setCollisionCallback(function (entityA, entityB) {
+        if (ogle.entity.exists(entityA) && ogle.entity.exists(entityB)) {
+            ogle.log("Collision: " + ogle.entity.getName(entityA) + " vs " + ogle.entity.getName(entityB));
+        }
+    });
 }
 
 function onUpdate(dt) {
-    const pos = {x:-2.5, y:0.6 + Math.sin(elapsedTime*2.0)*0.4, z:-2.5};
-    ogle.entity.setPosition(animatedCube, pos);
-    ogle.entity.setRotation(animatedCube, 0.0, elapsedTime*90.0, 0.0);
-    if (ogle.entity.exists(lamp)) {
-        ogle.light.setIntensity(lamp, 2.0 + Math.sin(elapsedTime*3.0)*0.5);
+    elapsedTime += dt;
+    if (ogle.entity.exists(cubeId)) {
+        ogle.entity.setPosition(cubeId, {
+            x: 0,
+            y: 1 + Math.sin(elapsedTime * 2.0) * 0.5,
+            z: 0
+        });
     }
 }
 ```
 
-## Как добавить новый скрипт
+## Как добавить новый класс на C++ и сделать его доступным из скриптов
+1. Создайте класс в C++, например `ScoreTracker`.
+
+```cpp
+#pragma once
+
+namespace OGLE {
+    class ScoreTracker {
+    public:
+        explicit ScoreTracker(int initialScore)
+            : m_score(initialScore) {}
+
+        int GetScore() const { return m_score; }
+        void AddPoints(int points) { m_score += points; }
+
+    private:
+        int m_score;
+    };
+}
+```
+
+2. Зарегистрируйте конструктор и методы в `src/scripting/ScriptBindings.cpp`.
+
+```cpp
+#include "scripting/ScoreTracker.h"
+
+engine.RegisterConstructor<ScoreTracker, int>("ScoreTracker");
+engine.RegisterMethod<ScoreTracker>("getScore", &ScoreTracker::GetScore);
+engine.RegisterMethod<ScoreTracker>("addPoints", &ScoreTracker::AddPoints);
+```
+
+3. Используйте класс в JS.
+
+```js
+function onStart() {
+    const tracker = new ScoreTracker(100);
+    ogle.log("Score = " + tracker.getScore());
+    tracker.addPoints(50);
+    ogle.log("After bonus: " + tracker.getScore());
+}
+```
+
+> Примечание: конструктор регистрируется глобально в JavaScript. Если нужно, чтобы класс был доступен как `ogle.ScoreTracker`, добавьте в JS:
+>
+> ```js
+> ogle.ScoreTracker = ScoreTracker;
+> ```
+
+## Как подключить свой скрипт
 1. Создайте файл `assets/scripts/<имя>.js`.
-2. В `app_config.json` укажите путь к нему в поле `scripts.startupScriptPath` (или запустите вручную через консоль `ogle.runScript('assets/scripts/<имя>.js')`).
+2. Укажите его в `app_config.json` в поле `scripts.startupScriptPath`.
 3. Перезапустите приложение.
 
-## FAQ
-- **Можно ли использовать сторонние библиотеки JavaScript?** Да, можно подключать .js файлы как обычные скрипты, но они должны быть загружены до выполнения вашего скрипта.
-- **Как получить ID созданной сущности?** Функции `create*` возвращают целочисленный ID. Можно сохранить его в переменную и использовать дальше.
-- **Есть ли типы данных?** Внутри скриптов доступны объекты с полями `{x,y,z}`, `v3`, `quaternion` и простые типы (числа, строки, булевы).  Для более сложных структур лучше использовать C++ API.
-
-**Ключевые изменения**  
-1. Добавлены все функции, которые реально привязываются к `ogle` в `ScriptManager` (createDirectionalLight, createEmpty, getAllEntities, getEntitiesByKind, getEntityCount, getName, setName, getEntityKind, getPosition, getRotation, getScale, setEnabled, setVisible, getTexture, setTexture, getMaterialBaseColor, setMaterialBaseColor, getMaterialEmissiveColor, setMaterialEmissiveColor, getMaterialUvTiling, setMaterialUvTiling, getMaterialUvOffset, setMaterialUvOffset, getMaterialRoughness, setMaterialRoughness, getMaterialMetallic, setMaterialMetallic, getMaterialAlphaCutoff, setMaterialAlphaCutoff, getEmissiveTexture, setEmissiveTexture, getLightColor, setLightColor, getLightIntensity, setLightIntensity, getLightRange, setLightRange, getLightCastShadows, setLightCastShadows, getLightPrimary, setLightPrimary, getLightType, setLightType, и др.).  
-2. Обновлены примеры и описание функций `ogle.world`.  
-3. Уточнено описание `ogle.log` и добавлен раздел FAQ.  
-4. Весь текст отформатирован в Markdown с таблицами и примерами.  
+## Текущий API
+- `ogle.world`: `clear`, `createCube`, `createSphere`, `createDirectionalLight`, `createPointLight`
+- `ogle.entity`: `exists`, `getPosition`, `setPosition`, `getRotation`, `setRotation`, `getName`
+- `ogle.material`: `setBaseColor`, `setEmissiveColor`, `setRoughness`, `setMetallic`, `setReflectivity`
+- `ogle.light`: `setIntensity`
+- `ogle.physics`: `addBox`, `setCollisionCallback`
+- `ogle.log`

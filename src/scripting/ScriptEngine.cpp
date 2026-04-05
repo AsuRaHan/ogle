@@ -1,7 +1,7 @@
 #include "scripting/ScriptEngine.h"
 #include "core/FileSystem.h"
 #include "Logger.h"
-#include <duktape.h>
+#include <filesystem>
 #include <sstream>
 #include <stdexcept>
 
@@ -27,13 +27,17 @@ namespace OGLE
 
     void ScriptEngine::CaptureErrorDetails()
     {
+        if (!m_context) {
+            m_lastError = "Invalid script context";
+            return;
+        }
+
         if (!duk_is_object(m_context, -1)) {
             m_lastError = std::string(duk_safe_to_string(m_context, -1));
             return;
         }
 
         std::ostringstream oss;
-        
         duk_get_prop_string(m_context, -1, "message");
         const char* message = duk_to_string(m_context, -1);
         oss << "Error: " << (message ? message : "Unknown error");
@@ -57,6 +61,12 @@ namespace OGLE
 
     bool ScriptEngine::ExecuteString(const std::string& source, const std::string& filename)
     {
+        if (!IsContextValid()) {
+            LOG_ERROR("Attempted to execute script without valid context");
+            m_lastError = "Invalid script context";
+            return false;
+        }
+
         m_lastError.clear();
 
         duk_push_string(m_context, filename.c_str());
@@ -74,30 +84,105 @@ namespace OGLE
             return false;
         }
 
-        duk_pop(m_context); // Pop result
+        duk_pop(m_context);
         return true;
     }
 
     bool ScriptEngine::ExecuteFile(const std::string& filepath)
     {
-        m_lastError.clear();
-
-        // Check if file exists first
-        std::filesystem::path filePath(filepath);
-        if (!FileSystem::Exists(filePath)) {
-            m_lastError = "Script file not found: " + filepath;
-            LOG_ERROR("Script file not found: " + filepath);
+        if (!IsContextValid()) {
+            LOG_ERROR("Attempted to execute file without valid context");
+            m_lastError = "Invalid script context";
             return false;
         }
 
-        // Read file content using FileSystem
+        m_lastError.clear();
+        std::filesystem::path filePath(filepath);
+        if (!FileSystem::Exists(filePath)) {
+            m_lastError = "Script file not found: " + filepath;
+            LOG_ERROR(m_lastError);
+            return false;
+        }
+
         std::string content;
         if (!FileSystem::ReadTextFile(filePath, content)) {
             m_lastError = "Failed to read script file: " + filepath;
-            LOG_ERROR("Failed to read script file: " + filepath);
+            LOG_ERROR(m_lastError);
             return false;
         }
 
         return ExecuteString(content, filepath);
+    }
+
+    bool ScriptEngine::CallGlobalFunction(const char* functionName)
+    {
+        if (!IsContextValid()) {
+            return false;
+        }
+
+        duk_get_global_string(m_context, functionName);
+        if (!duk_is_function(m_context, -1)) {
+            duk_pop(m_context);
+            return true;
+        }
+
+        if (duk_pcall(m_context, 0) != 0) {
+            m_lastError = duk_safe_to_string(m_context, -1);
+            LOG_ERROR(std::string("Script function failed: ") + functionName + " -> " + m_lastError);
+            duk_pop(m_context);
+            return false;
+        }
+
+        duk_pop(m_context);
+        return true;
+    }
+
+    bool ScriptEngine::CallGlobalFunction(const char* functionName, float argument)
+    {
+        if (!IsContextValid()) {
+            return false;
+        }
+
+        duk_get_global_string(m_context, functionName);
+        if (!duk_is_function(m_context, -1)) {
+            duk_pop(m_context);
+            return true;
+        }
+
+        duk_push_number(m_context, argument);
+        if (duk_pcall(m_context, 1) != 0) {
+            m_lastError = duk_safe_to_string(m_context, -1);
+            LOG_ERROR(std::string("Script function failed: ") + functionName + " -> " + m_lastError);
+            duk_pop(m_context);
+            return false;
+        }
+
+        duk_pop(m_context);
+        return true;
+    }
+
+    bool ScriptEngine::CallGlobalFunction(const char* functionName, unsigned int first, unsigned int second)
+    {
+        if (!IsContextValid()) {
+            return false;
+        }
+
+        duk_get_global_string(m_context, functionName);
+        if (!duk_is_function(m_context, -1)) {
+            duk_pop(m_context);
+            return true;
+        }
+
+        duk_push_uint(m_context, static_cast<duk_uint_t>(first));
+        duk_push_uint(m_context, static_cast<duk_uint_t>(second));
+        if (duk_pcall(m_context, 2) != 0) {
+            m_lastError = duk_safe_to_string(m_context, -1);
+            LOG_ERROR(std::string("Script function failed: ") + functionName + " -> " + m_lastError);
+            duk_pop(m_context);
+            return false;
+        }
+
+        duk_pop(m_context);
+        return true;
     }
 }

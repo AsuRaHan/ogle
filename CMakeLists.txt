@@ -118,6 +118,8 @@ add_executable(${PROJECT_NAME} WIN32
     src/scripting/ScriptBindings.h
     src/scripting/ScriptEngine.cpp
     src/scripting/ScriptEngine.h
+    src/scripting/Player.cpp
+    src/scripting/Player.h
 
     src/scripting/bindings/Common.cpp
     src/scripting/bindings/Common.h
@@ -166,11 +168,14 @@ endif()
 
 FetchContent_Declare(
     dukglue
-    URL https://github.com/Aloshi/dukglue.git
+    GIT_REPOSITORY https://github.com/Aloshi/dukglue.git
     GIT_TAG master
     GIT_PROGRESS   TRUE
 )
 FetchContent_GetProperties(dukglue)
+if(NOT dukglue_POPULATED)
+    FetchContent_MakeAvailable(dukglue)
+endif()
 
 # Подключаем библиотеки assimp nlohmann/json и OpenMesh 
 FetchContent_Declare(
@@ -270,6 +275,7 @@ FetchContent_MakeAvailable(bullet)
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/src 
     ${bullet_SOURCE_DIR}/src
+    ${dukglue_SOURCE_DIR}/include
 )
 
 

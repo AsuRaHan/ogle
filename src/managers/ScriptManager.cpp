@@ -6,11 +6,7 @@
 #include "Logger.h"
 #include "world/IWorldAccess.h"
 
-#include <duktape.h>
 #include <filesystem>
-#include <fstream>
-#include <sstream>
-#include <stdexcept>
 #include <windows.h>
 
 ScriptManager::ScriptManager() = default;
@@ -83,72 +79,22 @@ void ScriptManager::Update(float deltaTime)
 void ScriptManager::NotifyCollision(OGLE::Entity a, OGLE::Entity b)
 {
     if (!m_engine) return;
-    
-    duk_context* ctx = m_engine->GetContext();
-    if (!ctx) {
-        return;
-    }
 
-    duk_push_global_stash(ctx);
-    duk_get_prop_string(ctx, -1, "__collisionCallback");
-    if (!duk_is_function(ctx, -1)) {
-        duk_pop_2(ctx);
-        return;
-    }
-
-    duk_push_uint(ctx, static_cast<duk_uint_t>(entt::to_integral(a)));
-    duk_push_uint(ctx, static_cast<duk_uint_t>(entt::to_integral(b)));
-
-    if (duk_pcall(ctx, 2) != 0) {
-        LOG_ERROR("Collision callback script failed: " + std::string(duk_safe_to_string(ctx, -1)));
-    }
-
-    duk_pop_2(ctx); // pop result and stash
+    unsigned int first = static_cast<unsigned int>(entt::to_integral(a));
+    unsigned int second = static_cast<unsigned int>(entt::to_integral(b));
+    m_engine->CallGlobalFunction("onCollision", first, second);
 }
 
 bool ScriptManager::CallGlobalFunction(const char* functionName, float argument)
 {
     if (!m_engine) return false;
-    duk_context* ctx = m_engine->GetContext();
-
-    duk_get_global_string(ctx, functionName);
-    if (!duk_is_function(ctx, -1)) {
-        duk_pop(ctx);
-        return true; // Not an error if function doesn't exist
-    }
-
-    duk_push_number(ctx, argument);
-    if (duk_pcall(ctx, 1) != 0) {
-        LOG_ERROR("Script function failed: " + std::string(functionName) +
-            " -> " + duk_safe_to_string(ctx, -1));
-        duk_pop(ctx);
-        return false;
-    }
-
-    duk_pop(ctx);
-    return true;
+    return m_engine->CallGlobalFunction(functionName, argument);
 }
 
 bool ScriptManager::CallGlobalFunction(const char* functionName)
 {
     if (!m_engine) return false;
-    duk_context* ctx = m_engine->GetContext();
-
-    duk_get_global_string(ctx, functionName);
-    if (!duk_is_function(ctx, -1)) {
-        duk_pop(ctx);
-        return true; // Not an error if function doesn't exist
-    }
-
-    if (duk_pcall(ctx, 0) != 0) {
-        LOG_ERROR("Script function failed: " + std::string(functionName) +
-            " -> " + duk_safe_to_string(ctx, -1));
-        duk_pop(ctx);
-        return false;
-    }
-
-    duk_pop(ctx);
-    return true;
+    return m_engine->CallGlobalFunction(functionName);
 }
 
 std::string ScriptManager::ResolveScriptPath(const std::string& scriptPath) const

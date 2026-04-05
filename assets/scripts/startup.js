@@ -1,123 +1,154 @@
-// startup.js более старый синтаксис (ES5).!!!!!
-// An advanced script to demonstrate various engine features.
+﻿// Полноценный демонстрационный скрипт Dukglue.
+// Показаны основные API-узлы: world, entity, material, light, physics, animation и пользовательские типы.
 
-// Глобальные переменные для хранения ID сущностей, которые будут анимироваться
 var elapsedTime = 0;
-var floatingCube;
-var spinningSphere;
-var flickeringLight;
+var movingCube = null;
+var rotatingSphere = null;
+var demoLight = null;
+var importedTable = null;
+var collisionCount = 0;
+
+function createColor(name, r, g, b) {
+    return { x: r, y: g, z: b };
+}
 
 function onStart() {
-    ogle.log("Advanced startup script 'startup.js' is running onStart().");
+    ogle.log("[JS] Начало сценария: демонстрация всех возможностей движка");
 
-    // 1. Очищаем мир для создания новой сцены
+    // Подготовка мира: очистка и базовый пол.
     ogle.world.clear();
 
-    // 2. Создаём окружение
-    // Большой пол со статическим физическим телом
     var floor = ogle.world.createCube({
         name: "Floor",
         position: { x: 0, y: -0.5, z: 0 },
         scale: { x: 50, y: 1, z: 50 }
     });
-    ogle.material.setBaseColor(floor, { x: 0.2, y: 0.2, z: 0.25 });
-    ogle.material.setRoughness(floor, 0.9); // Делаем пол матовым, не блестящим
+    ogle.material.setBaseColor(floor, createColor("floor", 0.15, 0.18, 0.22));
+    ogle.material.setRoughness(floor, 0.95);
     ogle.physics.addBox(floor, { x: 25, y: 0.5, z: 25 }, "Static", 0);
 
-    // Основной направленный источник света (солнце)
+    // Добавление моделей и объектов мира.
+    importedTable = ogle.world.createModel({
+        path: "assets/Table-1-FBX/Table_1_fbx.FBX",
+        name: "DemoTable"
+    });
+    if (ogle.entity.exists(importedTable)) {
+        ogle.entity.setPosition(importedTable, { x: 0, y: 0, z: 5 });
+        ogle.entity.setScale(importedTable, { x: 0.4, y: 0.4, z: 0.4 });
+        ogle.entity.setName(importedTable, "TableModel");
+        ogle.material.setEmissiveColor(importedTable, createColor("tableEmissive", 0.05, 0.08, 0.12));
+        ogle.material.setUvTiling(importedTable, { x: 1.5, y: 1.5 });
+        ogle.physics.addBox(importedTable, { x: 3.0, y: 1.0, z: 3.0 }, "Static", 0);
+    }
+
+    // Свет: солнце и динамический источник.
     ogle.world.createDirectionalLight({
         name: "Sun",
-        rotation: { x: -45, y: -30, z: 0 },
-        color: { x: 1.0, y: 0.95, z: 0.85 },
-        intensity: 1.8,
+        rotation: { x: -35, y: -45, z: 0 },
+        color: createColor("sun", 1.0, 0.95, 0.87),
+        intensity: 1.7,
         castShadows: true,
         primary: true
     });
 
-    // 3. Создаём башню из динамических кубов для демонстрации физики
-    var stackHeight = 7;
-    var boxSize = 1.0;
-    for (var i = 0; i < stackHeight; i++) {
-        var cube = ogle.world.createCube({
-            name: "StackCube_" + i,
-            position: { x: 0, y: boxSize * i + boxSize / 2, z: 5 },
-            scale: { x: boxSize, y: boxSize, z: boxSize }
-        });
-        ogle.material.setBaseColor(cube, { x: 0.8, y: 0.1 + i * 0.1, z: 0.2 });
-        ogle.physics.addBox(cube, { x: boxSize / 2, y: boxSize / 2, z: boxSize / 2 }, "Dynamic", 1.0);
+    demoLight = ogle.world.createPointLight({
+        name: "DemoLight",
+        position: { x: 6, y: 4, z: -6 },
+        color: createColor("purpleGlow", 0.8, 0.6, 1.0),
+        intensity: 3.0,
+        range: 20.0
+    });
+    ogle.light.setRange(demoLight, 25.0);
+    ogle.light.setCastShadows(demoLight, true);
+    ogle.light.setPrimary(demoLight, false);
+
+    // Создание динамических игровых объектов.
+    movingCube = ogle.world.createCube({
+        name: "MovingCube",
+        position: { x: -7, y: 2.0, z: 0 },
+        scale: { x: 1.2, y: 1.2, z: 1.2 }
+    });
+    ogle.material.setBaseColor(movingCube, createColor("waterBlue", 0.2, 0.7, 1.0));
+    ogle.material.setRoughness(movingCube, 0.2);
+    ogle.physics.addBox(movingCube, { x: 0.6, y: 0.6, z: 0.6 }, "Dynamic", 1.0);
+
+    rotatingSphere = ogle.world.createSphere({
+        name: "SpinningSphere",
+        position: { x: 7, y: 3.0, z: -3 },
+        radius: 1.0
+    });
+    ogle.material.setBaseColor(rotatingSphere, createColor("sunset", 1.0, 0.75, 0.2));
+    ogle.material.setEmissiveColor(rotatingSphere, createColor("glow", 0.2, 0.08, 0.02));
+    ogle.material.setMetallic(rotatingSphere, 0.3);
+    ogle.material.setReflectivity(rotatingSphere, 0.4);
+    ogle.physics.addBox(rotatingSphere, { x: 1.0, y: 1.0, z: 1.0 }, "Dynamic", 2.5);
+
+    // Пользовательский объект и методы класса Player.
+    var hero = new ogle.Player(120);
+    ogle.log("Player создан с HP = " + hero.getHP());
+    hero.takeDamage(25);
+    ogle.log("После урона HP = " + hero.getHP());
+
+    // Показать информацию о сущностях через world / entity API.
+    var allEntities = ogle.world.getEntities();
+    ogle.log("Всего сущностей в мире: " + ogle.world.count());
+    ogle.log("Первый ID сущности: " + (allEntities.length ? allEntities[0] : "нет сущностей"));
+
+    var lights = ogle.world.getEntitiesByKind("Light");
+    ogle.log("Найдено источников света: " + lights.length);
+
+    var foundTable = ogle.world.findByName("TableModel");
+    if (ogle.entity.exists(foundTable)) {
+        ogle.log("Найдено по имени: " + ogle.entity.getName(foundTable));
     }
 
-    // 4. Создаём тяжёлый шар, который упадёт на башню
-    var cannonball = ogle.world.createSphere({
-        name: "Cannonball",
-        position: { x: 0.5, y: 12, z: 5.5 },
-        radius: 0.7
-    });
-    ogle.material.setBaseColor(cannonball, { x: 0.1, y: 0.1, z: 0.1 });
-    ogle.material.setMetallic(cannonball, 0.9); // Металлический материал
-    ogle.material.setRoughness(cannonball, 0.2); // Гладкий, блестящий
-    // Используем кубический коллайдер, так как API для сферического коллайдера не документирован
-    ogle.physics.addBox(cannonball, { x: 0.7, y: 0.7, z: 0.7 }, "Dynamic", 25.0); // Очень тяжёлый!
-
-    // 5. Создаём специальные анимированные объекты
-    // Парящий куб (анимация через скрипт, без физики)
-    floatingCube = ogle.world.createCube({
-        name: "FloatingCube",
-        position: { x: -8, y: 2, z: -8 },
-        scale: { x: 1, y: 1, z: 1 }
-    });
-    ogle.material.setBaseColor(floatingCube, { x: 0.2, y: 0.8, z: 1.0 });
-    ogle.material.setEmissiveColor(floatingCube, { x: 0.1, y: 0.4, z: 0.5 }); // Добавляем свечение
-
-    // Вращающаяся сфера
-    spinningSphere = ogle.world.createSphere({
-        name: "SpinningSphere",
-        position: { x: 8, y: 2, z: -8 },
-        radius: 1.2
-    });
-    ogle.material.setBaseColor(spinningSphere, { x: 1.0, y: 0.8, z: 0.2 });
-    ogle.material.setReflectivity(spinningSphere, 0.5);
-
-    // 6. Создаём мерцающий точечный источник света
-    flickeringLight = ogle.world.createPointLight({
-        name: "FlickerLight",
-        position: { x: 8, y: 4, z: 8 },
-        color: { x: 1.0, y: 0.5, z: 0.1 }, // Тёплый оранжевый цвет
-        intensity: 3.0,
-        range: 15.0
-    });
-
-    // 7. Устанавливаем коллбэк для отслеживания столкновений
+    // Установим callback для коллизий и сохраним текущее состояние мира.
     ogle.physics.setCollisionCallback(function (entityA, entityB) {
+        if (!ogle.entity.exists(entityA) || !ogle.entity.exists(entityB)) {
+            return;
+        }
         var nameA = ogle.entity.getName(entityA);
         var nameB = ogle.entity.getName(entityB);
-        // Избегаем спама в лог при столкновениях с полом
-        if (nameA !== "Floor" && nameB !== "Floor") {
-            ogle.log("Collision detected between '" + nameA + "' and '" + nameB + "'");
-        }
+        collisionCount += 1;
+        ogle.log("Коллизия " + collisionCount + ": " + nameA + " ↔ " + nameB);
     });
 
-    ogle.log("Advanced scene created successfully.");
+    ogle.world.save("assets/worlds/script_demo_world.json");
+
+    ogle.log("Сценарий запущен. Полный набор API доступен через ogle.world, ogle.entity, ogle.material, ogle.light, ogle.physics и ogle.animation.");
 }
 
 function onUpdate(dt) {
     elapsedTime += dt;
 
-    // Анимация парящего куба
-    if (ogle.entity.exists(floatingCube)) {
-        var floatingPos = { x: -8, y: 2.0 + Math.sin(elapsedTime) * 1.5, z: -8 };
-        ogle.entity.setPosition(floatingCube, floatingPos);
+    if (ogle.entity.exists(movingCube)) {
+        var position = {
+            x: -7 + Math.sin(elapsedTime) * 4.5,
+            y: 2.0 + Math.sin(elapsedTime * 1.5) * 0.25,
+            z: Math.cos(elapsedTime) * 2.0
+        };
+        ogle.entity.setPosition(movingCube, position);
     }
 
-    // Анимация вращающейся сферы
-    if (ogle.entity.exists(spinningSphere)) {
-        var rotation = { x: 0, y: elapsedTime * 50.0, z: 20.0 * Math.sin(elapsedTime * 0.5) };
-        ogle.entity.setRotation(spinningSphere, rotation);
+    if (ogle.entity.exists(rotatingSphere)) {
+        var rotation = {
+            x: 0,
+            y: elapsedTime * 40.0,
+            z: 20.0 * Math.sin(elapsedTime * 0.4)
+        };
+        ogle.entity.setRotation(rotatingSphere, rotation);
+        var scaleFactor = 1.0 + Math.sin(elapsedTime * 2.0) * 0.15;
+        ogle.entity.setScale(rotatingSphere, { x: scaleFactor, y: scaleFactor, z: scaleFactor });
     }
 
-    // Анимация мерцающего света
-    if (ogle.entity.exists(flickeringLight)) {
-        var intensity = 2.0 + Math.sin(elapsedTime * 10.0) * 1.5 + (Math.random() - 0.5) * 0.5;
-        ogle.light.setIntensity(flickeringLight, Math.max(0, intensity));
+    if (ogle.entity.exists(demoLight)) {
+        ogle.light.setColor(demoLight, createColor("pulse", 0.5 + Math.sin(elapsedTime) * 0.5, 0.4, 1.0));
+        ogle.light.setIntensity(demoLight, 2.0 + Math.sin(elapsedTime * 3.5) * 1.2);
+    }
+
+    if (elapsedTime > 15.0 && ogle.entity.exists(importedTable)) {
+        ogle.entity.setVisible(importedTable, false);
+        ogle.log("Модель таблицы скрыта через 15 секунд");
+        importedTable = null;
     }
 }
