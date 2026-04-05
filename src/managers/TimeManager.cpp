@@ -12,10 +12,16 @@ float TimeManager::Tick()
     if (!m_initialized) {
         m_lastFrameTime = now;
         m_initialized = true;
-        return 0.0f;
+        m_deltaTime = 0.0f;
+        return m_deltaTime;
     }
 
-    const float deltaTime = std::chrono::duration<float>(now - m_lastFrameTime).count();
+    m_deltaTime = std::chrono::duration<float>(now - m_lastFrameTime).count();
     m_lastFrameTime = now;
-    return deltaTime;
+    return m_deltaTime;
+}
+
+float TimeManager::GetDeltaTime() const
+{
+    return m_deltaTime;
 }

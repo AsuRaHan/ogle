@@ -12,131 +12,35 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_SOURCE_DIR}/bin)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_SOURCE_DIR}/bin)
 
-add_executable(${PROJECT_NAME} WIN32
-    src/main.cpp
-    src/App.cpp
+# =============================================================================
+# Автоматический сбор всех исходных файлов (рекомендуется на текущем этапе)
+# =============================================================================
 
-    src/config/AppConfig.h
-    src/config/ConfigManager.cpp
-    src/config/ConfigManager.h
-    src/core/FileSystem.cpp
-    src/core/FileSystem.h
-    src/editor/Editor.cpp
-    src/editor/Editor.h
-    src/editor/EditorAssetHelpers.cpp
-    src/editor/EditorAssetHelpers.h
-    src/editor/EditorContentBrowserPanel.cpp
-    src/editor/EditorContentBrowserPanel.h
-    src/editor/EditorCreationPanel.cpp
-    src/editor/EditorCreationPanel.h
-    src/editor/EditorProceduralTexturePanel.cpp
-    src/editor/EditorProceduralTexturePanel.h
-    src/editor/EditorHierarchyPanel.cpp
-    src/editor/EditorHierarchyPanel.h
-    src/editor/EditorMeshEditPanel.cpp
-    src/editor/EditorMeshEditPanel.h
-    src/editor/EditorInspectorPanel.cpp
-    src/editor/EditorInspectorPanel.h
-    src/editor/EditorAnimationPanel.cpp
-    src/editor/EditorAnimationPanel.h
-
-    src/ui/Win32Window.cpp
-    src/ui/Win32Window.h
-    src/ui/IWindow.h
-
-    src/opengl/OpenGLInitializer.cpp
-    src/opengl/OpenGLInitializer.h
-    src/opengl/OpenGLDebug.cpp
-    src/opengl/OpenGLDebug.h
-    src/opengl/GLFunctions.cpp
-    src/opengl/GLFunctions.h
-    src/opengl/ShaderManager.cpp
-    src/opengl/ShaderManager.h
-    src/opengl/OpenGLRenderer.cpp
-    src/opengl/OpenGLRenderer.h
-    src/opengl/Camera.cpp
-    src/opengl/Camera.h
-
-    src/Logger.cpp
-    src/Logger.h
-    src/WorldGenerator.cpp
-    src/WorldGenerator.h
-
-
-    src/models/PrimitiveFactory.cpp
-    src/models/PrimitiveFactory.h
-
-    src/models/MeshBuffer.cpp
-    src/models/MeshBuffer.h
-    src/models/BaseModel.cpp
-    src/models/BaseModel.h
-    src/models/ModelEntity.cpp
-    src/models/ModelEntity.h
-    src/render/Texture2D.cpp
-    src/render/Texture2D.h
-    src/render/Material.cpp
-    src/render/Material.h
-    src/render/MaterialLibrary.cpp
-    src/render/MaterialLibrary.h
-    src/render/AnimationLibrary.cpp
-    src/render/AnimationLibrary.h
-    src/render/ProceduralTexture.cpp
-    src/render/ProceduralTexture.h
-    src/render/TextureGenerator.cpp
-    src/render/TextureGenerator.h
-
-    src/input/AxisBinding.cpp
-    src/input/AxisBinding.h
-    src/input/InputAction.cpp
-    src/input/InputAction.h
-    src/input/InputController.cpp
-    src/input/InputController.h
-    src/input/InputTypes.h
-
-    src/managers/InputManager.cpp
-    src/managers/InputManager.h
-    src/managers/ImGuiManager.cpp
-    src/managers/ImGuiManager.h
-    src/managers/PhysicsManager.cpp
-    src/managers/PhysicsManager.h
-    src/physics/BulletPhysicsEngine.cpp
-    src/physics/BulletPhysicsEngine.h
-    src/managers/CameraManager.cpp
-    src/managers/CameraManager.h
-    src/managers/InputActionsManager.cpp
-    src/managers/InputActionsManager.h
-    src/managers/RenderManager.cpp
-    src/managers/RenderManager.h
-    src/managers/ScriptManager.cpp
-    src/managers/ScriptManager.h
-    src/managers/TimeManager.cpp
-    src/managers/TimeManager.h
-    src/managers/WorldManager.cpp
-    src/managers/WorldManager.h
-
-    src/scripting/ScriptBindings.cpp
-    src/scripting/ScriptBindings.h
-    src/scripting/ScriptApi.cpp
-    src/scripting/ScriptApi.h
-    src/scripting/ScriptEngine.cpp
-    src/scripting/ScriptEngine.h
-    src/scripting/Player.cpp
-    src/scripting/Player.h
-
-    src/world/World.cpp
-    src/world/World.h
-    src/world/WorldComponents.h
-    src/world/WorldObject.cpp
-    src/world/WorldObject.h
-    src/world/SceneSerializer.cpp
-    src/world/SceneSerializer.h
-    src/world/systems/AnimationSystem.cpp
-    src/world/systems/AnimationSystem.h
-    src/world/systems/RenderSystem.cpp
-    src/world/systems/RenderSystem.h
-    src/world/systems/TransformSystem.cpp
-    src/world/systems/TransformSystem.h
+# Собираем все .cpp файлы рекурсивно из папки src и всех её подпапок
+file(GLOB_RECURSE PROJECT_SOURCES 
+    CONFIGURE_DEPENDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp"
 )
+
+# Собираем все заголовочные файлы (.h и .hpp) — это нужно для удобства в IDE 
+# (Visual Studio, CLion и т.д. будут правильно показывать структуру проекта)
+file(GLOB_RECURSE PROJECT_HEADERS 
+    CONFIGURE_DEPENDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/*.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/*.hpp"
+)
+
+# Создаём исполняемый файл
+add_executable(${PROJECT_NAME} WIN32
+    ${PROJECT_SOURCES}
+    ${PROJECT_HEADERS}
+)
+
+# Указываем, где искать заголовочные файлы (очень важно!)
+target_include_directories(${PROJECT_NAME} PRIVATE 
+    "${CMAKE_CURRENT_SOURCE_DIR}/src"
+)
+# =============================================================================
 
 include(FetchContent)
 

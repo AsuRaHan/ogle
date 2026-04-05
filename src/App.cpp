@@ -2,56 +2,81 @@
 
 #include "Logger.h"
 #include "core/FileSystem.h"
+#include "core/Layer.h"
+#include "core/ExampleLayer.h"
 #include "ui/IWindow.h"
 #include <glm/vec3.hpp>
 #include <entt/entt.hpp>
 #include <string>
 
+// Initialize singleton instance
+App* App::s_instance = nullptr;
+
+namespace
+{
+// This layer encapsulates the original application logic to keep it running
+// within the new layer-based system.
+class MainApplicationLayer : public Layer
+{
+public:
+    MainApplicationLayer(App& app)
+        : Layer("MainApplicationLayer")
+        , m_app(app)
+    {
+    }
+
+    void OnUpdate(float deltaTime) override
+    {
+        auto& editor = m_app.GetEditor();
+        auto& imguiManager = m_app.GetImGuiManager();
+        auto& inputActionsManager = m_app.GetInputActionsManager();
+        auto& cameraManager = m_app.GetCameraManager();
+        auto& scriptManager = m_app.GetScriptManager();
+        auto& physicsManager = m_app.GetPhysicsManager();
+        auto& worldManager = m_app.GetWorldManager();
+        
+        if (!imguiManager.WantsKeyboardCapture() && !imguiManager.WantsMouseCapture()) {
+            inputActionsManager.UpdateCameraControls(cameraManager, deltaTime);
+        }
+
+        const bool runSimulation = editor.GetSimulationState() == Editor::SimulationState::Playing;
+        const bool stepSimulation = editor.ConsumeSimulationStepRequest();
+        if (runSimulation || stepSimulation) {
+            const float simulationDeltaTime = stepSimulation ? (1.0f / 60.0f) : deltaTime;
+            scriptManager.Update(simulationDeltaTime);
+            physicsManager.Update(simulationDeltaTime);
+            worldManager.Update(simulationDeltaTime);
+        }
+        cameraManager.Update(deltaTime);
+    }
+
+    void OnImGuiRender() override
+    {
+        auto& cameraManager = m_app.GetCameraManager();
+        auto& worldManager = m_app.GetWorldManager();
+        auto& timeManager = m_app.GetTimeManager();
+        auto& imguiManager = m_app.GetImGuiManager();
+        auto& editor = m_app.GetEditor();
+        auto& physicsManager = m_app.GetPhysicsManager();
+        auto& configManager = m_app.GetConfigManager();
+        auto& renderManager = m_app.GetRenderManager();
+
+        imguiManager.BuildDefaultUi(cameraManager, worldManager, timeManager.GetDeltaTime());
+        editor.BuildUi(cameraManager, worldManager, physicsManager, configManager);
+        renderManager.SetHighlightedEntity(editor.GetSelectedEntity());
+    }
+
+private:
+    App& m_app;
+};
+}
+
 App::App(std::unique_ptr<IWindow> window, ConfigManager configManager)
     : m_window(std::move(window))
     , m_configManager(std::move(configManager))
 {
+    s_instance = this;
 	LOG_INFO("App instance created");
-}
-
-CameraManager& App::GetCameraManager()
-{
-    return m_cameraManager;
-}
-
-const CameraManager& App::GetCameraManager() const
-{
-    return m_cameraManager;
-}
-
-ConfigManager& App::GetConfigManager()
-{
-    return m_configManager;
-}
-
-const ConfigManager& App::GetConfigManager() const
-{
-    return m_configManager;
-}
-
-Editor& App::GetEditor()
-{
-    return m_editor;
-}
-
-const Editor& App::GetEditor() const
-{
-    return m_editor;
-}
-
-WorldManager& App::GetWorldManager()
-{
-    return m_worldManager;
-}
-
-const WorldManager& App::GetWorldManager() const
-{
-    return m_worldManager;
 }
 
 void App::InitializeWorldFromConfig()
@@ -130,10 +155,11 @@ int App::Run(HINSTANCE hInstance, int nCmdShow)
         LOG_WARN("Startup script was not executed");
     }
 
+    // Push layers onto the stack
+    m_layerStack.PushLayer(new MainApplicationLayer(*this));
+    m_layerStack.PushLayer(new ExampleLayer());
+
     m_window->Show(nCmdShow);
-    // Save window state after closing
-    // The window will be destroyed when App is destroyed, but we can save state here
-    // if needed. We'll leave this for App's responsibility.
     m_timeManager.Reset();
 
     MSG msg{};
@@ -143,7 +169,7 @@ int App::Run(HINSTANCE hInstance, int nCmdShow)
             TranslateMessage(&msg);
             DispatchMessage(&msg);
             if (msg.message == WM_QUIT) {
-                MainLoop = false; // Завершение приложения
+                MainLoop = false;
             }
             else if (msg.message == WM_SIZE) {
                 int newWidth = LOWORD(msg.lParam);
@@ -158,24 +184,18 @@ int App::Run(HINSTANCE hInstance, int nCmdShow)
 
         const float deltaTime = m_timeManager.Tick();
         m_inputManager.Update(deltaTime);
+
+        // 1. Update phase
+        for (auto* layer : m_layerStack)
+            layer->OnUpdate(deltaTime);
+
         m_imguiManager.BeginFrame();
-        m_imguiManager.BuildDefaultUi(m_cameraManager, m_worldManager, deltaTime);
-        m_editor.BuildUi(m_cameraManager, m_worldManager, m_physicsManager, m_configManager);
-        m_renderManager.SetHighlightedEntity(m_editor.GetSelectedEntity());
 
-        if (!m_imguiManager.WantsKeyboardCapture() && !m_imguiManager.WantsMouseCapture()) {
-            m_inputActionsManager.UpdateCameraControls(m_cameraManager, deltaTime);
-        }
+        // 2. ImGui rendering phase
+        for (auto* layer : m_layerStack)
+            layer->OnImGuiRender();
 
-        const bool runSimulation = m_editor.GetSimulationState() == Editor::SimulationState::Playing;
-        const bool stepSimulation = m_editor.ConsumeSimulationStepRequest();
-        if (runSimulation || stepSimulation) {
-            const float simulationDeltaTime = stepSimulation ? (1.0f / 60.0f) : deltaTime;
-            m_scriptManager.Update(simulationDeltaTime);
-            m_physicsManager.Update(simulationDeltaTime);
-            m_worldManager.Update(simulationDeltaTime);
-        }
-        m_cameraManager.Update(deltaTime);
+        // 3. Final render
         m_renderManager.RenderFrame(*m_window, &m_imguiManager);
     }
 
