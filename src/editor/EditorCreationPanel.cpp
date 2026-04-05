@@ -1,5 +1,7 @@
 #include "editor/EditorCreationPanel.h"
 
+#include "core/EventBus.h"
+#include "core/Events.h"
 #include "editor/EditorState.h"
 #include "managers/WorldManager.h"
 
@@ -23,51 +25,28 @@ void EditorCreationPanel::Draw(EditorState& state, WorldManager& worldManager)
     }
 
     if (ImGui::Button("Create")) {
+        if (!state.eventBus) return;  // Safety check
+
         const std::string name = state.createNameBuffer[0] != '\0' ? state.createNameBuffer.data() : "NewObject";
+        const std::string modelPath = state.createModelPathBuffer.data();
+        const std::string texturePath = state.createTexturePathBuffer.data();
 
-        if (state.createKind == 0) {
-            state.selectedEntity = worldManager.CreateWorldObject(name, OGLE::WorldObjectKind::Generic).GetEntity();
-        } else if (state.createKind == 1) {
-            state.selectedEntity = worldManager.CreatePrimitive(
-                name,
-                OGLE::PrimitiveType::Cube,
-                glm::vec3(0.0f, 0.5f, 0.0f),
-                glm::vec3(1.0f, 1.0f, 1.0f),
-                state.createTexturePathBuffer.data());
-        } else if (state.createKind == 2) {
-            state.selectedEntity = worldManager.CreatePrimitive(
-                name,
-                OGLE::PrimitiveType::Sphere,
-                glm::vec3(0.0f, 0.5f, 0.0f),
-                glm::vec3(1.0f, 1.0f, 1.0f),
-                state.createTexturePathBuffer.data());
-        } else if (state.createKind == 3) {
-            state.selectedEntity = worldManager.CreatePrimitive(
-                name,
-                OGLE::PrimitiveType::Plane,
-                glm::vec3(0.0f, 0.0f, 0.0f),
-                glm::vec3(5.0f, 1.0f, 5.0f),
-                state.createTexturePathBuffer.data());
-        } else if (state.createKind == 5) {
-            state.selectedEntity = worldManager.CreateDirectionalLight(
-                name,
-                glm::vec3(-50.0f, 45.0f, 0.0f));
-        } else if (state.createKind == 6) {
-            state.selectedEntity = worldManager.CreatePointLight(
-                name,
-                glm::vec3(0.0f, 1.5f, 0.0f));
-        } else {
-            state.selectedEntity = worldManager.CreateModelFromFile(
-                state.createModelPathBuffer.data(),
-                OGLE::ModelType::DYNAMIC,
-                name);
+        OGLE::EditorCreateEntityEvent event;
+        event.name = name;
+        event.modelPath = modelPath;
+        event.texturePath = texturePath;
 
-            if (state.selectedEntity != entt::null && state.createTexturePathBuffer[0] != '\0') {
-                worldManager.SetEntityDiffuseTexture(state.selectedEntity, state.createTexturePathBuffer.data());
-            }
+        switch (state.createKind) {
+            case 0: event.type = OGLE::EditorCreateEntityEvent::Type::EmptyObject; break;
+            case 1: event.type = OGLE::EditorCreateEntityEvent::Type::Cube; break;
+            case 2: event.type = OGLE::EditorCreateEntityEvent::Type::Sphere; break;
+            case 3: event.type = OGLE::EditorCreateEntityEvent::Type::Plane; break;
+            case 5: event.type = OGLE::EditorCreateEntityEvent::Type::DirectionalLight; break;
+            case 6: event.type = OGLE::EditorCreateEntityEvent::Type::PointLight; break;
+            case 4: event.type = OGLE::EditorCreateEntityEvent::Type::ModelFromFile; break;
+            default: return;
         }
 
-        state.bufferedEntity = entt::null;
-        state.textureEditingEntity = entt::null;
+        state.eventBus->Dispatch(event);
     }
 }

@@ -1,5 +1,6 @@
 #include "editor/Editor.h"
 
+#include "core/Events.h"
 #include "Logger.h"
 #include "editor/EditorAssetHelpers.h"
 #include "input/InputController.h"
@@ -18,76 +19,76 @@
 
 bool Editor::Initialize()
 {
-    if (m_initialized) {
+    if (m_state.initialized) {
         return true;
     }
 
-    m_worldPathBuffer.fill('\0');
-    m_assetsPathBuffer.fill('\0');
-    m_selectedNameBuffer.fill('\0');
-    m_createNameBuffer.fill('\0');
-    m_createModelPathBuffer.fill('\0');
-    m_createTexturePathBuffer.fill('\0');
-    m_contentSelectionBuffer.fill('\0');
-    m_primitiveSourcePathBuffer.fill('\0');
-    m_skeletonSourcePathBuffer.fill('\0');
-    m_animationClipBuffer.fill('\0');
-    m_scriptPathBuffer.fill('\0');
-    m_texturePathBuffer.fill('\0');
-    m_emissiveTexturePathBuffer.fill('\0');
-    std::strncpy(m_createNameBuffer.data(), "NewObject", m_createNameBuffer.size() - 1);
-    std::strncpy(m_worldPathBuffer.data(), "assets/worlds/default_world.json", m_worldPathBuffer.size() - 1);
-    std::strncpy(m_assetsPathBuffer.data(), "assets", m_assetsPathBuffer.size() - 1);
+    m_state.worldPathBuffer.fill('\0');
+    m_state.assetsPathBuffer.fill('\0');
+    m_state.selectedNameBuffer.fill('\0');
+    m_state.createNameBuffer.fill('\0');
+    m_state.createModelPathBuffer.fill('\0');
+    m_state.createTexturePathBuffer.fill('\0');
+    m_state.contentSelectionBuffer.fill('\0');
+    m_state.primitiveSourcePathBuffer.fill('\0');
+    m_state.skeletonSourcePathBuffer.fill('\0');
+    m_state.animationClipBuffer.fill('\0');
+    m_state.scriptPathBuffer.fill('\0');
+    m_state.texturePathBuffer.fill('\0');
+    m_state.emissiveTexturePathBuffer.fill('\0');
+    strncpy(m_state.createNameBuffer.data(), "NewObject", m_state.createNameBuffer.size() - 1);
+    strncpy(m_state.worldPathBuffer.data(), "assets/worlds/default_world.json", m_state.worldPathBuffer.size() - 1);
+    strncpy(m_state.assetsPathBuffer.data(), "assets", m_state.assetsPathBuffer.size() - 1);
 
-    m_initialized = true;
+    m_state.initialized = true;
     LOG_INFO("Editor initialized");
     return true;
 }
 
 void Editor::Shutdown()
 {
-    if (!m_initialized) {
+    if (!m_state.initialized) {
         return;
     }
 
-    m_initialized = false;
+    m_state.initialized = false;
     LOG_INFO("Editor shutdown");
 }
 
 void Editor::SetEnabled(bool enabled)
 {
-    m_enabled = enabled;
+    m_state.enabled = enabled;
 }
 
 void Editor::Toggle()
 {
-    m_enabled = !m_enabled;
+    m_state.enabled = !m_state.enabled;
 }
 
 bool Editor::IsEnabled() const
 {
-    return m_enabled;
+    return m_state.enabled;
 }
 
 bool Editor::IsInitialized() const
 {
-    return m_initialized;
+    return m_state.initialized;
 }
 
 OGLE::Entity Editor::GetSelectedEntity() const
 {
-    return m_selectedEntity;
+    return m_state.selectedEntity;
 }
 
-Editor::SimulationState Editor::GetSimulationState() const
+EditorSimulationState Editor::GetSimulationState() const
 {
-    return m_simulationState;
+    return m_state.simulationState;
 }
 
 bool Editor::ConsumeSimulationStepRequest()
 {
-    const bool shouldStep = m_stepSimulationRequested;
-    m_stepSimulationRequested = false;
+    const bool shouldStep = m_state.stepSimulationRequested;
+    m_state.stepSimulationRequested = false;
     return shouldStep;
 }
 
@@ -97,7 +98,7 @@ void Editor::BuildUi(
     PhysicsManager& physicsManager,
     ConfigManager& configManager)
 {
-    if (!m_initialized || !m_enabled) {
+    if (!m_state.initialized || !m_state.enabled) {
         return;
     }
 
@@ -106,23 +107,23 @@ void Editor::BuildUi(
         TrySelectObject(camera, worldManager);
     }
 
-    if (m_selectedEntity != entt::null && !worldManager.IsEntityValid(m_selectedEntity)) {
-        m_selectedEntity = entt::null;
-        m_bufferedEntity = entt::null;
-        m_textureEditingEntity = entt::null;
+    if (m_state.selectedEntity != entt::null && !worldManager.IsEntityValid(m_state.selectedEntity)) {
+        m_state.selectedEntity = entt::null;
+        m_state.bufferedEntity = entt::null;
+        m_state.textureEditingEntity = entt::null;
     }
 
-    if (m_worldPathBuffer[0] == '\0') {
-        std::strncpy(
-            m_worldPathBuffer.data(),
+    if (m_state.worldPathBuffer[0] == '\0') {
+        strncpy(
+            m_state.worldPathBuffer.data(),
             configManager.GetConfig().world.path.c_str(),
-            m_worldPathBuffer.size() - 1);
+            m_state.worldPathBuffer.size() - 1);
     }
-    if (m_assetsPathBuffer[0] == '\0') {
-        std::strncpy(
-            m_assetsPathBuffer.data(),
+    if (m_state.assetsPathBuffer[0] == '\0') {
+        strncpy(
+            m_state.assetsPathBuffer.data(),
             configManager.GetConfig().assets.path.c_str(),
-            m_assetsPathBuffer.size() - 1);
+            m_state.assetsPathBuffer.size() - 1);
     }
 
     SyncSelectedBuffers(worldManager);
@@ -130,62 +131,48 @@ void Editor::BuildUi(
     if (ImGui::BeginMainMenuBar()) {
         if (ImGui::BeginMenu("File")) {
             if (ImGui::MenuItem("Load World")) {
-                configManager.GetConfig().world.path = m_worldPathBuffer.data();
-                configManager.Save();
-                worldManager.LoadActiveWorld(m_worldPathBuffer.data());
-                m_selectedEntity = entt::null;
-                m_bufferedEntity = entt::null;
-                m_textureEditingEntity = entt::null;
+                m_state.eventBus->Dispatch(OGLE::EditorLoadWorldEvent{ m_state.worldPathBuffer.data() });
             }
             if (ImGui::MenuItem("Save World")) {
-                configManager.GetConfig().world.path = m_worldPathBuffer.data();
-                configManager.Save();
-                worldManager.SaveActiveWorld(m_worldPathBuffer.data());
+                m_state.eventBus->Dispatch(OGLE::EditorSaveWorldEvent{ m_state.worldPathBuffer.data() });
             }
             if (ImGui::MenuItem("Reload Default")) {
-                worldManager.CreateDefaultWorld();
-                m_selectedEntity = entt::null;
-                m_bufferedEntity = entt::null;
-                m_textureEditingEntity = entt::null;
+                m_state.eventBus->Dispatch(OGLE::EditorReloadDefaultWorldEvent{});
             }
             if (ImGui::MenuItem("Clear World")) {
-                worldManager.ClearWorld();
-                m_selectedEntity = entt::null;
-                m_bufferedEntity = entt::null;
-                m_textureEditingEntity = entt::null;
+                m_state.eventBus->Dispatch(OGLE::EditorClearWorldEvent{});
             }
             ImGui::EndMenu();
         }
 
         if (ImGui::BeginMenu("Simulation")) {
-            const bool isPlaying = m_simulationState == SimulationState::Playing;
+            const bool isPlaying = m_state.simulationState == EditorSimulationState::Playing;
             if (ImGui::MenuItem("Play", nullptr, isPlaying)) {
-                m_simulationState = SimulationState::Playing;
+                m_state.eventBus->Dispatch(OGLE::EditorPlayEvent{});
             }
             if (ImGui::MenuItem("Pause", nullptr, !isPlaying)) {
-                m_simulationState = SimulationState::Paused;
+                m_state.eventBus->Dispatch(OGLE::EditorPauseEvent{});
             }
             if (ImGui::MenuItem("Step")) {
-                m_simulationState = SimulationState::Paused;
-                m_stepSimulationRequested = true;
+                m_state.eventBus->Dispatch(OGLE::EditorStepEvent{});
             }
             ImGui::EndMenu();
         }
 
         if (ImGui::BeginMenu("Window")) {
-            ImGui::MenuItem("World", nullptr, &m_showWorldWindow);
-            ImGui::MenuItem("Hierarchy", nullptr, &m_showHierarchyWindow);
-            ImGui::MenuItem("Inspector", nullptr, &m_showInspectorWindow);
-            ImGui::MenuItem("Animation", nullptr, &m_showAnimationWindow);
-            ImGui::MenuItem("Content Browser", nullptr, &m_showContentBrowserWindow);
+            ImGui::MenuItem("World", nullptr, &m_state.showWorldWindow);
+            ImGui::MenuItem("Hierarchy", nullptr, &m_state.showHierarchyWindow);
+            ImGui::MenuItem("Inspector", nullptr, &m_state.showInspectorWindow);
+            ImGui::MenuItem("Animation", nullptr, &m_state.showAnimationWindow);
+            ImGui::MenuItem("Content Browser", nullptr, &m_state.showContentBrowserWindow);
             ImGui::MenuItem("Procedural Texture", nullptr, &m_state.showProceduralTextureWindow);
             ImGui::EndMenu();
         }
         ImGui::EndMainMenuBar();
     }
 
-    if (m_showWorldWindow) {
-        if (ImGui::Begin("World", &m_showWorldWindow)) {
+    if (m_state.showWorldWindow) {
+        if (ImGui::Begin("World", &m_state.showWorldWindow)) {
         std::size_t entityCount = 0;
         const auto entityView = worldManager.GetActiveWorld().GetRegistry().view<OGLE::NameComponent>();
         for (auto entity : entityView) {
@@ -198,7 +185,7 @@ void Editor::BuildUi(
 
         ImGui::Text("World entities: %u", static_cast<unsigned int>(entityCount));
         ImGui::Text("Physics bodies: %u", static_cast<unsigned int>(physicsManager.GetBodyCount()));
-        ImGui::Text("Simulation: %s", m_simulationState == SimulationState::Playing ? "Playing" : "Paused");
+        ImGui::Text("Simulation: %s", m_state.simulationState == EditorSimulationState::Playing ? "Playing" : "Paused");
         ImGui::Separator();
         ImGui::Text("Camera");
         ImGui::Text("Position: %.2f %.2f %.2f", position.x, position.y, position.z);
@@ -206,46 +193,34 @@ void Editor::BuildUi(
         ImGui::Separator();
 
         ImGui::Text("World Path");
-        ImGui::InputText("##WorldPath", m_worldPathBuffer.data(), m_worldPathBuffer.size());
+        ImGui::InputText("##WorldPath", m_state.worldPathBuffer.data(), m_state.worldPathBuffer.size());
 
         if (ImGui::Button("Load World")) {
-            configManager.GetConfig().world.path = m_worldPathBuffer.data();
-            configManager.Save();
-            worldManager.LoadActiveWorld(m_worldPathBuffer.data());
-            m_selectedEntity = entt::null;
-            m_bufferedEntity = entt::null;
-            m_textureEditingEntity = entt::null;
+            m_state.eventBus->Dispatch(OGLE::EditorLoadWorldEvent{ m_state.worldPathBuffer.data() });
         }
         ImGui::SameLine();
         if (ImGui::Button("Save World")) {
-            configManager.GetConfig().world.path = m_worldPathBuffer.data();
-            configManager.Save();
-            worldManager.SaveActiveWorld(m_worldPathBuffer.data());
+            m_state.eventBus->Dispatch(OGLE::EditorSaveWorldEvent{ m_state.worldPathBuffer.data() });
         }
         ImGui::SameLine();
         if (ImGui::Button("Reload Default")) {
-            worldManager.CreateDefaultWorld();
-            m_selectedEntity = entt::null;
-            m_bufferedEntity = entt::null;
-            m_textureEditingEntity = entt::null;
+            m_state.eventBus->Dispatch(OGLE::EditorReloadDefaultWorldEvent{});
         }
 
         if (ImGui::Button("Clear World")) {
-            worldManager.ClearWorld();
-            m_selectedEntity = entt::null;
-            m_bufferedEntity = entt::null;
-            m_textureEditingEntity = entt::null;
+            m_state.eventBus->Dispatch(OGLE::EditorClearWorldEvent{});
         }
 
-        if (ImGui::Button(m_simulationState == SimulationState::Playing ? "Pause Simulation" : "Play Simulation")) {
-            m_simulationState = (m_simulationState == SimulationState::Playing)
-                ? SimulationState::Paused
-                : SimulationState::Playing;
+        if (ImGui::Button(m_state.simulationState == EditorSimulationState::Playing ? "Pause Simulation" : "Play Simulation")) {
+            if (m_state.simulationState == EditorSimulationState::Playing) {
+                m_state.eventBus->Dispatch(OGLE::EditorPauseEvent{});
+            } else {
+                m_state.eventBus->Dispatch(OGLE::EditorPlayEvent{});
+            }
         }
         ImGui::SameLine();
         if (ImGui::Button("Step Simulation")) {
-            m_simulationState = SimulationState::Paused;
-            m_stepSimulationRequested = true;
+            m_state.eventBus->Dispatch(OGLE::EditorStepEvent{});
         }
 
         ImGui::Separator();
@@ -255,22 +230,7 @@ void Editor::BuildUi(
             if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(GetContentBrowserAssetPayload())) {
                 const char* assetPath = static_cast<const char*>(payload->Data);
                 if (assetPath && IsEditorModelAssetPath(assetPath)) {
-                    const std::string entityName = BuildEditorEntityNameFromAssetPath(assetPath);
-                    const OGLE::Entity entity = worldManager.CreateModelFromFile(
-                        assetPath,
-                        OGLE::ModelType::DYNAMIC,
-                        entityName);
-
-                    if (entity != entt::null) {
-                        const glm::vec3 spawnPosition = camera.GetPosition() + camera.GetFront() * 5.0f;
-                        auto& world = worldManager.GetActiveWorld();
-                        if (auto* transform = world.GetComponent<OGLE::TransformComponent>(entity)) {
-                            world.SetTransform(entity, spawnPosition, transform->rotation, transform->scale);
-                        }
-                        m_selectedEntity = entity;
-                        m_bufferedEntity = entt::null;
-                        m_textureEditingEntity = entt::null;
-                    }
+                    m_state.eventBus->Dispatch(OGLE::EditorSpawnModelFromDragDropEvent{ std::string(assetPath) });
                 }
             }
             ImGui::EndDragDropTarget();
@@ -279,29 +239,29 @@ void Editor::BuildUi(
         ImGui::End();
     }
 
-    if (m_showHierarchyWindow) {
-        if (ImGui::Begin("Hierarchy", &m_showHierarchyWindow)) {
+    if (m_state.showHierarchyWindow) {
+        if (ImGui::Begin("Hierarchy", &m_state.showHierarchyWindow)) {
             m_hierarchyPanel.Draw(m_state, worldManager, physicsManager);
         }
         ImGui::End();
     }
 
-    if (m_showInspectorWindow) {
-        if (ImGui::Begin("Inspector", &m_showInspectorWindow)) {
+    if (m_state.showInspectorWindow) {
+        if (ImGui::Begin("Inspector", &m_state.showInspectorWindow)) {
             m_inspectorPanel.Draw(m_state, worldManager, physicsManager, cameraManager);
         }
         ImGui::End();
     }
 
-    if (m_showAnimationWindow) {
-        if (ImGui::Begin("Animation", &m_showAnimationWindow)) {
+    if (m_state.showAnimationWindow) {
+        if (ImGui::Begin("Animation", &m_state.showAnimationWindow)) {
             m_animationPanel.Draw(m_state, worldManager);
         }
         ImGui::End();
     }
 
-    if (m_showContentBrowserWindow) {
-        if (ImGui::Begin("Content Browser", &m_showContentBrowserWindow)) {
+    if (m_state.showContentBrowserWindow) {
+        if (ImGui::Begin("Content Browser", &m_state.showContentBrowserWindow)) {
             m_contentBrowserPanel.Draw(m_state, worldManager, configManager);
         }
         ImGui::End();
@@ -317,82 +277,82 @@ void Editor::BuildUi(
 
 void Editor::SyncSelectedBuffers(WorldManager& worldManager)
 {
-    if (m_selectedEntity == entt::null || !worldManager.IsEntityValid(m_selectedEntity)) {
+    if (m_state.selectedEntity == entt::null || !worldManager.IsEntityValid(m_state.selectedEntity)) {
         return;
     }
 
-    if (m_bufferedEntity != m_selectedEntity) {
-        m_bufferedEntity = m_selectedEntity;
+    if (m_state.bufferedEntity != m_state.selectedEntity) {
+        m_state.bufferedEntity = m_state.selectedEntity;
 
-        const auto selectedObject = worldManager.GetWorldObject(m_selectedEntity);
-        m_selectedNameBuffer.fill('\0');
-        std::strncpy(m_selectedNameBuffer.data(), selectedObject.GetName().c_str(), m_selectedNameBuffer.size() - 1);
+        const auto selectedObject = worldManager.GetWorldObject(m_state.selectedEntity);
+        m_state.selectedNameBuffer.fill('\0');
+        strncpy(m_state.selectedNameBuffer.data(), selectedObject.GetName().c_str(), m_state.selectedNameBuffer.size() - 1);
 
-        if (const OGLE::PrimitiveComponent* primitive = worldManager.GetActiveWorld().GetComponent<OGLE::PrimitiveComponent>(m_selectedEntity)) {
-            m_primitiveSourcePathBuffer.fill('\0');
-            std::strncpy(m_primitiveSourcePathBuffer.data(), primitive->sourcePath.c_str(), m_primitiveSourcePathBuffer.size() - 1);
+        if (const OGLE::PrimitiveComponent* primitive = worldManager.GetActiveWorld().GetComponent<OGLE::PrimitiveComponent>(m_state.selectedEntity)) {
+            m_state.primitiveSourcePathBuffer.fill('\0');
+            strncpy(m_state.primitiveSourcePathBuffer.data(), primitive->sourcePath.c_str(), m_state.primitiveSourcePathBuffer.size() - 1);
         } else {
-            m_primitiveSourcePathBuffer.fill('\0');
+            m_state.primitiveSourcePathBuffer.fill('\0');
         }
 
-        if (const OGLE::SkeletonComponent* skeleton = worldManager.GetActiveWorld().GetComponent<OGLE::SkeletonComponent>(m_selectedEntity)) {
-            m_skeletonSourcePathBuffer.fill('\0');
-            std::strncpy(m_skeletonSourcePathBuffer.data(), skeleton->sourcePath.c_str(), m_skeletonSourcePathBuffer.size() - 1);
+        if (const OGLE::SkeletonComponent* skeleton = worldManager.GetActiveWorld().GetComponent<OGLE::SkeletonComponent>(m_state.selectedEntity)) {
+            m_state.skeletonSourcePathBuffer.fill('\0');
+            strncpy(m_state.skeletonSourcePathBuffer.data(), skeleton->sourcePath.c_str(), m_state.skeletonSourcePathBuffer.size() - 1);
         } else {
-            m_skeletonSourcePathBuffer.fill('\0');
+            m_state.skeletonSourcePathBuffer.fill('\0');
         }
 
-        if (const OGLE::AnimationComponent* animation = worldManager.GetActiveWorld().GetComponent<OGLE::AnimationComponent>(m_selectedEntity)) {
-            m_animationClipBuffer.fill('\0');
-            std::strncpy(m_animationClipBuffer.data(), animation->currentClip.c_str(), m_animationClipBuffer.size() - 1);
+        if (const OGLE::AnimationComponent* animation = worldManager.GetActiveWorld().GetComponent<OGLE::AnimationComponent>(m_state.selectedEntity)) {
+            m_state.animationClipBuffer.fill('\0');
+            strncpy(m_state.animationClipBuffer.data(), animation->currentClip.c_str(), m_state.animationClipBuffer.size() - 1);
         } else {
-            m_animationClipBuffer.fill('\0');
+            m_state.animationClipBuffer.fill('\0');
         }
 
-        if (const OGLE::ScriptComponent* script = worldManager.GetActiveWorld().GetComponent<OGLE::ScriptComponent>(m_selectedEntity)) {
-            m_scriptPathBuffer.fill('\0');
-            std::strncpy(m_scriptPathBuffer.data(), script->scriptPath.c_str(), m_scriptPathBuffer.size() - 1);
+        if (const OGLE::ScriptComponent* script = worldManager.GetActiveWorld().GetComponent<OGLE::ScriptComponent>(m_state.selectedEntity)) {
+            m_state.scriptPathBuffer.fill('\0');
+            strncpy(m_state.scriptPathBuffer.data(), script->scriptPath.c_str(), m_state.scriptPathBuffer.size() - 1);
         } else {
-            m_scriptPathBuffer.fill('\0');
+            m_state.scriptPathBuffer.fill('\0');
         }
 
-        if (OGLE::MaterialComponent* materialComponent = worldManager.GetActiveWorld().GetComponent<OGLE::MaterialComponent>(m_selectedEntity)) {
-            m_textureEditingEntity = m_selectedEntity;
+        if (OGLE::MaterialComponent* materialComponent = worldManager.GetActiveWorld().GetComponent<OGLE::MaterialComponent>(m_state.selectedEntity)) {
+            m_state.textureEditingEntity = m_state.selectedEntity;
             const OGLE::Material& material = materialComponent->material;
-            m_texturePathBuffer.fill('\0');
-            m_emissiveTexturePathBuffer.fill('\0');
-            std::strncpy(m_texturePathBuffer.data(), material.GetDiffuseTexturePath().c_str(), m_texturePathBuffer.size() - 1);
-            std::strncpy(m_emissiveTexturePathBuffer.data(), material.GetEmissiveTexturePath().c_str(), m_emissiveTexturePathBuffer.size() - 1);
-            m_baseColorBuffer = material.GetBaseColor();
-            m_emissiveColorBuffer = material.GetEmissiveColor();
-            m_uvTilingBuffer = material.GetUvTiling();
-            m_uvOffsetBuffer = material.GetUvOffset();
-            m_roughnessBuffer = material.GetRoughness();
-            m_metallicBuffer = material.GetMetallic();
-            m_alphaCutoffBuffer = material.GetAlphaCutoff();
-            m_shaderProgramBuffer.fill('\0');
-            std::strncpy(m_shaderProgramBuffer.data(), material.GetShaderProgram().c_str(), m_shaderProgramBuffer.size() - 1);
+            m_state.texturePathBuffer.fill('\0');
+            m_state.emissiveTexturePathBuffer.fill('\0');
+            strncpy(m_state.texturePathBuffer.data(), material.GetDiffuseTexturePath().c_str(), m_state.texturePathBuffer.size() - 1);
+            strncpy(m_state.emissiveTexturePathBuffer.data(), material.GetEmissiveTexturePath().c_str(), m_state.emissiveTexturePathBuffer.size() - 1);
+            m_state.baseColorBuffer = material.GetBaseColor();
+            m_state.emissiveColorBuffer = material.GetEmissiveColor();
+            m_state.uvTilingBuffer = material.GetUvTiling();
+            m_state.uvOffsetBuffer = material.GetUvOffset();
+            m_state.roughnessBuffer = material.GetRoughness();
+            m_state.metallicBuffer = material.GetMetallic();
+            m_state.alphaCutoffBuffer = material.GetAlphaCutoff();
+            m_state.shaderProgramBuffer.fill('\0');
+            strncpy(m_state.shaderProgramBuffer.data(), material.GetShaderProgram().c_str(), m_state.shaderProgramBuffer.size() - 1);
         } else if (OGLE::ModelEntity* model = selectedObject.GetModel()) {
-            m_textureEditingEntity = m_selectedEntity;
+            m_state.textureEditingEntity = m_state.selectedEntity;
             const OGLE::Material& material = model->GetMaterial();
-            m_texturePathBuffer.fill('\0');
-            m_emissiveTexturePathBuffer.fill('\0');
-            std::strncpy(m_texturePathBuffer.data(), material.GetDiffuseTexturePath().c_str(), m_texturePathBuffer.size() - 1);
-            std::strncpy(m_emissiveTexturePathBuffer.data(), material.GetEmissiveTexturePath().c_str(), m_emissiveTexturePathBuffer.size() - 1);
-            m_baseColorBuffer = material.GetBaseColor();
-            m_emissiveColorBuffer = material.GetEmissiveColor();
-            m_uvTilingBuffer = material.GetUvTiling();
-            m_uvOffsetBuffer = material.GetUvOffset();
-            m_roughnessBuffer = material.GetRoughness();
-            m_metallicBuffer = material.GetMetallic();
-            m_alphaCutoffBuffer = material.GetAlphaCutoff();
-            m_shaderProgramBuffer.fill('\0');
-            std::strncpy(m_shaderProgramBuffer.data(), material.GetShaderProgram().c_str(), m_shaderProgramBuffer.size() - 1);
+            m_state.texturePathBuffer.fill('\0');
+            m_state.emissiveTexturePathBuffer.fill('\0');
+            strncpy(m_state.texturePathBuffer.data(), material.GetDiffuseTexturePath().c_str(), m_state.texturePathBuffer.size() - 1);
+            strncpy(m_state.emissiveTexturePathBuffer.data(), material.GetEmissiveTexturePath().c_str(), m_state.emissiveTexturePathBuffer.size() - 1);
+            m_state.baseColorBuffer = material.GetBaseColor();
+            m_state.emissiveColorBuffer = material.GetEmissiveColor();
+            m_state.uvTilingBuffer = material.GetUvTiling();
+            m_state.uvOffsetBuffer = material.GetUvOffset();
+            m_state.roughnessBuffer = material.GetRoughness();
+            m_state.metallicBuffer = material.GetMetallic();
+            m_state.alphaCutoffBuffer = material.GetAlphaCutoff();
+            m_state.shaderProgramBuffer.fill('\0');
+            strncpy(m_state.shaderProgramBuffer.data(), material.GetShaderProgram().c_str(), m_state.shaderProgramBuffer.size() - 1);
         } else {
-            m_textureEditingEntity = entt::null;
-            m_texturePathBuffer.fill('\0');
-            m_emissiveTexturePathBuffer.fill('\0');
-            m_shaderProgramBuffer.fill('\0');
+            m_state.textureEditingEntity = entt::null;
+            m_state.texturePathBuffer.fill('\0');
+            m_state.emissiveTexturePathBuffer.fill('\0');
+            m_state.shaderProgramBuffer.fill('\0');
         }
     }
 }
@@ -441,7 +401,7 @@ bool Editor::TrySelectObject(const ogle::Camera& camera, WorldManager& worldMana
             }
         });
 
-    m_selectedEntity = closestEntity;
+    m_state.selectedEntity = closestEntity;
     return closestEntity != entt::null;
 }
 

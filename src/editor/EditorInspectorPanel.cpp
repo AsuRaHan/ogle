@@ -1,5 +1,7 @@
 #include "editor/EditorInspectorPanel.h"
 
+#include "core/EventBus.h"
+#include "core/Events.h"
 #include <imgui.h>
 #include "ImGuizmo.h"
 #include "editor/EditorAssetHelpers.h"
@@ -52,7 +54,12 @@ void EditorInspectorPanel::Draw(EditorState& state, WorldManager& worldManager, 
     ImGui::Text("Entity: %u", static_cast<unsigned int>(entt::to_integral(state.selectedEntity)));
     ImGui::InputText("Name", state.selectedNameBuffer.data(), state.selectedNameBuffer.size());
     if (ImGui::Button("Apply Name")) {
-        selectedObject.SetName(state.selectedNameBuffer.data());
+        if (state.eventBus) {
+            state.eventBus->Dispatch(OGLE::EditorNameChangedEvent{
+                state.selectedEntity,
+                state.selectedNameBuffer.data()
+            });
+        }
     }
 
     if (worldObject) {
@@ -78,7 +85,14 @@ void EditorInspectorPanel::Draw(EditorState& state, WorldManager& worldManager, 
     transformChanged |= ImGui::DragFloat3("Rotation", glm::value_ptr(rotation), 0.5f);
     transformChanged |= ImGui::DragFloat3("Scale", glm::value_ptr(scale), 0.05f, 0.01f, 1000.0f);
     if (transformChanged) {
-        selectedObject.SetTransform(position, rotation, scale);
+        if (state.eventBus) {
+            state.eventBus->Dispatch(OGLE::EditorTransformChangedEvent{
+                state.selectedEntity,
+                position,
+                rotation,
+                scale
+            });
+        }
     }
 
     // ImGuizmo
@@ -112,7 +126,14 @@ void EditorInspectorPanel::Draw(EditorState& state, WorldManager& worldManager, 
     {
         glm::vec3 newPosition, newScale, newRotation;
         ImGuizmo::DecomposeMatrixToComponents(glm::value_ptr(modelMatrix), glm::value_ptr(newPosition), glm::value_ptr(newRotation), glm::value_ptr(newScale));
-        selectedObject.SetTransform(newPosition, newRotation, newScale);
+        if (state.eventBus) {
+            state.eventBus->Dispatch(OGLE::EditorTransformChangedEvent{
+                state.selectedEntity,
+                newPosition,
+                newRotation,
+                newScale
+            });
+        }
     }
 
 
@@ -471,10 +492,8 @@ void EditorInspectorPanel::Draw(EditorState& state, WorldManager& worldManager, 
 
     ImGui::Separator();
     if (ImGui::Button("Delete Selected")) {
-        physicsManager.RemoveBody(state.selectedEntity);
-        world.DestroyEntity(state.selectedEntity);
-        state.selectedEntity = entt::null;
-        state.bufferedEntity = entt::null;
-        state.textureEditingEntity = entt::null;
+        if (state.eventBus) {
+            state.eventBus->Dispatch(OGLE::EditorDeleteEntityEvent{ state.selectedEntity });
+        }
     }
 }

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/EventBus.h"
 #include "world/WorldComponents.h"
 
 #include <glm/vec2.hpp>
@@ -13,6 +14,7 @@ enum class EditorSimulationState {
 
 struct EditorState
 {
+    EventBus* eventBus = nullptr;
     bool initialized = false;
     bool enabled = true;
     bool showWorldWindow = true;

@@ -1,5 +1,7 @@
 #include "editor/EditorHierarchyPanel.h"
 
+#include "core/EventBus.h"
+#include "core/Events.h"
 #include "editor/EditorState.h"
 #include "managers/PhysicsManager.h"
 #include "managers/WorldManager.h"
@@ -35,8 +37,14 @@ void EditorHierarchyPanel::Draw(EditorState& state, WorldManager& worldManager, 
     });
 
     if (ImGui::Button("Add Empty")) {
-        state.selectedEntity = worldManager.CreateWorldObject("EmptyObject", OGLE::WorldObjectKind::Generic).GetEntity();
-        state.bufferedEntity = entt::null;
+        if (state.eventBus) {
+            state.eventBus->Dispatch(OGLE::EditorCreateEntityEvent{
+                OGLE::EditorCreateEntityEvent::Type::EmptyObject,
+                "EmptyObject",
+                "",
+                ""
+            });
+        }
     }
     // ImGui::SameLine();
     // if (ImGui::Button("Add Cube")) {
@@ -49,11 +57,9 @@ void EditorHierarchyPanel::Draw(EditorState& state, WorldManager& worldManager, 
         ImGui::BeginDisabled();
     }
     if (ImGui::Button("Delete")) {
-        physicsManager.RemoveBody(state.selectedEntity);
-        worldManager.GetActiveWorld().DestroyEntity(state.selectedEntity);
-        state.selectedEntity = entt::null;
-        state.bufferedEntity = entt::null;
-        state.textureEditingEntity = entt::null;
+        if (state.eventBus) {
+            state.eventBus->Dispatch(OGLE::EditorDeleteEntityEvent{ state.selectedEntity });
+        }
     }
     if (!canDelete) {
         ImGui::EndDisabled();
@@ -88,13 +94,9 @@ void EditorHierarchyPanel::Draw(EditorState& state, WorldManager& worldManager, 
 
                 if (ImGui::BeginPopupContextItem()) {
                     if (ImGui::MenuItem("Delete")) {
-                        physicsManager.RemoveBody(entity);
-                        if (entity == state.selectedEntity) {
-                            state.selectedEntity = entt::null;
-                            state.bufferedEntity = entt::null;
-                            state.textureEditingEntity = entt::null;
+                        if (state.eventBus) {
+                            state.eventBus->Dispatch(OGLE::EditorDeleteEntityEvent{ entity });
                         }
-                        worldManager.GetActiveWorld().DestroyEntity(entity);
                         ImGui::EndPopup();
                         break;
                     }
