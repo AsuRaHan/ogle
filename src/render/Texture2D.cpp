@@ -2,6 +2,7 @@
 
 #include "Logger.h"
 #include "core/FileSystem.h"
+#include "render/TextureManager.h"
 
 #include <wincodec.h>
 
@@ -13,9 +14,6 @@
 namespace OGLE {
     namespace
     {
-        std::mutex g_textureCacheMutex;
-        std::unordered_map<std::string, std::weak_ptr<Texture2D>> g_textureCache;
-
         bool EnsureComInitialized()
         {
             const HRESULT result = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
@@ -32,28 +30,16 @@ namespace OGLE {
 
     std::shared_ptr<Texture2D> Texture2D::LoadShared(const std::string& path)
     {
-        const std::string resolvedPath = FileSystem::ResolvePath(path).string();
+        return TextureManager::Get().Load(path);
+    }
 
-        {
-            std::lock_guard<std::mutex> lock(g_textureCacheMutex);
-            const auto cacheIt = g_textureCache.find(resolvedPath);
-            if (cacheIt != g_textureCache.end()) {
-                if (std::shared_ptr<Texture2D> cachedTexture = cacheIt->second.lock()) {
-                    return cachedTexture;
-                }
-            }
-        }
-
+    std::shared_ptr<Texture2D> Texture2D::LoadFromFileDirect(const std::string& path)
+    {
         std::shared_ptr<Texture2D> texture(new Texture2D());
-        if (!texture->LoadFromFile(resolvedPath)) {
+        if (!texture->LoadFromFile(path))
+        {
             return {};
         }
-
-        {
-            std::lock_guard<std::mutex> lock(g_textureCacheMutex);
-            g_textureCache[resolvedPath] = texture;
-        }
-
         return texture;
     }
 
@@ -195,6 +181,41 @@ namespace OGLE {
         texture->m_path = name;
 
         LOG_INFO("Created texture from GLuint: " + name + " (" + std::to_string(width) + "x" + std::to_string(height) + ")");
+        return texture;
+    }
+
+    std::shared_ptr<Texture2D> Texture2D::CreateFromPixels(const unsigned char* pixels, int width, int height, const std::string& name)
+    {
+        if (!pixels || width <= 0 || height <= 0)
+        {
+            LOG_ERROR("Invalid parameters for CreateFromPixels: width=" + std::to_string(width) + ", height=" + std::to_string(height));
+            return nullptr;
+        }
+
+        std::shared_ptr<Texture2D> texture(new Texture2D());
+
+        glGenTextures(1, &texture->m_textureId);
+        glBindTexture(GL_TEXTURE_2D, texture->m_textureId);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexImage2D(
+            GL_TEXTURE_2D,
+            0,
+            GL_RGBA,
+            width,
+            height,
+            0,
+            GL_RGBA,
+            GL_UNSIGNED_BYTE,
+            pixels);
+        glBindTexture(GL_TEXTURE_2D, 0);
+
+        texture->m_width = width;
+        texture->m_height = height;
+        texture->m_path = name;
+
         return texture;
     }
 }

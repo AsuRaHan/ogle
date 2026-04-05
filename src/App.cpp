@@ -168,6 +168,7 @@ int App::Run(HINSTANCE hInstance, int nCmdShow)
     m_layerStack.PushLayer(new MainApplicationLayer(*this));
     m_layerStack.PushLayer(new ExampleLayer());
 
+    OGLE::TextureManager::Get().Initialize();
     m_window->Show(nCmdShow);
     m_timeManager.Reset();
 

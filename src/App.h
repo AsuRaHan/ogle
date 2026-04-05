@@ -13,6 +13,7 @@
 #include "managers/ScriptManager.h"
 #include "managers/TimeManager.h"
 #include "managers/WorldManager.h"
+#include "render/TextureManager.h"
 #include <memory>
 #include <windows.h>
 
@@ -51,6 +52,8 @@ public:
     const ScriptManager& GetScriptManager() const { return m_scriptManager; }
     WorldManager& GetWorldManager() { return m_worldManager; }
     const WorldManager& GetWorldManager() const { return m_worldManager; }
+    OGLE::TextureManager& GetTextureManager() { return OGLE::TextureManager::Get(); }
+    const OGLE::TextureManager& GetTextureManager() const { return OGLE::TextureManager::Get(); }
 
     EventBus& GetEventBus() { return m_eventBus; }
     const EventBus& GetEventBus() const { return m_eventBus; }
