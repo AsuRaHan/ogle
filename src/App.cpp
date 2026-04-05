@@ -1,6 +1,7 @@
 #include "App.h"
 
 #include "Logger.h"
+#include "core/Events.h"
 #include "core/FileSystem.h"
 #include "core/Layer.h"
 #include "core/ExampleLayer.h"
@@ -136,11 +137,15 @@ int App::Run(HINSTANCE hInstance, int nCmdShow)
         return -1;
     }
 
-    m_physicsManager.SetCollisionCallback([this](OGLE::Entity a, OGLE::Entity b) {
+    m_physicsManager.SetCollisionCallback([this](entt::entity a, entt::entity b) {
         const auto eidA = static_cast<unsigned int>(entt::to_integral(a));
         const auto eidB = static_cast<unsigned int>(entt::to_integral(b));
         LOG_INFO("Collision detected between entities " + std::to_string(eidA) + " and " + std::to_string(eidB));
-        m_scriptManager.NotifyCollision(a, b);
+        m_eventBus.Dispatch(OGLE::CollisionEvent{a, b});
+    });
+
+    m_eventBus.Subscribe<OGLE::CollisionEvent>([this](const OGLE::CollisionEvent& e) {
+        m_scriptManager.NotifyCollision(e.entityA, e.entityB);
     });
 
     if (!m_scriptManager.Initialize(m_worldManager, m_physicsManager, "assets/scripts/internal/api_bootstrap.js")) {
@@ -162,6 +167,11 @@ int App::Run(HINSTANCE hInstance, int nCmdShow)
     m_window->Show(nCmdShow);
     m_timeManager.Reset();
 
+    // Set up event subscriptions
+    m_eventBus.Subscribe<OGLE::WindowResizeEvent>([this](const OGLE::WindowResizeEvent& e) {
+        m_renderManager.Resize(e.width, e.height, *m_window);
+    });
+
     MSG msg{};
     bool MainLoop = true;
     while (MainLoop) {
@@ -174,7 +184,7 @@ int App::Run(HINSTANCE hInstance, int nCmdShow)
             else if (msg.message == WM_SIZE) {
                 int newWidth = LOWORD(msg.lParam);
                 int newHeight = HIWORD(msg.lParam);
-                m_renderManager.Resize(newWidth, newHeight, *m_window);
+                m_eventBus.Dispatch(OGLE::WindowResizeEvent{newWidth, newHeight});
             }
         }
 

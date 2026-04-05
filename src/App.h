@@ -1,6 +1,7 @@
 #pragma once
 
 #include "config/ConfigManager.h"
+#include "core/EventBus.h"
 #include "core/LayerStack.h"
 #include "editor/Editor.h"
 #include "managers/CameraManager.h"
@@ -51,6 +52,9 @@ public:
     WorldManager& GetWorldManager() { return m_worldManager; }
     const WorldManager& GetWorldManager() const { return m_worldManager; }
 
+    EventBus& GetEventBus() { return m_eventBus; }
+    const EventBus& GetEventBus() const { return m_eventBus; }
+
     void SaveWindowState(const std::string& filePath);
 
 private:
@@ -71,4 +75,5 @@ private:
     RenderManager m_renderManager;
     ScriptManager m_scriptManager;
     WorldManager m_worldManager;
+    EventBus m_eventBus;
 };

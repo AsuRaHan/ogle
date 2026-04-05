@@ -35,10 +35,24 @@ float ComputeShadowFactor(vec4 lightSpacePosition, vec3 normal, vec3 lightDirect
         return 0.0;
     }
 
-    float closestDepth = texture(uShadowMap, projected.xy).r;
     float currentDepth = projected.z;
     float bias = max(0.0008, 0.0035 * (1.0 - max(dot(normal, lightDirection), 0.0)));
-    return currentDepth - bias > closestDepth ? 1.0 : 0.0;
+
+    // --- PCF (Percentage-Closer Filtering) ---
+    // Sample the shadow map in a 3x3 grid around the current texel.
+    // This smooths shadow edges by averaging 9 depth comparisons.
+    float shadow = 0.0;
+    vec2 texelSize = 1.0 / vec2(textureSize(uShadowMap, 0));
+
+    for (int x = -1; x <= 1; x++) {
+        for (int y = -1; y <= 1; y++) {
+            float closestDepth = texture(uShadowMap, projected.xy + vec2(x, y) * texelSize).r;
+            shadow += currentDepth - bias > closestDepth ? 1.0 : 0.0;
+        }
+    }
+    shadow /= 9.0;
+
+    return shadow;
 }
 
 void main() {
