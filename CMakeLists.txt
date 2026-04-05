@@ -147,6 +147,7 @@ FetchContent_Declare(
     glm
     GIT_REPOSITORY https://github.com/g-truc/glm.git
     GIT_TAG master
+    GIT_PROGRESS   TRUE
 )
 FetchContent_MakeAvailable(glm)
 
@@ -162,11 +163,21 @@ if(NOT duktape_POPULATED)
     add_library(duktape STATIC ${duktape_SOURCE_DIR}/src/duktape.c)
     target_include_directories(duktape PUBLIC ${duktape_SOURCE_DIR}/src)
 endif()
+
+FetchContent_Declare(
+    dukglue
+    URL https://github.com/Aloshi/dukglue.git
+    GIT_TAG master
+    GIT_PROGRESS   TRUE
+)
+FetchContent_GetProperties(dukglue)
+
 # Подключаем библиотеки assimp nlohmann/json и OpenMesh 
 FetchContent_Declare(
     assimp
     GIT_REPOSITORY https://github.com/assimp/assimp.git
     GIT_TAG master
+    GIT_PROGRESS   TRUE
 )
 FetchContent_MakeAvailable(assimp)
 
@@ -174,6 +185,7 @@ FetchContent_Declare(
     openmesh
     GIT_REPOSITORY https://www.graphics.rwth-aachen.de:9000/OpenMesh/OpenMesh.git
     GIT_TAG master
+    GIT_PROGRESS   TRUE
 )
 FetchContent_MakeAvailable(openmesh)
 
@@ -189,6 +201,7 @@ FetchContent_Declare(
     nlohmann_json
     GIT_REPOSITORY https://github.com/nlohmann/json.git
     GIT_TAG develop
+    GIT_PROGRESS   TRUE
 )
 FetchContent_MakeAvailable(nlohmann_json)
 
@@ -222,6 +235,7 @@ FetchContent_Declare(
     imguizmo
     GIT_REPOSITORY https://github.com/CedricGuillemet/ImGuizmo.git
     GIT_TAG master
+    GIT_PROGRESS   TRUE
 )
 FetchContent_GetProperties(imguizmo)
 if(NOT imguizmo_POPULATED)
@@ -247,7 +261,7 @@ set(INSTALL_LIBS OFF CACHE BOOL "" FORCE)
 FetchContent_Declare(
     bullet
     GIT_REPOSITORY https://github.com/bulletphysics/bullet3.git
-    GIT_TAG 3.25
+    GIT_TAG master
     GIT_PROGRESS TRUE
 )
 FetchContent_MakeAvailable(bullet)
