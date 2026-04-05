@@ -263,7 +263,10 @@ void Editor::BuildUi(
 
                     if (entity != entt::null) {
                         const glm::vec3 spawnPosition = camera.GetPosition() + camera.GetFront() * 5.0f;
-                        worldManager.SetEntityPosition(entity, spawnPosition);
+                        auto& world = worldManager.GetActiveWorld();
+                        if (auto* transform = world.GetComponent<OGLE::TransformComponent>(entity)) {
+                            world.SetTransform(entity, spawnPosition, transform->rotation, transform->scale);
+                        }
                         m_selectedEntity = entity;
                         m_bufferedEntity = entt::null;
                         m_textureEditingEntity = entt::null;
@@ -325,35 +328,35 @@ void Editor::SyncSelectedBuffers(WorldManager& worldManager)
         m_selectedNameBuffer.fill('\0');
         std::strncpy(m_selectedNameBuffer.data(), selectedObject.GetName().c_str(), m_selectedNameBuffer.size() - 1);
 
-        if (const OGLE::PrimitiveComponent* primitive = worldManager.GetActiveWorld().GetPrimitive(m_selectedEntity)) {
+        if (const OGLE::PrimitiveComponent* primitive = worldManager.GetActiveWorld().GetComponent<OGLE::PrimitiveComponent>(m_selectedEntity)) {
             m_primitiveSourcePathBuffer.fill('\0');
             std::strncpy(m_primitiveSourcePathBuffer.data(), primitive->sourcePath.c_str(), m_primitiveSourcePathBuffer.size() - 1);
         } else {
             m_primitiveSourcePathBuffer.fill('\0');
         }
 
-        if (const OGLE::SkeletonComponent* skeleton = worldManager.GetActiveWorld().GetSkeleton(m_selectedEntity)) {
+        if (const OGLE::SkeletonComponent* skeleton = worldManager.GetActiveWorld().GetComponent<OGLE::SkeletonComponent>(m_selectedEntity)) {
             m_skeletonSourcePathBuffer.fill('\0');
             std::strncpy(m_skeletonSourcePathBuffer.data(), skeleton->sourcePath.c_str(), m_skeletonSourcePathBuffer.size() - 1);
         } else {
             m_skeletonSourcePathBuffer.fill('\0');
         }
 
-        if (const OGLE::AnimationComponent* animation = worldManager.GetActiveWorld().GetAnimation(m_selectedEntity)) {
+        if (const OGLE::AnimationComponent* animation = worldManager.GetActiveWorld().GetComponent<OGLE::AnimationComponent>(m_selectedEntity)) {
             m_animationClipBuffer.fill('\0');
             std::strncpy(m_animationClipBuffer.data(), animation->currentClip.c_str(), m_animationClipBuffer.size() - 1);
         } else {
             m_animationClipBuffer.fill('\0');
         }
 
-        if (const OGLE::ScriptComponent* script = worldManager.GetActiveWorld().GetScript(m_selectedEntity)) {
+        if (const OGLE::ScriptComponent* script = worldManager.GetActiveWorld().GetComponent<OGLE::ScriptComponent>(m_selectedEntity)) {
             m_scriptPathBuffer.fill('\0');
             std::strncpy(m_scriptPathBuffer.data(), script->scriptPath.c_str(), m_scriptPathBuffer.size() - 1);
         } else {
             m_scriptPathBuffer.fill('\0');
         }
 
-        if (OGLE::MaterialComponent* materialComponent = worldManager.GetActiveWorld().GetMaterial(m_selectedEntity)) {
+        if (OGLE::MaterialComponent* materialComponent = worldManager.GetActiveWorld().GetComponent<OGLE::MaterialComponent>(m_selectedEntity)) {
             m_textureEditingEntity = m_selectedEntity;
             const OGLE::Material& material = materialComponent->material;
             m_texturePathBuffer.fill('\0');

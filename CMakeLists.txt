@@ -141,6 +141,14 @@ add_executable(${PROJECT_NAME} WIN32
     src/world/WorldComponents.h
     src/world/WorldObject.cpp
     src/world/WorldObject.h
+    src/world/SceneSerializer.cpp
+    src/world/SceneSerializer.h
+    src/world/systems/AnimationSystem.cpp
+    src/world/systems/AnimationSystem.h
+    src/world/systems/RenderSystem.cpp
+    src/world/systems/RenderSystem.h
+    src/world/systems/TransformSystem.cpp
+    src/world/systems/TransformSystem.h
 )
 
 include(FetchContent)

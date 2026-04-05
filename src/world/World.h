@@ -6,6 +6,12 @@
 #include "../models/ModelEntity.h"
 
 namespace OGLE {
+    class SceneSerializer;
+    class TransformSystem;
+    class AnimationSystem;
+    class RenderSystem;
+
+
     class World {
     public:
         World();
@@ -28,10 +34,10 @@ namespace OGLE {
             ModelType type = ModelType::DYNAMIC,
             const std::string& name = "Model");
 
-        void Update(float deltaTime);
-        void Draw();
         void Clear();
 
+        void Update(float deltaTime);
+        void Draw();
         void Save(const std::string& path);
         void Load(const std::string& path);
 
@@ -40,10 +46,22 @@ namespace OGLE {
         bool IsValid(Entity entity) const;
         bool HasModel(Entity entity) const;
 
-        WorldObjectComponent* GetWorldObjectComponent(Entity entity);
-        const WorldObjectComponent* GetWorldObjectComponent(Entity entity) const;
-        NameComponent* GetNameComponent(Entity entity);
-        const NameComponent* GetNameComponent(Entity entity) const;
+        template<typename T>
+        T* GetComponent(Entity entity) {
+            if (!IsValid(entity) || !m_registry.all_of<T>(entity)) {
+                return nullptr;
+            }
+            return &m_registry.get<T>(entity);
+        }
+
+        template<typename T>
+        const T* GetComponent(Entity entity) const {
+            if (!IsValid(entity) || !m_registry.all_of<T>(entity)) {
+                return nullptr;
+            }
+            return &m_registry.get<T>(entity);
+        }
+
         void SetName(Entity entity, const std::string& name);
 
         ModelEntity* GetModel(Entity entity);
@@ -51,22 +69,20 @@ namespace OGLE {
 
         TransformComponent* GetTransform(Entity entity);
         const TransformComponent* GetTransform(Entity entity) const;
-        PrimitiveComponent* GetPrimitive(Entity entity);
-        const PrimitiveComponent* GetPrimitive(Entity entity) const;
-        MaterialComponent* GetMaterial(Entity entity);
-        const MaterialComponent* GetMaterial(Entity entity) const;
-        LightComponent* GetLight(Entity entity);
-        const LightComponent* GetLight(Entity entity) const;
-        ShaderComponent* GetShader(Entity entity);
-        const ShaderComponent* GetShader(Entity entity) const;
-        SkeletonComponent* GetSkeleton(Entity entity);
-        const SkeletonComponent* GetSkeleton(Entity entity) const;
-        AnimationComponent* GetAnimation(Entity entity);
-        const AnimationComponent* GetAnimation(Entity entity) const;
-        ScriptComponent* GetScript(Entity entity);
-        const ScriptComponent* GetScript(Entity entity) const;
+
         PhysicsBodyComponent* GetPhysicsBody(Entity entity);
         const PhysicsBodyComponent* GetPhysicsBody(Entity entity) const;
+
+        MaterialComponent* GetMaterial(Entity entity);
+        const MaterialComponent* GetMaterial(Entity entity) const;
+
+        ShaderComponent* GetShader(Entity entity);
+        const ShaderComponent* GetShader(Entity entity) const;
+
+        PrimitiveComponent* GetPrimitive(Entity entity);
+        const PrimitiveComponent* GetPrimitive(Entity entity) const;
+
+        void SyncModelTransform(Entity entity);
 
         void SetTransform(
             Entity entity,
@@ -78,9 +94,15 @@ namespace OGLE {
         const entt::registry& GetRegistry() const { return m_registry; }
 
     private:
-        void SyncModelTransform(Entity entity);
+        friend class SceneSerializer;
 
         entt::registry m_registry;
+        // Ускоряет поиск сущностей по имени. Заполняется при создании/загрузке/переименовании.
         std::unordered_map<std::string, Entity> m_nameToEntityMap;
+
+        std::unique_ptr<SceneSerializer> m_serializer;
+        std::unique_ptr<TransformSystem> m_transformSystem;
+        std::unique_ptr<AnimationSystem> m_animationSystem;
+        std::unique_ptr<RenderSystem> m_renderSystem;
     };
 }

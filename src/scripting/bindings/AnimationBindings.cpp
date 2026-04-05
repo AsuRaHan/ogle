@@ -12,7 +12,7 @@ namespace OGLE
         {
             ns.add_function("createAnimationAsset", [&](const std::string& name, Entity entity) {
                 auto& world = worldAccess.GetActiveWorld();
-                if (AnimationComponent* animComp = world.GetAnimation(entity)) {
+                if (AnimationComponent* animComp = world.GetComponent<AnimationComponent>(entity)) {
                     return AnimationLibrary::Instance().AddAnimation(name, *animComp);
                 }
                 return false;
@@ -25,7 +25,7 @@ namespace OGLE
                     return false;
                 }
 
-                if (AnimationComponent* animationComp = world.GetAnimation(entity)) {
+                if (AnimationComponent* animationComp = world.GetComponent<AnimationComponent>(entity)) {
                     *animationComp = *asset;
                 } else {
                     world.GetRegistry().emplace<AnimationComponent>(entity, *asset);

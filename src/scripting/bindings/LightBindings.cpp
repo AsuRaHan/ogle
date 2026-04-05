@@ -6,7 +6,7 @@ duk_ret_t JsSetIntensity(duk_context* context)
 {
     if (auto* world = GetWorld(context)) {
         const auto entity = ToEntity(duk_require_uint(context, 0));
-        if (auto* light = world->GetLight(entity)) {
+        if (auto* light = world->GetComponent<LightComponent>(entity)) {
             light->intensity = (float)duk_require_number(context, 1);
         }
     }

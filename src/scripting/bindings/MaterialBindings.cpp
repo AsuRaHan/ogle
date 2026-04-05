@@ -4,7 +4,7 @@ namespace OGLE { namespace ScriptBindings {
 
 Material* GetMutableMaterial(World& world, Entity entity)
 {
-    if (auto* matComp = world.GetMaterial(entity)) {
+    if (auto* matComp = world.GetComponent<MaterialComponent>(entity)) {
         return &matComp->material;
     }
     if (auto* model = world.GetModel(entity)) {

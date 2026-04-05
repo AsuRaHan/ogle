@@ -43,7 +43,7 @@ void EditorInspectorPanel::Draw(EditorState& state, WorldManager& worldManager, 
 
     auto selectedObject = worldManager.GetWorldObject(state.selectedEntity);
     OGLE::World& world = worldManager.GetActiveWorld();
-    OGLE::WorldObjectComponent* worldObject = world.GetWorldObjectComponent(state.selectedEntity);
+    OGLE::WorldObjectComponent* worldObject = world.GetComponent<OGLE::WorldObjectComponent>(state.selectedEntity);
     OGLE::TransformComponent currentTransform = selectedObject.GetTransform();
     glm::vec3 position = currentTransform.position;
     glm::vec3 rotation = currentTransform.rotation;
@@ -116,7 +116,7 @@ void EditorInspectorPanel::Draw(EditorState& state, WorldManager& worldManager, 
     }
 
 
-    if (OGLE::PrimitiveComponent* primitive = world.GetPrimitive(state.selectedEntity)) {
+    if (OGLE::PrimitiveComponent* primitive = world.GetComponent<OGLE::PrimitiveComponent>(state.selectedEntity)) {
         if (ImGui::CollapsingHeader("Primitive", ImGuiTreeNodeFlags_DefaultOpen)) {
             ImGui::TextWrapped("Type: %s", GetPrimitiveTypeLabel(primitive->type));
             ImGui::InputText("Source Path", state.primitiveSourcePathBuffer.data(), state.primitiveSourcePathBuffer.size());
@@ -134,7 +134,7 @@ void EditorInspectorPanel::Draw(EditorState& state, WorldManager& worldManager, 
         }
     }
 
-    if (OGLE::MaterialComponent* materialComponent = world.GetMaterial(state.selectedEntity)) {
+    if (OGLE::MaterialComponent* materialComponent = world.GetComponent<OGLE::MaterialComponent>(state.selectedEntity)) {
         if (ImGui::CollapsingHeader("Material", ImGuiTreeNodeFlags_DefaultOpen)) {
             // The editable material lives in MaterialComponent so the inspector can treat it as a standalone primitive.
             ImGui::ColorEdit3("Base Color", glm::value_ptr(state.baseColorBuffer));
@@ -190,7 +190,7 @@ void EditorInspectorPanel::Draw(EditorState& state, WorldManager& worldManager, 
                 }
 
                 // RHS: if scene has shader component, sync too
-                OGLE::ShaderComponent* shaderComp = world.GetShader(state.selectedEntity);
+                OGLE::ShaderComponent* shaderComp = world.GetComponent<OGLE::ShaderComponent>(state.selectedEntity);
                 if (!shaderComp) {
                     world.GetRegistry().emplace<OGLE::ShaderComponent>(state.selectedEntity, OGLE::ShaderComponent{std::string(state.shaderProgramBuffer.data())});
                 } else {
@@ -240,7 +240,7 @@ void EditorInspectorPanel::Draw(EditorState& state, WorldManager& worldManager, 
         }
     }
 
-    if (OGLE::LightComponent* light = world.GetLight(state.selectedEntity)) {
+    if (OGLE::LightComponent* light = world.GetComponent<OGLE::LightComponent>(state.selectedEntity)) {
         if (ImGui::CollapsingHeader("Light", ImGuiTreeNodeFlags_DefaultOpen)) {
             int lightType = light->type == OGLE::LightType::Directional ? 0 : 1;
             const char* lightTypeLabels[] = { "Directional", "Point" };
@@ -273,7 +273,7 @@ void EditorInspectorPanel::Draw(EditorState& state, WorldManager& worldManager, 
         }
     }
 
-    OGLE::PhysicsBodyComponent* physicsBody = world.GetPhysicsBody(state.selectedEntity);
+    OGLE::PhysicsBodyComponent* physicsBody = world.GetComponent<OGLE::PhysicsBodyComponent>(state.selectedEntity);
     if (physicsBody) {
         if (ImGui::CollapsingHeader("Physics", ImGuiTreeNodeFlags_DefaultOpen)) {
             int bodyType = static_cast<int>(physicsBody->type);
@@ -338,7 +338,7 @@ void EditorInspectorPanel::Draw(EditorState& state, WorldManager& worldManager, 
         }
     }
 
-    if (OGLE::SkeletonComponent* skeleton = world.GetSkeleton(state.selectedEntity)) {
+    if (OGLE::SkeletonComponent* skeleton = world.GetComponent<OGLE::SkeletonComponent>(state.selectedEntity)) {
         if (ImGui::CollapsingHeader("Skeleton", ImGuiTreeNodeFlags_DefaultOpen)) {
             ImGui::Checkbox("Skeleton Enabled", &skeleton->enabled);
             ImGui::InputInt("Bone Count", &skeleton->boneCount);
@@ -358,7 +358,7 @@ void EditorInspectorPanel::Draw(EditorState& state, WorldManager& worldManager, 
         }
     }
 
-    if (OGLE::AnimationComponent* animation = world.GetAnimation(state.selectedEntity)) {
+    if (OGLE::AnimationComponent* animation = world.GetComponent<OGLE::AnimationComponent>(state.selectedEntity)) {
         if (ImGui::CollapsingHeader("Animation", ImGuiTreeNodeFlags_DefaultOpen)) {
             ImGui::Checkbox("Animation Enabled", &animation->enabled);
             ImGui::Checkbox("Playing", &animation->playing);
@@ -405,7 +405,7 @@ void EditorInspectorPanel::Draw(EditorState& state, WorldManager& worldManager, 
         }
     }
 
-    if (OGLE::ScriptComponent* script = world.GetScript(state.selectedEntity)) {
+    if (OGLE::ScriptComponent* script = world.GetComponent<OGLE::ScriptComponent>(state.selectedEntity)) {
         if (ImGui::CollapsingHeader("Script", ImGuiTreeNodeFlags_DefaultOpen)) {
             ImGui::Checkbox("Script Enabled", &script->enabled);
             ImGui::Checkbox("Auto Start", &script->autoStart);
@@ -425,20 +425,20 @@ void EditorInspectorPanel::Draw(EditorState& state, WorldManager& worldManager, 
     if (ImGui::CollapsingHeader("Add Components", ImGuiTreeNodeFlags_DefaultOpen)) {
         ImGui::TextDisabled("Build entities from small editable primitives.");
 
-        if (!world.GetMaterial(state.selectedEntity)) {
+        if (!world.GetComponent<OGLE::MaterialComponent>(state.selectedEntity)) {
             if (ImGui::Button("Add Material")) {
                 world.GetRegistry().emplace<OGLE::MaterialComponent>(state.selectedEntity);
                 state.bufferedEntity = entt::null;
             }
         }
 
-        if (!world.GetPhysicsBody(state.selectedEntity)) {
+        if (!world.GetComponent<OGLE::PhysicsBodyComponent>(state.selectedEntity)) {
             if (ImGui::Button("Add Physics")) {
                 world.GetRegistry().emplace<OGLE::PhysicsBodyComponent>(state.selectedEntity);
             }
         }
 
-        if (!world.GetLight(state.selectedEntity)) {
+        if (!world.GetComponent<OGLE::LightComponent>(state.selectedEntity)) {
             if (ImGui::Button("Add Light")) {
                 world.GetRegistry().emplace<OGLE::LightComponent>(state.selectedEntity);
                 if (worldObject) {
@@ -447,21 +447,21 @@ void EditorInspectorPanel::Draw(EditorState& state, WorldManager& worldManager, 
             }
         }
 
-        if (!world.GetSkeleton(state.selectedEntity)) {
+        if (!world.GetComponent<OGLE::SkeletonComponent>(state.selectedEntity)) {
             if (ImGui::Button("Add Skeleton")) {
                 world.GetRegistry().emplace<OGLE::SkeletonComponent>(state.selectedEntity);
                 state.bufferedEntity = entt::null;
             }
         }
 
-        if (!world.GetAnimation(state.selectedEntity)) {
+        if (!world.GetComponent<OGLE::AnimationComponent>(state.selectedEntity)) {
             if (ImGui::Button("Add Animation")) {
                 world.GetRegistry().emplace<OGLE::AnimationComponent>(state.selectedEntity);
                 state.bufferedEntity = entt::null;
             }
         }
 
-        if (!world.GetScript(state.selectedEntity)) {
+        if (!world.GetComponent<OGLE::ScriptComponent>(state.selectedEntity)) {
             if (ImGui::Button("Add Script")) {
                 world.GetRegistry().emplace<OGLE::ScriptComponent>(state.selectedEntity);
                 state.bufferedEntity = entt::null;

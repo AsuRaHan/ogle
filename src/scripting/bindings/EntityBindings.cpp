@@ -21,7 +21,7 @@ duk_ret_t JsEntityExists(duk_context* context)
 duk_ret_t JsGetPosition(duk_context* context)
 {
     if (auto* world = GetWorld(context)) {
-        if (const auto* transform = world->GetTransform(ToEntity(duk_require_uint(context, 0)))) {
+        if (const auto* transform = world->GetComponent<TransformComponent>(ToEntity(duk_require_uint(context, 0)))) {
             PushVec3(context, transform->position);
             return 1;
         }
@@ -34,12 +34,14 @@ duk_ret_t JsSetPosition(duk_context* context)
 {
     if (auto* world = GetWorld(context)) {
         const auto entity = ToEntity(duk_require_uint(context, 0));
-        if (duk_is_object(context, 1)) {
-            glm::vec3 pos;
-            duk_get_prop_string(context, 1, "x"); pos.x = (float)duk_get_number(context, -1); duk_pop(context);
-            duk_get_prop_string(context, 1, "y"); pos.y = (float)duk_get_number(context, -1); duk_pop(context);
-            duk_get_prop_string(context, 1, "z"); pos.z = (float)duk_get_number(context, -1); duk_pop(context);
-            // world->SetEntityPosition(entity, pos);
+        if (auto* transform = world->GetComponent<TransformComponent>(entity)) {
+            if (duk_is_object(context, 1)) {
+                glm::vec3 pos;
+                duk_get_prop_string(context, 1, "x"); pos.x = (float)duk_get_number(context, -1); duk_pop(context);
+                duk_get_prop_string(context, 1, "y"); pos.y = (float)duk_get_number(context, -1); duk_pop(context);
+                duk_get_prop_string(context, 1, "z"); pos.z = (float)duk_get_number(context, -1); duk_pop(context);
+                world->SetTransform(entity, pos, transform->rotation, transform->scale);
+            }
         }
     }
     return 0;
@@ -48,7 +50,7 @@ duk_ret_t JsSetPosition(duk_context* context)
 duk_ret_t JsGetRotation(duk_context* context)
 {
     if (auto* world = GetWorld(context)) {
-        if (const auto* transform = world->GetTransform(ToEntity(duk_require_uint(context, 0)))) {
+        if (const auto* transform = world->GetComponent<TransformComponent>(ToEntity(duk_require_uint(context, 0)))) {
             PushVec3(context, transform->rotation);
             return 1;
         }
@@ -61,12 +63,14 @@ duk_ret_t JsSetRotation(duk_context* context)
 {
     if (auto* world = GetWorld(context)) {
         const auto entity = ToEntity(duk_require_uint(context, 0));
-        if (duk_is_object(context, 1)) {
-            glm::vec3 rot;
-            duk_get_prop_string(context, 1, "x"); rot.x = (float)duk_get_number(context, -1); duk_pop(context);
-            duk_get_prop_string(context, 1, "y"); rot.y = (float)duk_get_number(context, -1); duk_pop(context);
-            duk_get_prop_string(context, 1, "z"); rot.z = (float)duk_get_number(context, -1); duk_pop(context);
-            // world->SetEntityRotation(entity, rot);
+        if (auto* transform = world->GetComponent<TransformComponent>(entity)) {
+            if (duk_is_object(context, 1)) {
+                glm::vec3 rot;
+                duk_get_prop_string(context, 1, "x"); rot.x = (float)duk_get_number(context, -1); duk_pop(context);
+                duk_get_prop_string(context, 1, "y"); rot.y = (float)duk_get_number(context, -1); duk_pop(context);
+                duk_get_prop_string(context, 1, "z"); rot.z = (float)duk_get_number(context, -1); duk_pop(context);
+                world->SetTransform(entity, transform->position, rot, transform->scale);
+            }
         }
     }
     return 0;
@@ -75,7 +79,7 @@ duk_ret_t JsSetRotation(duk_context* context)
 duk_ret_t JsGetName(duk_context* context)
 {
     if (auto* world = GetWorld(context)) {
-        if (const auto* name = world->GetNameComponent(ToEntity(duk_require_uint(context, 0)))) {
+        if (const auto* name = world->GetComponent<NameComponent>(ToEntity(duk_require_uint(context, 0)))) {
             duk_push_string(context, name->value.c_str());
             return 1;
         }

@@ -16,12 +16,12 @@ void EditorAnimationPanel::Draw(EditorState& state, WorldManager& worldManager)
 
     ImGui::Text("Entity: %u", static_cast<unsigned int>(entt::to_integral(state.selectedEntity)));
 
-    OGLE::AnimationComponent* animation = world.GetAnimation(state.selectedEntity);
+    OGLE::AnimationComponent* animation = world.GetComponent<OGLE::AnimationComponent>(state.selectedEntity);
     if (!animation) {
         ImGui::TextDisabled("No animation component.");
         if (ImGui::Button("Add Animation Component")) {
             world.GetRegistry().emplace<OGLE::AnimationComponent>(state.selectedEntity);
-            animation = world.GetAnimation(state.selectedEntity);
+            animation = world.GetComponent<OGLE::AnimationComponent>(state.selectedEntity);
         }
         return;
     }

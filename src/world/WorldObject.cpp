@@ -16,13 +16,13 @@ namespace OGLE {
 
     WorldObjectKind WorldObject::GetKind() const
     {
-        const WorldObjectComponent* object = m_world ? m_world->GetWorldObjectComponent(m_entity) : nullptr;
+        const WorldObjectComponent* object = m_world ? m_world->GetComponent<WorldObjectComponent>(m_entity) : nullptr;
         return object ? object->kind : WorldObjectKind::Generic;
     }
 
     std::string WorldObject::GetName() const
     {
-        const NameComponent* name = m_world ? m_world->GetNameComponent(m_entity) : nullptr;
+        const NameComponent* name = m_world ? m_world->GetComponent<NameComponent>(m_entity) : nullptr;
         return name ? name->value : std::string{};
     }
 
@@ -35,7 +35,7 @@ namespace OGLE {
 
     TransformComponent WorldObject::GetTransform() const
     {
-        const TransformComponent* transform = m_world ? m_world->GetTransform(m_entity) : nullptr;
+        const TransformComponent* transform = m_world ? m_world->GetComponent<TransformComponent>(m_entity) : nullptr;
         return transform ? *transform : TransformComponent{};
     }
 
