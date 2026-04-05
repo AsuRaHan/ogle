@@ -1,64 +1,83 @@
 #include "scripting/ScriptBindings.h"
 #include "scripting/ScriptEngine.h"
+#include "scripting/ScriptApi.h"
 #include "scripting/Player.h"
 #include "Logger.h"
-#include "scripting/bindings/Common.h"
-#include "scripting/bindings/LogBindings.h"
-#include "scripting/bindings/WorldBindings.h"
-#include "scripting/bindings/EntityBindings.h"
-#include "scripting/bindings/MaterialBindings.h"
-#include "scripting/bindings/LightBindings.h"
-#include "scripting/bindings/PhysicsBindings.h"
+#include <dukglue/dukglue.h>
 
 namespace OGLE
 {
     namespace ScriptBindings
     {
-        static void JsLog(const std::string& message)
-        {
-            LOG_INFO(message);
-        }
-
         void Register(ScriptEngine& engine, IWorldAccess& worldAccess, PhysicsManager& physicsManager)
         {
             duk_context* ctx = engine.GetContext();
 
-            duk_push_global_stash(ctx);
-            duk_push_pointer(ctx, &worldAccess);
-            duk_put_prop_string(ctx, -2, kWorldAccessPtr);
-            duk_push_pointer(ctx, &physicsManager);
-            duk_put_prop_string(ctx, -2, kPhysicsManagerPtr);
-            duk_pop(ctx);
+            static WorldApi worldApi(&worldAccess);
+            static EntityApi entityApi(&worldAccess);
+            static PhysicsApi physicsApi(&physicsManager, &worldAccess);
+            static InputApi inputApi;
+            static LogApi logApi;
 
-            engine.RegisterFunction("log", &JsLog);
-            engine.RegisterConstructor<Player, int>("Player");
-            engine.RegisterMethod<Player>("getHP", &Player::GetHP);
-            engine.RegisterMethod<Player>("takeDamage", &Player::TakeDamage);
+            dukglue_register_constructor<OGLE::Player, int>(ctx, "Player");
+            dukglue_register_method<OGLE::Player>(ctx, &OGLE::Player::GetHP, "getHP");
+            dukglue_register_method<OGLE::Player>(ctx, &OGLE::Player::TakeDamage, "takeDamage");
+
+            dukglue_register_method(ctx, &WorldApi::clear, "clear");
+            dukglue_register_method(ctx, &WorldApi::createCube, "createCube");
+            dukglue_register_method(ctx, &WorldApi::createSphere, "createSphere");
+            dukglue_register_method(ctx, &WorldApi::createDirectionalLight, "createDirectionalLight");
+            dukglue_register_method(ctx, &WorldApi::createPointLight, "createPointLight");
+
+            dukglue_register_method(ctx, &EntityApi::exists, "exists");
+            dukglue_register_method(ctx, &EntityApi::getPosition, "getPosition");
+            dukglue_register_method(ctx, &EntityApi::setPosition, "setPosition");
+            dukglue_register_method(ctx, &EntityApi::getRotation, "getRotation");
+            dukglue_register_method(ctx, &EntityApi::setRotation, "setRotation");
+            dukglue_register_method(ctx, &EntityApi::getName, "getName");
+
+            dukglue_register_method(ctx, &PhysicsApi::addBox, "addBox");
+
+            dukglue_register_method(ctx, &InputApi::isKeyDown, "isKeyDown");
+            dukglue_register_method(ctx, &InputApi::isKeyPressed, "isKeyPressed");
+            dukglue_register_method(ctx, &InputApi::isKeyReleased, "isKeyReleased");
+            dukglue_register_method(ctx, &InputApi::getMousePosition, "getMousePosition");
+            dukglue_register_method(ctx, &InputApi::getMouseDelta, "getMouseDelta");
+            dukglue_register_method(ctx, &InputApi::getMouseWheelDelta, "getMouseWheelDelta");
+            dukglue_register_method(ctx, &InputApi::isMouseButtonDown, "isMouseButtonDown");
+            dukglue_register_method(ctx, &InputApi::isMouseButtonPressed, "isMouseButtonPressed");
+            dukglue_register_method(ctx, &InputApi::isMouseButtonReleased, "isMouseButtonReleased");
+            dukglue_register_method(ctx, &InputApi::isGamepadConnected, "isGamepadConnected");
+            dukglue_register_method(ctx, &InputApi::isGamepadButtonDown, "isGamepadButtonDown");
+            dukglue_register_method(ctx, &InputApi::getGamepadAxis, "getGamepadAxis");
+            dukglue_register_method(ctx, &InputApi::getAxis, "getAxis");
+            dukglue_register_method(ctx, &InputApi::getAxisRaw, "getAxisRaw");
+            dukglue_register_method(ctx, &InputApi::getCurrentContext, "getCurrentContext");
+
+            dukglue_register_method(ctx, &LogApi::log, "log");
+
+            dukglue_register_global(ctx, &worldApi, "world");
+            dukglue_register_global(ctx, &entityApi, "entity");
+            dukglue_register_global(ctx, &physicsApi, "physics");
+            dukglue_register_global(ctx, &inputApi, "input");
+            dukglue_register_global(ctx, &logApi, "log");
 
             duk_push_global_object(ctx);
-            duk_idx_t ogle_obj_idx = duk_push_object(ctx);
-
-            auto create_module = [&](const char* name, auto registrationFunc) {
-                duk_idx_t module_idx = duk_push_object(ctx);
-                auto bindNative = [ctx, module_idx](const char* func_name, duk_c_function func, duk_idx_t nargs) {
-                    duk_push_c_function(ctx, func, nargs);
-                    duk_put_prop_string(ctx, module_idx, func_name);
-                };
-                registrationFunc(ctx, bindNative);
-                duk_put_prop_string(ctx, ogle_obj_idx, name);
-            };
-
-            create_module("world", RegisterWorldBindings);
-            create_module("entity", RegisterEntityBindings);
-            create_module("material", RegisterMaterialBindings);
-            create_module("light", RegisterLightBindings);
-            create_module("physics", RegisterPhysicsBindings);
-            RegisterLogBindings(ctx, [ctx, ogle_obj_idx](const char* func_name, duk_c_function func, duk_idx_t nargs) {
-                duk_push_c_function(ctx, func, nargs);
-                duk_put_prop_string(ctx, ogle_obj_idx, func_name);
-            });
-
-            duk_put_global_string(ctx, "ogle");
+            duk_push_object(ctx);
+            duk_get_prop_string(ctx, -2, "world");
+            duk_put_prop_string(ctx, -2, "world");
+            duk_get_prop_string(ctx, -2, "entity");
+            duk_put_prop_string(ctx, -2, "entity");
+            duk_get_prop_string(ctx, -2, "physics");
+            duk_put_prop_string(ctx, -2, "physics");
+            duk_get_prop_string(ctx, -2, "input");
+            duk_put_prop_string(ctx, -2, "input");
+            duk_get_prop_string(ctx, -2, "log");
+            duk_put_prop_string(ctx, -2, "log");
+            duk_get_prop_string(ctx, -2, "Player");
+            duk_put_prop_string(ctx, -2, "Player");
+            duk_put_prop_string(ctx, -2, "ogle");
+            duk_pop(ctx);
         }
     }
 }

@@ -193,10 +193,18 @@ Dependencies are pulled through `CMake FetchContent`.
 - `OpenMesh`
 - `EnTT`
 - `nlohmann/json`
-- `Duktape`
+- `Duktape` with dukglue-based C++ bindings
 - `Dear ImGui`
 - `Bullet Physics`
 - `Windows Imaging Component (WIC)` for texture loading
+- Project documentation is available in `docs/`
+
+## Documentation
+
+The project documentation is stored in `docs/`.
+
+- `docs/README.md` — documentation index
+- `docs/js.md` — current JavaScript scripting API documentation
 
 ## Build
 

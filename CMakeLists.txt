@@ -116,6 +116,8 @@ add_executable(${PROJECT_NAME} WIN32
 
     src/scripting/ScriptBindings.cpp
     src/scripting/ScriptBindings.h
+    src/scripting/ScriptApi.cpp
+    src/scripting/ScriptApi.h
     src/scripting/ScriptEngine.cpp
     src/scripting/ScriptEngine.h
     src/scripting/Player.cpp

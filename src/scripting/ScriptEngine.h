@@ -1,8 +1,10 @@
 #pragma once
 
 #include <string>
+#include <utility>
 #include <duktape.h>
 #include <dukglue/dukglue.h>
+#include "Logger.h"
 
 namespace OGLE
 {
@@ -21,8 +23,31 @@ namespace OGLE
         duk_context* GetContext() { return m_context; }
 
         bool CallGlobalFunction(const char* functionName);
-        bool CallGlobalFunction(const char* functionName, float argument);
-        bool CallGlobalFunction(const char* functionName, unsigned int first, unsigned int second);
+
+        template<typename... Args>
+        bool CallGlobalFunction(const char* functionName, Args&&... args)
+        {
+            if (!IsContextValid()) {
+                return false;
+            }
+
+            duk_get_global_string(m_context, functionName);
+            if (!duk_is_function(m_context, -1)) {
+                duk_pop(m_context);
+                return true;
+            }
+
+            dukglue_push(m_context, std::forward<Args>(args)...);
+            if (duk_pcall(m_context, static_cast<duk_idx_t>(sizeof...(Args))) != 0) {
+                m_lastError = duk_safe_to_string(m_context, -1);
+                LOG_ERROR(std::string("Script function failed: ") + functionName + " -> " + m_lastError);
+                duk_pop(m_context);
+                return false;
+            }
+
+            duk_pop(m_context);
+            return true;
+        }
 
         template<typename Function>
         bool RegisterFunction(const char* name, Function function)
