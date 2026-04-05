@@ -116,8 +116,8 @@ int App::Run(HINSTANCE hInstance, int nCmdShow)
     m_inputManager.AttachToWindow(*m_window);
     m_inputActionsManager.ConfigureDefaultActions();
 
-    m_cameraManager.SetPosition(glm::vec3(7.0f, 5.0f, 9.0f));
-    m_cameraManager.LookAt(glm::vec3(0.0f, 0.0f, 0.0f));
+    // m_cameraManager.SetPosition(glm::vec3(7.0f, 5.0f, 9.0f));
+    // m_cameraManager.LookAt(glm::vec3(0.0f, 0.0f, 0.0f));
 
     if (!m_renderManager.Initialize(*m_window, m_cameraManager, m_worldManager)) {
         return -1;
@@ -166,136 +166,13 @@ int App::Run(HINSTANCE hInstance, int nCmdShow)
 
     // Push layers onto the stack
     m_layerStack.PushLayer(new MainApplicationLayer(*this));
-    m_layerStack.PushLayer(new ExampleLayer());
+    // m_layerStack.PushLayer(new ExampleLayer());
 
     OGLE::TextureManager::Get().Initialize();
     m_window->Show(nCmdShow);
     m_timeManager.Reset();
 
-    // ── Editor event subscriptions ─────────────────────────────────────
-    m_eventBus.Subscribe<OGLE::EditorLoadWorldEvent>([this](const OGLE::EditorLoadWorldEvent& e) {
-        m_configManager.GetConfig().world.path = e.path;
-        m_configManager.Save();
-        m_worldManager.LoadActiveWorld(e.path);
-        m_editor.GetState().selectedEntity = entt::null;
-        m_editor.GetState().bufferedEntity = entt::null;
-        m_editor.GetState().textureEditingEntity = entt::null;
-    });
-
-    m_eventBus.Subscribe<OGLE::EditorSaveWorldEvent>([this](const OGLE::EditorSaveWorldEvent& e) {
-        m_configManager.GetConfig().world.path = e.path;
-        m_configManager.Save();
-        m_worldManager.SaveActiveWorld(e.path);
-    });
-
-    m_eventBus.Subscribe<OGLE::EditorReloadDefaultWorldEvent>([this](const OGLE::EditorReloadDefaultWorldEvent&) {
-        m_worldManager.CreateDefaultWorld();
-        m_editor.GetState().selectedEntity = entt::null;
-        m_editor.GetState().bufferedEntity = entt::null;
-        m_editor.GetState().textureEditingEntity = entt::null;
-    });
-
-    m_eventBus.Subscribe<OGLE::EditorClearWorldEvent>([this](const OGLE::EditorClearWorldEvent&) {
-        m_worldManager.ClearWorld();
-        m_editor.GetState().selectedEntity = entt::null;
-        m_editor.GetState().bufferedEntity = entt::null;
-        m_editor.GetState().textureEditingEntity = entt::null;
-    });
-
-    m_eventBus.Subscribe<OGLE::EditorPlayEvent>([this](const OGLE::EditorPlayEvent&) {
-        m_editor.GetState().simulationState = Editor::SimulationState::Playing;
-    });
-
-    m_eventBus.Subscribe<OGLE::EditorPauseEvent>([this](const OGLE::EditorPauseEvent&) {
-        m_editor.GetState().simulationState = Editor::SimulationState::Paused;
-    });
-
-    m_eventBus.Subscribe<OGLE::EditorStepEvent>([this](const OGLE::EditorStepEvent&) {
-        m_editor.GetState().simulationState = Editor::SimulationState::Paused;
-        m_editor.GetState().stepSimulationRequested = true;
-    });
-
-    m_eventBus.Subscribe<OGLE::EditorCreateEntityEvent>([this](const OGLE::EditorCreateEntityEvent& e) {
-        entt::entity created = entt::null;
-
-        switch (e.type) {
-            case OGLE::EditorCreateEntityEvent::Type::EmptyObject:
-                created = m_worldManager.CreateWorldObject(e.name, OGLE::WorldObjectKind::Generic).GetEntity();
-                break;
-            case OGLE::EditorCreateEntityEvent::Type::Cube:
-                created = m_worldManager.CreatePrimitive(e.name, OGLE::PrimitiveType::Cube,
-                    glm::vec3(0.0f, 0.5f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f), e.texturePath);
-                break;
-            case OGLE::EditorCreateEntityEvent::Type::Sphere:
-                created = m_worldManager.CreatePrimitive(e.name, OGLE::PrimitiveType::Sphere,
-                    glm::vec3(0.0f, 0.5f, 0.0f), glm::vec3(1.0f, 1.0f, 1.0f), e.texturePath);
-                break;
-            case OGLE::EditorCreateEntityEvent::Type::Plane:
-                created = m_worldManager.CreatePrimitive(e.name, OGLE::PrimitiveType::Plane,
-                    glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(5.0f, 1.0f, 5.0f), e.texturePath);
-                break;
-            case OGLE::EditorCreateEntityEvent::Type::DirectionalLight:
-                created = m_worldManager.CreateDirectionalLight(e.name, glm::vec3(-50.0f, 45.0f, 0.0f));
-                break;
-            case OGLE::EditorCreateEntityEvent::Type::PointLight:
-                created = m_worldManager.CreatePointLight(e.name, glm::vec3(0.0f, 1.5f, 0.0f));
-                break;
-            case OGLE::EditorCreateEntityEvent::Type::ModelFromFile:
-                created = m_worldManager.CreateModelFromFile(e.modelPath, OGLE::ModelType::DYNAMIC, e.name);
-                if (created != entt::null && !e.texturePath.empty()) {
-                    m_worldManager.SetEntityDiffuseTexture(created, e.texturePath);
-                }
-                break;
-        }
-
-        if (created != entt::null) {
-            m_editor.GetState().selectedEntity = created;
-            m_editor.GetState().bufferedEntity = entt::null;
-            m_editor.GetState().textureEditingEntity = entt::null;
-        }
-    });
-
-    m_eventBus.Subscribe<OGLE::EditorDeleteEntityEvent>([this](const OGLE::EditorDeleteEntityEvent& e) {
-        if (e.entity != entt::null && m_worldManager.IsEntityValid(e.entity)) {
-            m_physicsManager.RemoveBody(e.entity);
-            m_worldManager.GetActiveWorld().DestroyEntity(e.entity);
-        }
-        if (e.entity == m_editor.GetState().selectedEntity) {
-            m_editor.GetState().selectedEntity = entt::null;
-            m_editor.GetState().bufferedEntity = entt::null;
-            m_editor.GetState().textureEditingEntity = entt::null;
-        }
-    });
-
-    m_eventBus.Subscribe<OGLE::EditorSpawnModelFromDragDropEvent>([this](const OGLE::EditorSpawnModelFromDragDropEvent& e) {
-        // Reuse camera + spawn logic from the original drag-drop handler
-        const auto& camera = m_cameraManager.GetCamera();
-        const glm::vec3 spawnPosition = camera.GetPosition() + camera.GetFront() * 5.0f;
-        const OGLE::Entity entity = m_worldManager.CreateModelFromFile(
-            e.assetPath, OGLE::ModelType::DYNAMIC, BuildEditorEntityNameFromAssetPath(e.assetPath));
-
-        if (entity != entt::null) {
-            auto& world = m_worldManager.GetActiveWorld();
-            if (auto* transform = world.GetComponent<OGLE::TransformComponent>(entity)) {
-                world.SetTransform(entity, spawnPosition, transform->rotation, transform->scale);
-            }
-            m_editor.GetState().selectedEntity = entity;
-            m_editor.GetState().bufferedEntity = entt::null;
-            m_editor.GetState().textureEditingEntity = entt::null;
-        }
-    });
-
-    m_eventBus.Subscribe<OGLE::EditorTransformChangedEvent>([this](const OGLE::EditorTransformChangedEvent& e) {
-        if (e.entity != entt::null && m_worldManager.IsEntityValid(e.entity)) {
-            m_worldManager.GetWorldObject(e.entity).SetTransform(e.position, e.rotation, e.scale);
-        }
-    });
-
-    m_eventBus.Subscribe<OGLE::EditorNameChangedEvent>([this](const OGLE::EditorNameChangedEvent& e) {
-        if (e.entity != entt::null && m_worldManager.IsEntityValid(e.entity)) {
-            m_worldManager.GetWorldObject(e.entity).SetName(e.name);
-        }
-    });
+    m_editor.SubscribeToEvents(m_eventBus, m_configManager, m_worldManager, m_physicsManager, m_cameraManager);
 
     // Set up event subscriptions
     m_eventBus.Subscribe<OGLE::WindowResizeEvent>([this](const OGLE::WindowResizeEvent& e) {

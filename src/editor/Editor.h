@@ -14,7 +14,7 @@
 namespace ogle {
     class Camera;
 }
-
+class EventBus;
 class CameraManager;
 class WorldManager;
 class PhysicsManager;
@@ -39,7 +39,11 @@ public:
     OGLE::Entity GetSelectedEntity() const;
     SimulationState GetSimulationState() const;
     bool ConsumeSimulationStepRequest();
-
+    void SubscribeToEvents(EventBus& eventBus,
+        ConfigManager& configManager,
+        WorldManager& worldManager,
+        PhysicsManager& physicsManager,
+        CameraManager& cameraManager);
     void BuildUi(
         const CameraManager& cameraManager,
         WorldManager& worldManager,
