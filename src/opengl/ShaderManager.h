@@ -1,6 +1,7 @@
 #pragma once
 
 #include "GLFunctions.h"
+#include "Shader.h"
 #include "../Logger.h"
 #include <string>
 #include <map>
@@ -31,6 +32,9 @@ public:
     std::vector<std::string> GetProgramNames() const;
     GLint getUniformLocation(const std::string& programName, const std::string& uniformName);
 
+    std::shared_ptr<OGLE::Shader> GetShader(const std::string& programName);
+    std::shared_ptr<OGLE::Shader> GetShaderProgram(const std::string& programName);
+
     static void SetGlobalInstance(ShaderManager* instance);
     static ShaderManager* GetGlobalInstance();
 
@@ -47,7 +51,10 @@ private:
     bool checkProgramLinking(GLuint program);
     void cacheUniforms(const std::string& programName, GLuint programId);
 
-    std::map<std::string, GLuint> shaders;
+    std::map<std::string, GLuint> shaders; // individual compiled shaders
+    // Raw program IDs used only for glUseProgram
     std::map<std::string, GLuint> programs;
+    // Shared Shader objects encapsulating program and uniform cache
+    std::map<std::string, std::shared_ptr<OGLE::Shader>> m_shaderPrograms;
     std::map<std::string, std::map<std::string, GLint>> m_uniformLocations;
 };

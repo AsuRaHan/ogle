@@ -5,12 +5,12 @@ CameraManager::CameraManager()
 {
 }
 
-ogle::Camera& CameraManager::GetCamera()
+OGLE::Camera& CameraManager::GetCamera()
 {
     return m_camera;
 }
 
-const ogle::Camera& CameraManager::GetCamera() const
+const OGLE::Camera& CameraManager::GetCamera() const
 {
     return m_camera;
 }
@@ -100,12 +100,12 @@ void CameraManager::Orbit(float horizontalAngle, float verticalAngle)
     m_camera.Orbit(horizontalAngle, verticalAngle);
 }
 
-void CameraManager::SetMode(ogle::Camera::Mode mode)
+void CameraManager::SetMode(OGLE::Camera::Mode mode)
 {
     m_camera.SetMode(mode);
 }
 
-ogle::Camera::Mode CameraManager::GetMode() const
+OGLE::Camera::Mode CameraManager::GetMode() const
 {
     return m_camera.GetMode();
 }

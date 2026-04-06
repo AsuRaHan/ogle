@@ -5,7 +5,7 @@
 #include <vector>
 #include <string>
 
-namespace ogle {
+namespace OGLE {
 
 // Одно привязка к оси
 struct AxisBinding {
@@ -71,4 +71,4 @@ struct AxisBinding {
                                          float deadzone = 0.1f, float scale = 1.0f);
 };
 
-} // namespace ogle
+} // namespace OGLE

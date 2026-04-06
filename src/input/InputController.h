@@ -16,13 +16,10 @@
 #include "Logger.h"
 
 // Предварительные объявления
-namespace ogle {
+namespace OGLE {
 	class InputAction;
 	enum class ActionType;
 	struct Modifiers;
-}
-
-namespace ogle {
 
 	// Главный контроллер ввода (доступен везде, как ShaderController)
 	class InputController {
@@ -202,4 +199,4 @@ namespace ogle {
 		void RegisterDefaultAxes();
 	};
 
-} // namespace ogle
+} // namespace OGLE

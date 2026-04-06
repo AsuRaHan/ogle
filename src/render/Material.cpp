@@ -1,81 +1,46 @@
 #include "render/Material.h"
-
+#include "opengl/ShaderManager.h"
 #include "Logger.h"
 
 #include <algorithm>
 
 namespace OGLE {
-    void Material::Bind(GLuint program) const
+    void Material::Bind() const
     {
-        const GLint baseColorLocation = glGetUniformLocation(program, "uBaseColor");
-        if (baseColorLocation >= 0) {
-            glUniform3f(baseColorLocation, m_baseColor.x, m_baseColor.y, m_baseColor.z);
-        }
-        const GLint emissiveColorLocation = glGetUniformLocation(program, "uEmissiveColor");
-        if (emissiveColorLocation >= 0) {
-            glUniform3f(emissiveColorLocation, m_emissiveColor.x, m_emissiveColor.y, m_emissiveColor.z);
-        }
-        const GLint uvTilingLocation = glGetUniformLocation(program, "uUvTiling");
-        if (uvTilingLocation >= 0) {
-            glUniform2f(uvTilingLocation, m_uvTiling.x, m_uvTiling.y);
-        }
-        const GLint uvOffsetLocation = glGetUniformLocation(program, "uUvOffset");
-        if (uvOffsetLocation >= 0) {
-            glUniform2f(uvOffsetLocation, m_uvOffset.x, m_uvOffset.y);
-        }
-        const GLint roughnessLocation = glGetUniformLocation(program, "uRoughness");
-        if (roughnessLocation >= 0) {
-            glUniform1f(roughnessLocation, m_roughness);
-        }
-        const GLint metallicLocation = glGetUniformLocation(program, "uMetallic");
-        if (metallicLocation >= 0) {
-            glUniform1f(metallicLocation, m_metallic);
-        }
-        const GLint alphaCutoffLocation = glGetUniformLocation(program, "uAlphaCutoff");
-        if (alphaCutoffLocation >= 0) {
-            glUniform1f(alphaCutoffLocation, m_alphaCutoff);
-        }
+        // Use the stored shader object to set uniforms via its cache
+        if (!m_shader) return;
+        m_shader->Bind();
+        // Basic material properties
+        m_shader->SetUniform("uBaseColor", m_baseColor);
+        m_shader->SetUniform("uEmissiveColor", m_emissiveColor);
+        m_shader->SetUniform("uUvTiling", m_uvTiling);
+        m_shader->SetUniform("uUvOffset", m_uvOffset);
+        m_shader->SetUniform("uRoughness", m_roughness);
+        m_shader->SetUniform("uMetallic", m_metallic);
+        m_shader->SetUniform("uAlphaCutoff", m_alphaCutoff);
 
-        const GLint hasTextureLocation = glGetUniformLocation(program, "uHasDiffuseTexture");
-        const GLint textureSamplerLocation = glGetUniformLocation(program, "uDiffuseTexture");
-        const GLint hasEmissiveTextureLocation = glGetUniformLocation(program, "uHasEmissiveTexture");
-        const GLint emissiveTextureSamplerLocation = glGetUniformLocation(program, "uEmissiveTexture");
+        // Texture handling – set flags and bind textures
+        int hasDiffuse = (m_diffuseTexture && m_diffuseTexture->IsValid()) ? 1 : 0;
+        int hasEmissive = (m_emissiveTexture && m_emissiveTexture->IsValid()) ? 1 : 0;
+        m_shader->SetUniform("uHasDiffuseTexture", hasDiffuse);
+        m_shader->SetUniform("uHasEmissiveTexture", hasEmissive);
 
+        // Bind textures to units 0 and 1
         glActiveTexture(GL_TEXTURE0);
         if (m_diffuseTexture && m_diffuseTexture->IsValid()) {
             glBindTexture(GL_TEXTURE_2D, m_diffuseTexture->GetTextureId());
-            if (hasTextureLocation >= 0) {
-                glUniform1i(hasTextureLocation, 1);
-            }
         } else {
             glBindTexture(GL_TEXTURE_2D, 0);
-            if (hasTextureLocation >= 0) {
-                glUniform1i(hasTextureLocation, 0);
-            }
         }
-
-        if (textureSamplerLocation >= 0) {
-            glUniform1i(textureSamplerLocation, 0);
-        }
-
         glActiveTexture(GL_TEXTURE1);
         if (m_emissiveTexture && m_emissiveTexture->IsValid()) {
             glBindTexture(GL_TEXTURE_2D, m_emissiveTexture->GetTextureId());
-            if (hasEmissiveTextureLocation >= 0) {
-                glUniform1i(hasEmissiveTextureLocation, 1);
-            }
         } else {
             glBindTexture(GL_TEXTURE_2D, 0);
-            if (hasEmissiveTextureLocation >= 0) {
-                glUniform1i(hasEmissiveTextureLocation, 0);
-            }
         }
-
-        if (emissiveTextureSamplerLocation >= 0) {
-            glUniform1i(emissiveTextureSamplerLocation, 1);
-        }
-
-        glActiveTexture(GL_TEXTURE0);
+        // Sampler uniforms
+        m_shader->SetUniform("uDiffuseTexture", 0);
+        m_shader->SetUniform("uEmissiveTexture", 1);
     }
 
     void Material::SetBaseColor(const glm::vec3& color)
@@ -275,6 +240,9 @@ namespace OGLE {
     void Material::SetShaderProgram(const std::string& shaderProgramName)
     {
         m_shaderProgramName = shaderProgramName;
+        if (ShaderManager::GetGlobalInstance()) {
+            m_shader = ShaderManager::GetGlobalInstance()->GetShaderProgram(shaderProgramName);
+        }
     }
 
     const std::string& Material::GetShaderProgram() const

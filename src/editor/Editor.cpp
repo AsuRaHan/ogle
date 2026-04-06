@@ -103,7 +103,7 @@ void Editor::BuildUi(
         return;
     }
 
-    const ogle::Camera& camera = cameraManager.GetCamera();
+    const OGLE::Camera& camera = cameraManager.GetCamera();
     if (!ImGui::GetIO().WantCaptureMouse) {
         TrySelectObject(camera, worldManager);
     }
@@ -358,10 +358,10 @@ void Editor::SyncSelectedBuffers(WorldManager& worldManager)
     }
 }
 
-bool Editor::TrySelectObject(const ogle::Camera& camera, WorldManager& worldManager)
+bool Editor::TrySelectObject(const OGLE::Camera& camera, WorldManager& worldManager)
 {
-    auto& input = ogle::InputController::Get();
-    if (!input.IsMouseButtonPressed(static_cast<int>(ogle::MouseButton::Left))) {
+    auto& input = OGLE::InputController::Get();
+    if (!input.IsMouseButtonPressed(static_cast<int>(OGLE::MouseButton::Left))) {
         return false;
     }
 

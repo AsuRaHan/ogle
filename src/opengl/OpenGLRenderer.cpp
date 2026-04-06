@@ -11,7 +11,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <Windows.h>
 
-OpenGLRenderer::OpenGLRenderer(int width, int height, ogle::Camera& camera, WorldManager& worldManager)
+OpenGLRenderer::OpenGLRenderer(int width, int height, OGLE::Camera& camera, WorldManager& worldManager)
     : m_shaderManager()
     , m_camera(camera)
     , m_worldManager(worldManager)
@@ -348,7 +348,7 @@ void OpenGLRenderer::Render()
         }
 
         if (materialForRender) {
-            materialForRender->Bind(programHandle);
+            materialForRender->Bind();// materialForRender->Bind(programHandle);
         }
 
         modelComponent.model->Draw();

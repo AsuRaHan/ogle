@@ -217,77 +217,77 @@ namespace OGLE
 
         bool InputApi::isKeyDown(int key) const
         {
-            return ogle::InputController::Get().IsKeyDown(key);
+            return OGLE::InputController::Get().IsKeyDown(key);
         }
 
         bool InputApi::isKeyPressed(int key) const
         {
-            return ogle::InputController::Get().IsKeyPressed(key);
+            return OGLE::InputController::Get().IsKeyPressed(key);
         }
 
         bool InputApi::isKeyReleased(int key) const
         {
-            return ogle::InputController::Get().IsKeyReleased(key);
+            return OGLE::InputController::Get().IsKeyReleased(key);
         }
 
         std::vector<float> InputApi::getMousePosition() const
         {
-            return FromGlm2(ogle::InputController::Get().GetMousePosition());
+            return FromGlm2(OGLE::InputController::Get().GetMousePosition());
         }
 
         std::vector<float> InputApi::getMouseDelta() const
         {
-            return FromGlm2(ogle::InputController::Get().GetMouseDelta());
+            return FromGlm2(OGLE::InputController::Get().GetMouseDelta());
         }
 
         float InputApi::getMouseWheelDelta() const
         {
-            return ogle::InputController::Get().GetMouseWheelDelta();
+            return OGLE::InputController::Get().GetMouseWheelDelta();
         }
 
         bool InputApi::isMouseButtonDown(int button) const
         {
-            return ogle::InputController::Get().IsMouseButtonDown(button);
+            return OGLE::InputController::Get().IsMouseButtonDown(button);
         }
 
         bool InputApi::isMouseButtonPressed(int button) const
         {
-            return ogle::InputController::Get().IsMouseButtonPressed(button);
+            return OGLE::InputController::Get().IsMouseButtonPressed(button);
         }
 
         bool InputApi::isMouseButtonReleased(int button) const
         {
-            return ogle::InputController::Get().IsMouseButtonReleased(button);
+            return OGLE::InputController::Get().IsMouseButtonReleased(button);
         }
 
         bool InputApi::isGamepadConnected(int player) const
         {
-            return ogle::InputController::Get().IsGamepadConnected(player);
+            return OGLE::InputController::Get().IsGamepadConnected(player);
         }
 
         bool InputApi::isGamepadButtonDown(int player, int button) const
         {
-            return ogle::InputController::Get().IsGamepadButtonDown(player, button);
+            return OGLE::InputController::Get().IsGamepadButtonDown(player, button);
         }
 
         float InputApi::getGamepadAxis(int player, int axis) const
         {
-            return ogle::InputController::Get().GetGamepadAxis(player, axis);
+            return OGLE::InputController::Get().GetGamepadAxis(player, axis);
         }
 
         float InputApi::getAxis(const std::string& name) const
         {
-            return ogle::InputController::Get().GetAxis(name);
+            return OGLE::InputController::Get().GetAxis(name);
         }
 
         float InputApi::getAxisRaw(const std::string& name) const
         {
-            return ogle::InputController::Get().GetAxisRaw(name);
+            return OGLE::InputController::Get().GetAxisRaw(name);
         }
 
         std::string InputApi::getCurrentContext() const
         {
-            return ogle::InputController::Get().GetCurrentContext();
+            return OGLE::InputController::Get().GetCurrentContext();
         }
 
         void LogApi::log(const std::string& message)

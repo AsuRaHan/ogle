@@ -36,9 +36,11 @@ PFNGLUNIFORM3FPROC glUniform3f = nullptr;
 PFNGLUNIFORM4FPROC glUniform4f = nullptr;
 PFNGLUNIFORM2FPROC glUniform2f = nullptr;
 PFNGLUNIFORM3FVPROC glUniform3fv = nullptr;
+PFNGLUNIFORM2FVPROC glUniform2fv = nullptr;
 PFNGLUNIFORM1FVPROC glUniform1fv = nullptr;
 PFNGLMAPBUFFERPROC glMapBuffer = nullptr;
 PFNGLUNMAPBUFFERPROC glUnmapBuffer = nullptr;
+PFNGLUNIFORMMATRIX3FVPROC glUniformMatrix3fv = nullptr;
 PFNGLUNIFORM2IPROC glUniform2i = nullptr;
 PFNGLBINDBUFFERBASEPROC glBindBufferBase = nullptr;
 PFNGLDISPATCHCOMPUTEPROC glDispatchCompute = nullptr;
@@ -148,12 +150,16 @@ void LoadOpenGLFunctions() {
     CHECK_LOAD_FUNCTION(glUniform2f);
     glUniform3fv = (PFNGLUNIFORM3FVPROC)wglGetProcAddress("glUniform3fv");
     CHECK_LOAD_FUNCTION(glUniform3fv);
+    glUniform2fv = (PFNGLUNIFORM2FVPROC)wglGetProcAddress("glUniform2fv");
+    CHECK_LOAD_FUNCTION(glUniform2fv);
     glUniform1fv = (PFNGLUNIFORM1FVPROC)wglGetProcAddress("glUniform1fv");
     CHECK_LOAD_FUNCTION(glUniform1fv);
     glMapBuffer = (PFNGLMAPBUFFERPROC)wglGetProcAddress("glMapBuffer");
     CHECK_LOAD_FUNCTION(glMapBuffer);
     glUnmapBuffer = (PFNGLUNMAPBUFFERPROC)wglGetProcAddress("glUnmapBuffer");
     CHECK_LOAD_FUNCTION(glUnmapBuffer);
+	glUniformMatrix3fv = (PFNGLUNIFORMMATRIX3FVPROC)wglGetProcAddress("glUniformMatrix3fv");
+	CHECK_LOAD_FUNCTION(glUniformMatrix3fv);
     // Compute Shader related functions
     glUniform2i = (PFNGLUNIFORM2IPROC)wglGetProcAddress("glUniform2i");
     CHECK_LOAD_FUNCTION(glUniform2i);

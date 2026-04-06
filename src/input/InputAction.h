@@ -14,7 +14,7 @@
 //#include "InputController.h"  // Для доступа к состоянию ввода
 #include "InputTypes.h"
 
-namespace ogle {
+namespace OGLE {
 
 	class InputController;
 
@@ -136,4 +136,4 @@ namespace ogle {
 		friend class InputSystem;
 	};
 
-} // namespace ogle::input
+} // namespace OGLE::input

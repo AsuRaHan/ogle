@@ -533,10 +533,13 @@ typedef void (APIENTRY* PFNGLUNIFORM3FPROC)(GLint location, GLfloat v0, GLfloat 
 typedef void (APIENTRY* PFNGLUNIFORM4FPROC)(GLint location, GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3);
 typedef void (APIENTRY* PFNGLUNIFORM2FPROC)(GLint location, GLfloat v0, GLfloat v1);
 typedef void (APIENTRY* PFNGLUNIFORM3FVPROC)(GLint location, GLsizei count, const GLfloat* value);
+typedef void (APIENTRY* PFNGLUNIFORM2FVPROC)(GLint location, GLsizei count, const GLfloat* value);
 typedef void (APIENTRY* PFNGLUNIFORM1FVPROC)(GLint location, GLsizei count, const GLfloat* value);
 
 typedef void* (APIENTRY* PFNGLMAPBUFFERPROC)(GLenum target, GLenum access);
 typedef GLboolean(APIENTRY* PFNGLUNMAPBUFFERPROC)(GLenum target);
+
+typedef void (APIENTRY* PFNGLUNIFORMMATRIX3FVPROC)(GLint location, GLsizei count, GLboolean transpose, const GLfloat* value);
 
 typedef void (APIENTRY* PFNGLUNIFORM2IPROC)(GLint location, GLint v0, GLint v1);
 typedef void (APIENTRY* PFNGLBINDBUFFERBASEPROC)(GLenum target, GLuint index, GLuint buffer);
@@ -613,7 +616,9 @@ extern PFNGLUNIFORM3FPROC glUniform3f;
 extern PFNGLUNIFORM4FPROC glUniform4f;
 extern PFNGLUNIFORM2FPROC glUniform2f;
 extern PFNGLUNIFORM3FVPROC glUniform3fv;
+extern PFNGLUNIFORM2FVPROC glUniform2fv;
 extern PFNGLUNIFORM1FVPROC glUniform1fv;
+extern PFNGLUNIFORMMATRIX3FVPROC glUniformMatrix3fv;
 extern PFNGLMAPBUFFERPROC glMapBuffer;
 extern PFNGLUNMAPBUFFERPROC glUnmapBuffer;
 extern PFNGLUNIFORM2IPROC glUniform2i;

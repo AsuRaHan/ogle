@@ -40,7 +40,7 @@ namespace OGLE {
 
     void ModelEntity::BindMaterial(GLuint program) const
     {
-        m_material.Bind(program);
+        m_material.Bind();// m_material.Bind(program);
     }
 
     void ModelEntity::ConvertToStatic() {

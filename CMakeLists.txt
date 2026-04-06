@@ -76,7 +76,12 @@ if(NOT dukglue_POPULATED)
     FetchContent_MakeAvailable(dukglue)
 endif()
 
-# Подключаем библиотеки assimp nlohmann/json и OpenMesh 
+# Подключаем библиотеки assimp nlohmann/json и OpenMesh
+# Отключаем тесты, инструменты и лишние части Assimp
+set(ASSIMP_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(ASSIMP_BUILD_ASSIMP_TOOLS OFF CACHE BOOL "" FORCE)
+set(ASSIMP_INSTALL OFF CACHE BOOL "" FORCE)
+set(ASSIMP_BUILD_SAMPLES OFF CACHE BOOL "" FORCE)
 FetchContent_Declare(
     assimp
     GIT_REPOSITORY https://github.com/assimp/assimp.git

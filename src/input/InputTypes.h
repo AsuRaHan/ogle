@@ -5,7 +5,7 @@
 #include <cstdint>
 #include <string>
 
-namespace ogle {
+namespace OGLE {
 
 	// Используем Windows Virtual Keys напрямую
 	using KeyCode = int;  // VK_SPACE, VK_A, VK_ESCAPE и т.д.
@@ -64,4 +64,4 @@ namespace ogle {
 		explicit Modifiers(int win32KeyState);
 	};
 
-} // namespace ogle
+} // namespace OGLE

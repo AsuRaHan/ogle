@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <cmath>
 
-namespace ogle {
+namespace OGLE {
 
 	InputController& InputController::Get() {
 		static InputController instance;
@@ -449,4 +449,4 @@ namespace ogle {
 
 
 
-} // namespace ogle
+} // namespace OGLE

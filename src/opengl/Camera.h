@@ -8,7 +8,7 @@
 
 #include "Logger.h"
 
-namespace ogle {
+namespace OGLE {
 
 	class Camera {
 	public:
@@ -168,4 +168,4 @@ namespace ogle {
 		void ExtractFrustumPlanes();  // Приватный метод для извлечения плоскостей
 	};
 
-} // namespace ogle
+} // namespace OGLE

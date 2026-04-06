@@ -9,8 +9,8 @@ class CameraManager
 public:
     CameraManager();
 
-    ogle::Camera& GetCamera();
-    const ogle::Camera& GetCamera() const;
+    OGLE::Camera& GetCamera();
+    const OGLE::Camera& GetCamera() const;
 
     void Update(float deltaTime);
 
@@ -34,9 +34,9 @@ public:
     void SetOrbitDistance(float distance);
     void Orbit(float horizontalAngle, float verticalAngle);
 
-    void SetMode(ogle::Camera::Mode mode);
-    ogle::Camera::Mode GetMode() const;
+    void SetMode(OGLE::Camera::Mode mode);
+    OGLE::Camera::Mode GetMode() const;
 
 private:
-    ogle::Camera m_camera;
+    OGLE::Camera m_camera;
 };

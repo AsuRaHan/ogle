@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Texture2D.h"
-
+#include "../opengl/Shader.h"
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 
@@ -12,7 +12,8 @@
 namespace OGLE {
     class Material {
     public:
-        void Bind(GLuint program) const;
+        // Updated: Bind no longer requires program; the material knows its shader
+        void Bind() const;
 
         void SetBaseColor(const glm::vec3& color);
         const glm::vec3& GetBaseColor() const;
@@ -45,6 +46,8 @@ namespace OGLE {
         bool FromJson(const nlohmann::json& j);
 
     private:
+        // Shader object will be set via SetShader; keep as private
+        std::shared_ptr<OGLE::Shader> m_shader;
         // Editable surface parameters live here so the editor, serializer, and renderer share one source of truth.
         glm::vec3 m_baseColor{ 1.0f, 1.0f, 1.0f };
         glm::vec3 m_emissiveColor{ 0.0f, 0.0f, 0.0f };

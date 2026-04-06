@@ -11,7 +11,7 @@
 // Needed for std::chrono::steady_clock used in the implementation
 #include <chrono>
 
-namespace ogle {
+namespace OGLE {
     class Camera;
 }
 
@@ -24,7 +24,7 @@ class WorldManager;
 
 class OpenGLRenderer {
 public:
-    OpenGLRenderer(int width, int height, ogle::Camera& camera, WorldManager& worldManager);
+    OpenGLRenderer(int width, int height, OGLE::Camera& camera, WorldManager& worldManager);
     ~OpenGLRenderer();
 
     bool Initialize();
@@ -49,7 +49,7 @@ private:
     glm::vec3 RotationToDirection(const glm::vec3& rotationDegrees) const;
 
     ShaderManager m_shaderManager;
-    ogle::Camera& m_camera;
+    OGLE::Camera& m_camera;
     WorldManager& m_worldManager;
     int m_width;
     int m_height;

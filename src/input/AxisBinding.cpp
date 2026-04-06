@@ -1,7 +1,7 @@
 // src/input/AxisBinding.cpp
 #include "AxisBinding.h"
 
-namespace ogle {
+namespace OGLE {
 
 AxisBinding AxisBinding::CreateKeyboardKey(KeyCode key, float scale) {
     AxisBinding binding;
@@ -45,4 +45,4 @@ AxisBinding AxisBinding::CreateGamepadAxis(int player, GamepadAxis axis,
     return binding;
 }
 
-} // namespace ogle
+} // namespace OGLE

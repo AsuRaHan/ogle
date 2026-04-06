@@ -19,7 +19,7 @@ void InputManager::AttachToWindow(IWindow& window)
 
 void InputManager::Update(float deltaTime)
 {
-    auto& input = ogle::InputController::Get();
+    auto& input = OGLE::InputController::Get();
     input.ResetFrameState();
 
     bool keyPressed[256] = { false };
@@ -55,7 +55,7 @@ void InputManager::Update(float deltaTime)
         mousePressed,
         mouseReleased);
 
-    ogle::Modifiers modifiers;
+    OGLE::Modifiers modifiers;
     modifiers.ctrl = m_keyStates[VK_CONTROL] || m_keyStates[VK_LCONTROL] || m_keyStates[VK_RCONTROL];
     modifiers.shift = m_keyStates[VK_SHIFT] || m_keyStates[VK_LSHIFT] || m_keyStates[VK_RSHIFT];
     modifiers.alt = m_keyStates[VK_MENU] || m_keyStates[VK_LMENU] || m_keyStates[VK_RMENU];

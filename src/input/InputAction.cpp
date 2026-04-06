@@ -6,7 +6,7 @@
 
 #include <cmath>
 
-namespace ogle {
+namespace OGLE {
 
 	Modifiers::Modifiers(int win32KeyState) {
 		ctrl = (win32KeyState & MK_CONTROL) != 0;
@@ -242,4 +242,4 @@ namespace ogle {
         return true;
     }
 
-} // namespace ogle::input
+} // namespace OGLE::input

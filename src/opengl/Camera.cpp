@@ -2,7 +2,7 @@
 #include "Camera.h"
 #include <algorithm>
 
-namespace ogle {
+namespace OGLE {
 
 	Camera::Camera(const std::string& name)
 		: m_name(name) {
@@ -332,4 +332,4 @@ namespace ogle {
 			clip[3][3] - clip[3][2]
 		));
 	}
-} // namespace ogle
+} // namespace OGLE

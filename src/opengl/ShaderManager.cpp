@@ -105,8 +105,36 @@ bool ShaderManager::linkProgram(const std::string& programName, const std::strin
     cacheUniforms(programName, program);
     programs[programName] = program;
     LOG_INFO(std::string("[ShaderManager::linkProgram] Компиляция шейдерной программы programName=") + programName + " завершена ей присвоен ID=" + std::to_string(program));
+    
+    m_shaderPrograms[programName] = std::make_shared<OGLE::Shader>(program);
     return true;
 }
+
+std::shared_ptr<OGLE::Shader> ShaderManager::GetShader(const std::string& programName)
+{
+    if (m_shaderPrograms.find(programName) == m_shaderPrograms.end()) {
+		return nullptr;
+	}
+	return m_shaderPrograms[programName];
+}
+
+std::shared_ptr<OGLE::Shader> ShaderManager::GetShaderProgram(const std::string& programName)
+{
+    if (m_shaderPrograms.find(programName) != m_shaderPrograms.end()) {
+        return m_shaderPrograms[programName];
+    }
+
+    if (programs.find(programName) != programs.end()) {
+        GLuint programId = programs[programName];
+        auto shader = std::make_shared<OGLE::Shader>(programId);
+        m_shaderPrograms[programName] = shader;
+        return shader;
+    }
+
+    LOG_WARN("Shader program not found: " + programName);
+    return nullptr;
+}
+
 
 bool ShaderManager::linkGeometryProgram(const std::string& programName, const std::string& vertexShaderName, 
     const std::string& geometryShaderName, const std::string& fragmentShaderName) {

@@ -76,7 +76,7 @@ namespace OGLE
             duk_put_prop_string(ctx, -2, "log");
             duk_get_prop_string(ctx, -2, "Player");
             duk_put_prop_string(ctx, -2, "Player");
-            duk_put_prop_string(ctx, -2, "ogle");
+            duk_put_prop_string(ctx, -2, "OGLE");
             duk_pop(ctx);
         }
     }

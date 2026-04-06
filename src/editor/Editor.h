@@ -11,7 +11,7 @@
 
 #include "config/ConfigManager.h"
 
-namespace ogle {
+namespace OGLE {
     class Camera;
 }
 class EventBus;
@@ -51,7 +51,7 @@ public:
         ConfigManager& configManager);
 
 private:
-    bool TrySelectObject(const ogle::Camera& camera, WorldManager& worldManager);
+    bool TrySelectObject(const OGLE::Camera& camera, WorldManager& worldManager);
     static bool IntersectRayWithAabb(
         const glm::vec3& rayOrigin,
         const glm::vec3& rayDirection,
