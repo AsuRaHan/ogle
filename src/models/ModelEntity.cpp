@@ -89,14 +89,9 @@ namespace OGLE {
         return m_indices;
     }
 
-    bool ModelEntity::SetDiffuseTexturePath(const std::string& texturePath)
+    void ModelEntity::AddTexture(const std::string& slotName, const std::string& texturePath)
     {
-        return m_material.SetDiffuseTexturePath(texturePath);
-    }
-
-    const std::string& ModelEntity::GetDiffuseTexturePath() const
-    {
-        return m_material.GetDiffuseTexturePath();
+        m_material.AddTexture(slotName, texturePath);
     }
 
     const std::vector<AnimationClip>& ModelEntity::GetAnimationClips() const {
@@ -165,18 +160,7 @@ namespace OGLE {
             {"position", {m_Position.x, m_Position.y, m_Position.z}},
             {"rotation", {m_Rotation.x, m_Rotation.y, m_Rotation.z}},
             {"scale", {m_Scale.x, m_Scale.y, m_Scale.z}},
-            {"material", {
-                {"baseColor", {material.GetBaseColor().x, material.GetBaseColor().y, material.GetBaseColor().z}},
-                {"emissiveColor", {material.GetEmissiveColor().x, material.GetEmissiveColor().y, material.GetEmissiveColor().z}},
-                {"uvTiling", {material.GetUvTiling().x, material.GetUvTiling().y}},
-                {"uvOffset", {material.GetUvOffset().x, material.GetUvOffset().y}},
-                {"roughness", material.GetRoughness()},
-                {"metallic", material.GetMetallic()},
-                {"alphaCutoff", material.GetAlphaCutoff()},
-                {"diffuseTexturePath", material.GetDiffuseTexturePath()},
-                {"emissiveTexturePath", material.GetEmissiveTexturePath()},
-                {"shaderProgram", material.GetShaderProgram()}
-            }}
+            {"material", m_material.ToJson()}
         };
 
         if (!m_animationClips.empty()) {
@@ -239,42 +223,7 @@ namespace OGLE {
         }
 
         if (j.contains("material")) {
-            const auto& materialJson = j.at("material");
-            if (materialJson.contains("baseColor")) {
-                const auto& baseColorJson = materialJson.at("baseColor");
-                m_material.SetBaseColor(glm::vec3(baseColorJson[0], baseColorJson[1], baseColorJson[2]));
-            }
-            if (materialJson.contains("emissiveColor")) {
-                const auto& emissiveColorJson = materialJson.at("emissiveColor");
-                m_material.SetEmissiveColor(glm::vec3(emissiveColorJson[0], emissiveColorJson[1], emissiveColorJson[2]));
-            }
-            if (materialJson.contains("uvTiling")) {
-                const auto& uvTilingJson = materialJson.at("uvTiling");
-                m_material.SetUvTiling(glm::vec2(uvTilingJson[0], uvTilingJson[1]));
-            }
-            if (materialJson.contains("uvOffset")) {
-                const auto& uvOffsetJson = materialJson.at("uvOffset");
-                m_material.SetUvOffset(glm::vec2(uvOffsetJson[0], uvOffsetJson[1]));
-            }
-            if (materialJson.contains("roughness")) {
-                m_material.SetRoughness(materialJson.at("roughness").get<float>());
-            }
-            if (materialJson.contains("metallic")) {
-                m_material.SetMetallic(materialJson.at("metallic").get<float>());
-            }
-            if (materialJson.contains("alphaCutoff")) {
-                m_material.SetAlphaCutoff(materialJson.at("alphaCutoff").get<float>());
-            }
-
-            if (materialJson.contains("diffuseTexturePath")) {
-                m_material.SetDiffuseTexturePath(materialJson.at("diffuseTexturePath").get<std::string>());
-            }
-            if (materialJson.contains("emissiveTexturePath")) {
-                m_material.SetEmissiveTexturePath(materialJson.at("emissiveTexturePath").get<std::string>());
-            }
-            if (materialJson.contains("shaderProgram")) {
-                m_material.SetShaderProgram(materialJson.at("shaderProgram").get<std::string>());
-            }
+            m_material.FromJson(j.at("material"));
         }
 
         if (j.contains("animationClips")) {
@@ -321,10 +270,10 @@ namespace OGLE {
 
                 m_animationClips.push_back(std::move(clip));
             }
-        } else if (!GetLoadedDiffuseTexturePath().empty()) {
-            m_material.SetDiffuseTexturePath(GetLoadedDiffuseTexturePath());
-        }
-
+        } 
+        // else if (!GetLoadedDiffuseTexturePath().empty()) {
+        //     m_material.AddTexture("diffuse", GetLoadedDiffuseTexturePath());
+        // }
         UpdateModelMatrix();
     }
 

@@ -322,8 +322,15 @@ void Editor::SyncSelectedBuffers(WorldManager& worldManager)
             const OGLE::Material& material = materialComponent->material;
             m_state.texturePathBuffer.fill('\0');
             m_state.emissiveTexturePathBuffer.fill('\0');
-            strncpy(m_state.texturePathBuffer.data(), material.GetDiffuseTexturePath().c_str(), m_state.texturePathBuffer.size() - 1);
-            strncpy(m_state.emissiveTexturePathBuffer.data(), material.GetEmissiveTexturePath().c_str(), m_state.emissiveTexturePathBuffer.size() - 1);
+            const auto& texturePaths = material.GetTexturePaths();
+            auto diffuseIt = texturePaths.find("diffuse");
+            if (diffuseIt != texturePaths.end()) {
+                strncpy(m_state.texturePathBuffer.data(), diffuseIt->second.c_str(), m_state.texturePathBuffer.size() - 1);
+            }
+            auto emissiveIt = texturePaths.find("emissive");
+            if (emissiveIt != texturePaths.end()) {
+                strncpy(m_state.emissiveTexturePathBuffer.data(), emissiveIt->second.c_str(), m_state.emissiveTexturePathBuffer.size() - 1);
+            }
             m_state.baseColorBuffer = material.GetBaseColor();
             m_state.emissiveColorBuffer = material.GetEmissiveColor();
             m_state.uvTilingBuffer = material.GetUvTiling();
@@ -338,8 +345,15 @@ void Editor::SyncSelectedBuffers(WorldManager& worldManager)
             const OGLE::Material& material = model->GetMaterial();
             m_state.texturePathBuffer.fill('\0');
             m_state.emissiveTexturePathBuffer.fill('\0');
-            strncpy(m_state.texturePathBuffer.data(), material.GetDiffuseTexturePath().c_str(), m_state.texturePathBuffer.size() - 1);
-            strncpy(m_state.emissiveTexturePathBuffer.data(), material.GetEmissiveTexturePath().c_str(), m_state.emissiveTexturePathBuffer.size() - 1);
+            const auto& texturePaths = material.GetTexturePaths();
+            auto diffuseIt = texturePaths.find("diffuse");
+            if (diffuseIt != texturePaths.end()) {
+                strncpy(m_state.texturePathBuffer.data(), diffuseIt->second.c_str(), m_state.texturePathBuffer.size() - 1);
+            }
+            auto emissiveIt = texturePaths.find("emissive");
+            if (emissiveIt != texturePaths.end()) {
+                strncpy(m_state.emissiveTexturePathBuffer.data(), emissiveIt->second.c_str(), m_state.emissiveTexturePathBuffer.size() - 1);
+            }
             m_state.baseColorBuffer = material.GetBaseColor();
             m_state.emissiveColorBuffer = material.GetEmissiveColor();
             m_state.uvTilingBuffer = material.GetUvTiling();
@@ -522,7 +536,7 @@ void Editor::SubscribeToEvents(EventBus& eventBus,
             case OGLE::EditorCreateEntityEvent::Type::ModelFromFile:
                 created = worldManager.CreateModelFromFile(e.modelPath, OGLE::ModelType::DYNAMIC, e.name);
                 if (created != entt::null && !e.texturePath.empty()) {
-                    worldManager.SetEntityDiffuseTexture(created, e.texturePath);
+                    // worldManager.SetEntityDiffuseTexture(created, e.texturePath);
                 }
                 break;
         }

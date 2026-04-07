@@ -17,8 +17,8 @@ namespace OGLE {
                 {"roughness", material.GetRoughness()},
                 {"metallic", material.GetMetallic()},
                 {"alphaCutoff", material.GetAlphaCutoff()},
-                {"diffuseTexturePath", material.GetDiffuseTexturePath()},
-                {"emissiveTexturePath", material.GetEmissiveTexturePath()},
+                // {"diffuseTexturePath", material.GetDiffuseTexturePath()},
+                // {"emissiveTexturePath", material.GetEmissiveTexturePath()},
                 {"shaderProgram", material.GetShaderProgram()}
             };
         }
@@ -50,12 +50,12 @@ namespace OGLE {
             if (materialJson.contains("alphaCutoff")) {
                 material.SetAlphaCutoff(materialJson.at("alphaCutoff").get<float>());
             }
-            if (materialJson.contains("diffuseTexturePath")) {
-                material.SetDiffuseTexturePath(materialJson.at("diffuseTexturePath").get<std::string>());
-            }
-            if (materialJson.contains("emissiveTexturePath")) {
-                material.SetEmissiveTexturePath(materialJson.at("emissiveTexturePath").get<std::string>());
-            }
+            // if (materialJson.contains("diffuseTexturePath")) {
+            //     material.SetDiffuseTexturePath(materialJson.at("diffuseTexturePath").get<std::string>());
+            // }
+            // if (materialJson.contains("emissiveTexturePath")) {
+            //     material.SetEmissiveTexturePath(materialJson.at("emissiveTexturePath").get<std::string>());
+            // }
             if (materialJson.contains("shaderProgram")) {
                 material.SetShaderProgram(materialJson.at("shaderProgram").get<std::string>());
             }

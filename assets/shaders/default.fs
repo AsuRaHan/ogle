@@ -3,11 +3,11 @@ in vec3 vWorldNormal;
 in vec3 vWorldPosition;
 in vec4 vLightSpacePosition;
 in vec2 vTexCoord;
-uniform sampler2D uDiffuseTexture;
-uniform sampler2D uEmissiveTexture;
+uniform sampler2D uTexture_diffuse;
+uniform sampler2D uTexture_emissive;
 uniform sampler2D uShadowMap;
-uniform int uHasDiffuseTexture;
-uniform int uHasEmissiveTexture;
+uniform int uHasTexture_diffuse;
+uniform int uHasTexture_emissive;
 uniform int uHasDirectionalLight;
 uniform int uDirectionalLightCastsShadows;
 uniform int uPointLightCount;
@@ -58,8 +58,8 @@ float ComputeShadowFactor(vec4 lightSpacePosition, vec3 normal, vec3 lightDirect
 void main() {
     // One primary shadowed directional light plus a few point lights keeps the renderer understandable.
     vec4 diffuseSample = vec4(1.0);
-    if (uHasDiffuseTexture == 1) {
-        diffuseSample = texture(uDiffuseTexture, vTexCoord);
+    if (uHasTexture_diffuse == 1) {
+        diffuseSample = texture(uTexture_diffuse, vTexCoord);
     }
     if (diffuseSample.a < uAlphaCutoff) {
         discard;
@@ -67,8 +67,8 @@ void main() {
 
     vec3 albedo = uBaseColor * diffuseSample.rgb;
     vec3 emissive = uEmissiveColor;
-    if (uHasEmissiveTexture == 1) {
-        emissive *= texture(uEmissiveTexture, vTexCoord).rgb;
+    if (uHasTexture_emissive == 1) {
+        emissive *= texture(uTexture_emissive, vTexCoord).rgb;
     }
 
     vec3 normal = normalize(vWorldNormal);

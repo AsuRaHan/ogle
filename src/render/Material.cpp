@@ -1,6 +1,7 @@
 #include "render/Material.h"
 #include "opengl/ShaderManager.h"
 #include "Logger.h"
+#include "render/TextureManager.h"
 
 #include <algorithm>
 
@@ -19,28 +20,22 @@ namespace OGLE {
         m_shader->SetUniform("uMetallic", m_metallic);
         m_shader->SetUniform("uAlphaCutoff", m_alphaCutoff);
 
-        // Texture handling – set flags and bind textures
-        int hasDiffuse = (m_diffuseTexture && m_diffuseTexture->IsValid()) ? 1 : 0;
-        int hasEmissive = (m_emissiveTexture && m_emissiveTexture->IsValid()) ? 1 : 0;
-        m_shader->SetUniform("uHasDiffuseTexture", hasDiffuse);
-        m_shader->SetUniform("uHasEmissiveTexture", hasEmissive);
+        // Texture handling
+        int textureUnit = 0;
+        for (const auto& pair : m_textureSlots) {
+            const std::string& slotName = pair.first;
+            const std::shared_ptr<Texture2D>& texture = pair.second;
 
-        // Bind textures to units 0 and 1
-        glActiveTexture(GL_TEXTURE0);
-        if (m_diffuseTexture && m_diffuseTexture->IsValid()) {
-            glBindTexture(GL_TEXTURE_2D, m_diffuseTexture->GetTextureId());
-        } else {
-            glBindTexture(GL_TEXTURE_2D, 0);
+            if (texture && texture->IsValid()) {
+                glActiveTexture(GL_TEXTURE0 + textureUnit);
+                glBindTexture(GL_TEXTURE_2D, texture->GetTextureId());
+                m_shader->SetUniform("uTexture_" + slotName, textureUnit);
+                m_shader->SetUniform("uHasTexture_" + slotName, 1);
+                textureUnit++;
+            } else {
+                m_shader->SetUniform("uHasTexture_" + slotName, 0);
+            }
         }
-        glActiveTexture(GL_TEXTURE1);
-        if (m_emissiveTexture && m_emissiveTexture->IsValid()) {
-            glBindTexture(GL_TEXTURE_2D, m_emissiveTexture->GetTextureId());
-        } else {
-            glBindTexture(GL_TEXTURE_2D, 0);
-        }
-        // Sampler uniforms
-        m_shader->SetUniform("uDiffuseTexture", 0);
-        m_shader->SetUniform("uEmissiveTexture", 1);
     }
 
     void Material::SetBaseColor(const glm::vec3& color)
@@ -113,88 +108,65 @@ namespace OGLE {
         return m_alphaCutoff;
     }
 
-    bool Material::SetDiffuseTexturePath(const std::string& path)
+    void Material::AddTexture(const std::string& slotName, const std::string& texturePath)
     {
-        if (path.empty()) {
-            ClearDiffuseTexture();
-            return true;
+        if (texturePath.empty()) {
+            RemoveTexture(slotName);
+            return;
         }
 
-        std::shared_ptr<Texture2D> texture = Texture2D::LoadShared(path);
+        std::shared_ptr<Texture2D> texture = TextureManager::Get().Load(texturePath);
         if (!texture || !texture->IsValid()) {
-            LOG_WARN("Failed to load diffuse texture: " + path);
-            return false;
+            LOG_WARN("Failed to load texture for slot '" + slotName + "': " + texturePath);
+            // Even if it fails, we store the path so it can be fixed in the editor
+            m_textureSlotPaths[slotName] = texturePath;
+            m_textureSlots.erase(slotName);
+            return;
         }
 
-        m_diffuseTexture = std::move(texture);
-        m_diffuseTexturePath = m_diffuseTexture->GetPath();
-        return true;
+        m_textureSlots[slotName] = texture;
+        m_textureSlotPaths[slotName] = texture->GetPath(); // Use resolved path
     }
 
-    void Material::ClearDiffuseTexture()
+    void Material::RemoveTexture(const std::string& slotName)
     {
-        m_diffuseTexture.reset();
-        m_diffuseTexturePath.clear();
+        m_textureSlots.erase(slotName);
+        m_textureSlotPaths.erase(slotName);
     }
 
-    bool Material::HasDiffuseTexture() const
+    std::shared_ptr<Texture2D> Material::GetTexture(const std::string& slotName) const
     {
-        return m_diffuseTexture && m_diffuseTexture->IsValid();
-    }
-
-    const std::string& Material::GetDiffuseTexturePath() const
-    {
-        return m_diffuseTexturePath;
-    }
-
-    bool Material::SetEmissiveTexturePath(const std::string& path)
-    {
-        if (path.empty()) {
-            ClearEmissiveTexture();
-            return true;
+        auto it = m_textureSlots.find(slotName);
+        if (it != m_textureSlots.end()) {
+            return it->second;
         }
-
-        std::shared_ptr<Texture2D> texture = Texture2D::LoadShared(path);
-        if (!texture || !texture->IsValid()) {
-            LOG_WARN("Failed to load emissive texture: " + path);
-            return false;
-        }
-
-        m_emissiveTexture = std::move(texture);
-        m_emissiveTexturePath = m_emissiveTexture->GetPath();
-        return true;
+        return nullptr;
     }
 
-    void Material::ClearEmissiveTexture()
+    const std::map<std::string, std::string>& Material::GetTexturePaths() const
     {
-        m_emissiveTexture.reset();
-        m_emissiveTexturePath.clear();
+        return m_textureSlotPaths;
     }
 
-    bool Material::HasEmissiveTexture() const
+    bool Material::HasTexture(const std::string& slotName) const
     {
-        return m_emissiveTexture && m_emissiveTexture->IsValid();
-    }
-
-    const std::string& Material::GetEmissiveTexturePath() const
-    {
-        return m_emissiveTexturePath;
+        auto it = m_textureSlots.find(slotName);
+        return it != m_textureSlots.end() && it->second && it->second->IsValid();
     }
 
     nlohmann::json Material::ToJson() const
     {
-        return nlohmann::json{
-            {"baseColor", {m_baseColor.x, m_baseColor.y, m_baseColor.z}},
-            {"emissiveColor", {m_emissiveColor.x, m_emissiveColor.y, m_emissiveColor.z}},
-            {"uvTiling", {m_uvTiling.x, m_uvTiling.y}},
-            {"uvOffset", {m_uvOffset.x, m_uvOffset.y}},
-            {"roughness", m_roughness},
-            {"metallic", m_metallic},
-            {"alphaCutoff", m_alphaCutoff},
-            {"diffuseTexturePath", m_diffuseTexturePath},
-            {"emissiveTexturePath", m_emissiveTexturePath},
-            {"shaderProgram", m_shaderProgramName}
-        };
+        nlohmann::json j;
+        j["baseColor"] = {m_baseColor.x, m_baseColor.y, m_baseColor.z};
+        j["emissiveColor"] = {m_emissiveColor.x, m_emissiveColor.y, m_emissiveColor.z};
+        j["uvTiling"] = {m_uvTiling.x, m_uvTiling.y};
+        j["uvOffset"] = {m_uvOffset.x, m_uvOffset.y};
+        j["roughness"] = m_roughness;
+        j["metallic"] = m_metallic;
+        j["alphaCutoff"] = m_alphaCutoff;
+        j["shaderProgram"] = m_shaderProgramName;
+        j["textureSlots"] = m_textureSlotPaths;
+        return j;
     }
 
     bool Material::FromJson(const nlohmann::json& j)
@@ -224,12 +196,16 @@ namespace OGLE {
         if (j.contains("alphaCutoff")) {
             SetAlphaCutoff(j.at("alphaCutoff").get<float>());
         }
-        if (j.contains("diffuseTexturePath")) {
-            SetDiffuseTexturePath(j.at("diffuseTexturePath").get<std::string>());
+        
+        if (j.contains("textureSlots")) {
+            m_textureSlotPaths.clear();
+            m_textureSlots.clear();
+            const auto& texturesJson = j.at("textureSlots");
+            for (auto it = texturesJson.begin(); it != texturesJson.end(); ++it) {
+                AddTexture(it.key(), it.value().get<std::string>());
+            }
         }
-        if (j.contains("emissiveTexturePath")) {
-            SetEmissiveTexturePath(j.at("emissiveTexturePath").get<std::string>());
-        }
+
         if (j.contains("shaderProgram")) {
             SetShaderProgram(j.at("shaderProgram").get<std::string>());
         }

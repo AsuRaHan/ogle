@@ -13,9 +13,9 @@ namespace {
     {
         auto model = std::make_shared<OGLE::ModelEntity>(OGLE::ModelType::STATIC);
         model->SetMeshData(vertices, indices);
-        if (!diffuseTexturePath.empty()) {
-            model->SetDiffuseTexturePath(diffuseTexturePath);
-        }
+        // if (!diffuseTexturePath.empty()) {
+        //     model->SetDiffuseTexturePath(diffuseTexturePath);
+        // }
         return model;
     }
 

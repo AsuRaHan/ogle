@@ -79,25 +79,25 @@ bool WorldManager::SetEntityScale(OGLE::Entity entity, const glm::vec3& scale)
     return true;
 }
 
-bool WorldManager::SetEntityDiffuseTexture(OGLE::Entity entity, const std::string& texturePath)
-{
-    OGLE::World& world = GetActiveWorld();
+// bool WorldManager::SetEntityDiffuseTexture(OGLE::Entity entity, const std::string& texturePath)
+// {
+//     OGLE::World& world = GetActiveWorld();
 
-    if (OGLE::MaterialComponent* material = world.GetMaterial(entity)) {
-        return material->material.SetDiffuseTexturePath(texturePath);
-    }
+//     if (OGLE::MaterialComponent* material = world.GetMaterial(entity)) {
+//         return material->material.SetDiffuseTexturePath(texturePath);
+//     }
 
-    // Ensure mesh entities always have authoring material in ECS.
-    if (const OGLE::ModelEntity* model = world.GetModel(entity)) {
-        OGLE::MaterialComponent component;
-        component.material = model->GetMaterial();
-        component.material.SetDiffuseTexturePath(texturePath);
-        world.GetRegistry().emplace<OGLE::MaterialComponent>(entity, component);
-        return true;
-    }
+//     // Ensure mesh entities always have authoring material in ECS.
+//     if (const OGLE::ModelEntity* model = world.GetModel(entity)) {
+//         OGLE::MaterialComponent component;
+//         component.material = model->GetMaterial();
+//         component.material.SetDiffuseTexturePath(texturePath);
+//         world.GetRegistry().emplace<OGLE::MaterialComponent>(entity, component);
+//         return true;
+//     }
 
-    return false;
-}
+//     return false;
+// }
 
 bool WorldManager::SetEntityShaderProgram(OGLE::Entity entity, const std::string& shaderProgramName)
 {

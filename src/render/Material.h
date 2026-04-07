@@ -8,6 +8,7 @@
 #include <nlohmann/json.hpp>
 #include <memory>
 #include <string>
+#include <map>
 
 namespace OGLE {
     class Material {
@@ -30,14 +31,12 @@ namespace OGLE {
         void SetAlphaCutoff(float alphaCutoff);
         float GetAlphaCutoff() const;
 
-        bool SetDiffuseTexturePath(const std::string& path);
-        void ClearDiffuseTexture();
-        bool HasDiffuseTexture() const;
-        const std::string& GetDiffuseTexturePath() const;
-        bool SetEmissiveTexturePath(const std::string& path);
-        void ClearEmissiveTexture();
-        bool HasEmissiveTexture() const;
-        const std::string& GetEmissiveTexturePath() const;
+        // New texture slot methods
+        void AddTexture(const std::string& slotName, const std::string& texturePath);
+        void RemoveTexture(const std::string& slotName);
+        std::shared_ptr<Texture2D> GetTexture(const std::string& slotName) const;
+        const std::map<std::string, std::string>& GetTexturePaths() const;
+        bool HasTexture(const std::string& slotName) const;
 
         void SetShaderProgram(const std::string& shaderProgramName);
         const std::string& GetShaderProgram() const;
@@ -56,10 +55,10 @@ namespace OGLE {
         float m_roughness = 0.7f;
         float m_metallic = 0.0f;
         float m_alphaCutoff = 0.0f;
-        std::string m_diffuseTexturePath;
-        std::shared_ptr<Texture2D> m_diffuseTexture;
-        std::string m_emissiveTexturePath;
-        std::shared_ptr<Texture2D> m_emissiveTexture;
+        
+        std::map<std::string, std::string> m_textureSlotPaths;
+        std::map<std::string, std::shared_ptr<Texture2D>> m_textureSlots;
+
         std::string m_shaderProgramName;
 
     };

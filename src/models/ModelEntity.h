@@ -27,8 +27,7 @@ namespace OGLE {
         std::vector<float>& GetVertices(); // Добавлено для доступа к изменяемым вершинам
         const std::vector<float>& GetVertices() const; // Добавлено для чтения вершин
         const std::vector<unsigned int>& GetIndices() const; // Добавлено для чтения индексов
-        bool SetDiffuseTexturePath(const std::string& texturePath);
-        const std::string& GetDiffuseTexturePath() const;
+        void AddTexture(const std::string& slotName, const std::string& texturePath);
         Material& GetMaterial();
         const Material& GetMaterial() const;
         

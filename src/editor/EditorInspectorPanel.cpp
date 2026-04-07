@@ -201,8 +201,8 @@ void EditorInspectorPanel::Draw(EditorState& state, WorldManager& worldManager, 
                 materialComponent->material.SetRoughness(state.roughnessBuffer);
                 materialComponent->material.SetMetallic(state.metallicBuffer);
                 materialComponent->material.SetAlphaCutoff(state.alphaCutoffBuffer);
-                materialComponent->material.SetDiffuseTexturePath(state.texturePathBuffer.data());
-                materialComponent->material.SetEmissiveTexturePath(state.emissiveTexturePathBuffer.data());
+                materialComponent->material.AddTexture("diffuse", state.texturePathBuffer.data());
+                materialComponent->material.AddTexture("emissive", state.emissiveTexturePathBuffer.data());
                 materialComponent->material.SetShaderProgram(state.shaderProgramBuffer.data());
 
                 // Apply new or existing material asset name if it exists
@@ -231,8 +231,8 @@ void EditorInspectorPanel::Draw(EditorState& state, WorldManager& worldManager, 
             }
             ImGui::SameLine();
             if (ImGui::Button("Clear Textures")) {
-                materialComponent->material.SetDiffuseTexturePath("");
-                materialComponent->material.SetEmissiveTexturePath("");
+                materialComponent->material.RemoveTexture("diffuse");
+                materialComponent->material.RemoveTexture("emissive");
                 state.texturePathBuffer.fill('\0');
                 state.emissiveTexturePathBuffer.fill('\0');
             }
@@ -251,7 +251,7 @@ void EditorInspectorPanel::Draw(EditorState& state, WorldManager& worldManager, 
                 if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(GetContentBrowserAssetPayload())) {
                     const char* assetPath = static_cast<const char*>(payload->Data);
                     if (assetPath && IsEditorTextureAssetPath(assetPath)) {
-                        materialComponent->material.SetDiffuseTexturePath(assetPath);
+                        materialComponent->material.AddTexture("diffuse", assetPath);
                         state.texturePathBuffer.fill('\0');
                         std::strncpy(state.texturePathBuffer.data(), assetPath, state.texturePathBuffer.size() - 1);
                     }

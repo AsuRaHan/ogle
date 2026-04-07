@@ -85,9 +85,9 @@ namespace OGLE {
             return entt::null;
         }
         model->BakeToGPU();
-        if (!model->GetLoadedDiffuseTexturePath().empty()) {
-            model->SetDiffuseTexturePath(model->GetLoadedDiffuseTexturePath());
-        }
+        // if (!model->GetLoadedDiffuseTexturePath().empty()) {
+        //     model->SetDiffuseTexturePath(model->GetLoadedDiffuseTexturePath());
+        // }
         const Entity entity = AddModel(std::move(model), name);
         if (m_registry.all_of<PrimitiveComponent>(entity)) {
             auto& primitive = m_registry.get<PrimitiveComponent>(entity);
