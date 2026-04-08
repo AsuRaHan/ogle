@@ -73,35 +73,85 @@ float voronoi(vec2 st, uint seed) {
             return false;
         }
 
-        // Здесь будут shader sources
-        std::string noiseHelper(g_noiseHelper);
+        // Helper to build and load a compute shader
+        auto loadAndLink = [&](const std::string& name, const std::string& source) {
+            if (!shaderManager->loadComputeShader(name, source.c_str())) {
+                LOG_ERROR("Failed to load compute shader: " + name);
+                return false;
+            }
+            if (!shaderManager->linkComputeProgram(name + "_program", name)) {
+                LOG_ERROR("Failed to link compute program: " + name + "_program");
+                return false;
+            }
+            return true;
+        };
 
-        // Загрузка всех compute shader'ов (упрощённо)
         bool success = true;
 
-        // Для демонстрации - просто создадим dummy compute shaders
-        const char* dummyCompute = "#version 430 core\nlayout(local_size_x=8,local_size_y=8)in;void main(){}";
-        
-        success &= shaderManager->loadComputeShader("perlin_noise", dummyCompute);
-        success &= shaderManager->loadComputeShader("fbm_noise", dummyCompute);
-        success &= shaderManager->loadComputeShader("marble", dummyCompute);
-        success &= shaderManager->loadComputeShader("wood", dummyCompute);
-        success &= shaderManager->loadComputeShader("clouds", dummyCompute);
-        success &= shaderManager->loadComputeShader("voronoi", dummyCompute);
-        success &= shaderManager->loadComputeShader("checkerboard", dummyCompute);
-        success &= shaderManager->loadComputeShader("ridged_noise", dummyCompute);
-        success &= shaderManager->loadComputeShader("turbulence", dummyCompute);
+        // --- Shader Sources ---
+        const std::string header = R"(
+#version 430 core
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+layout(rgba32f, binding = 0) uniform writeonly image2D destTex;
 
-        // Связывание compute программ
-        success &= shaderManager->linkComputeProgram("perlin_noise_program", "perlin_noise");
-        success &= shaderManager->linkComputeProgram("fbm_noise_program", "fbm_noise");
-        success &= shaderManager->linkComputeProgram("marble_program", "marble");
-        success &= shaderManager->linkComputeProgram("wood_program", "wood");
-        success &= shaderManager->linkComputeProgram("clouds_program", "clouds");
-        success &= shaderManager->linkComputeProgram("voronoi_program", "voronoi");
-        success &= shaderManager->linkComputeProgram("checkerboard_program", "checkerboard");
-        success &= shaderManager->linkComputeProgram("ridged_noise_program", "ridged_noise");
-        success &= shaderManager->linkComputeProgram("turbulence_program", "turbulence");
+uniform float scale;
+uniform int octaves;
+uniform float persistence;
+uniform float lacunarity;
+uniform vec3 color1;
+uniform vec3 color2;
+uniform uint seed;
+)";
+
+        auto getMain = [](const std::string& body) {
+            return R"(
+void main() {
+    ivec2 pixel_coords = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 size = imageSize(destTex);
+    if (pixel_coords.x >= size.x || pixel_coords.y >= size.y) {
+        return;
+    }
+    vec2 uv = vec2(pixel_coords) / vec2(size);
+    vec3 finalColor;
+    
+    )" + body + R"(
+
+    imageStore(destTex, pixel_coords, vec4(finalColor, 1.0));
+}
+)";
+        };
+
+        // --- Actual Implementations ---
+
+        // Checkerboard
+        std::string checkerboardBody = R"(
+    float valX = floor(uv.x * scale);
+    float valY = floor(uv.y * scale);
+    finalColor = (mod(valX + valY, 2.0) == 0.0) ? color1 : color2;)";
+        success &= loadAndLink("checkerboard", header + getMain(checkerboardBody));
+
+        // Perlin Noise
+        std::string perlinBody = R"(
+    float n = perlin(uv * scale, seed);
+    finalColor = mix(color1, color2, n);)";
+        success &= loadAndLink("perlin_noise", header + g_noiseHelper + getMain(perlinBody));
+
+        // FBM Noise
+        std::string fbmBody = R"(
+    float n = fbm(uv * scale, octaves, persistence, lacunarity, seed);
+    finalColor = mix(color1, color2, n);)";
+        std::string fbmSrc = header + g_noiseHelper + getMain(fbmBody);
+        success &= loadAndLink("fbm_noise", fbmSrc);
+        success &= loadAndLink("clouds", fbmSrc); // Clouds can be FBM
+
+        // Dummy shader for unimplemented types
+        std::string dummyBody = "finalColor = vec3(1.0, 0.0, 1.0); // Magenta for unimplemented shaders";
+        std::string dummySrc = header + getMain(dummyBody);
+        success &= loadAndLink("marble", dummySrc);
+        success &= loadAndLink("wood", dummySrc);
+        success &= loadAndLink("voronoi", dummySrc);
+        success &= loadAndLink("ridged_noise", dummySrc);
+        success &= loadAndLink("turbulence", dummySrc);
 
         return success;
     }

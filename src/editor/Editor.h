@@ -82,8 +82,8 @@ private:
     OGLE::Entity& m_selectedEntity = m_state.selectedEntity;
     OGLE::Entity& m_bufferedEntity = m_state.bufferedEntity;
     OGLE::Entity& m_textureEditingEntity = m_state.textureEditingEntity;
-    std::array<char, 512>& m_texturePathBuffer = m_state.texturePathBuffer;
-    std::array<char, 512>& m_emissiveTexturePathBuffer = m_state.emissiveTexturePathBuffer;
+    // std::array<char, 512>& m_texturePathBuffer = m_state.texturePathBuffer;
+    // std::array<char, 512>& m_emissiveTexturePathBuffer = m_state.emissiveTexturePathBuffer;
     std::array<char, 256>& m_worldPathBuffer = m_state.worldPathBuffer;
     std::array<char, 256>& m_assetsPathBuffer = m_state.assetsPathBuffer;
     std::array<char, 256>& m_selectedNameBuffer = m_state.selectedNameBuffer;

@@ -165,8 +165,40 @@ void EditorInspectorPanel::Draw(EditorState& state, WorldManager& worldManager, 
             ImGui::SliderFloat("Roughness", &state.roughnessBuffer, 0.0f, 1.0f);
             ImGui::SliderFloat("Metallic", &state.metallicBuffer, 0.0f, 1.0f);
             ImGui::SliderFloat("Alpha Cutoff", &state.alphaCutoffBuffer, 0.0f, 1.0f);
-            ImGui::InputText("Diffuse Texture", state.texturePathBuffer.data(), state.texturePathBuffer.size());
-            ImGui::InputText("Emissive Texture", state.emissiveTexturePathBuffer.data(), state.emissiveTexturePathBuffer.size());
+
+            ImGui::Separator();
+            ImGui::Text("Textures");
+
+            // Buffer for adding a new slot
+            static char newSlotName[128] = "";
+
+            // Display existing texture slots
+            for (auto& pair : state.materialTexturePathsBuffer) {
+                ImGui::PushID(pair.first.c_str());
+                ImGui::InputText(pair.first.c_str(), pair.second.data(), pair.second.size());
+                if (ImGui::BeginDragDropTarget()) {
+                    if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(GetContentBrowserAssetPayload())) {
+                        const char* assetPath = static_cast<const char*>(payload->Data);
+                        if (assetPath && IsEditorTextureAssetPath(assetPath)) {
+                            strncpy(pair.second.data(), assetPath, pair.second.size() - 1);
+                        }
+                    }
+                    ImGui::EndDragDropTarget();
+                }
+                ImGui::PopID();
+            }
+
+            ImGui::Separator();
+            ImGui::InputText("New Slot Name", newSlotName, IM_ARRAYSIZE(newSlotName));
+            ImGui::SameLine();
+            if (ImGui::Button("Add Texture Slot")) {
+                if (strlen(newSlotName) > 0) {
+                    // Add to buffer, will be applied on "Apply Material"
+                    state.materialTexturePathsBuffer[newSlotName].fill('\0');
+                    newSlotName[0] = '\0'; 
+                }
+            }
+
 
             // Shader selection combo: loaded shader programs from ShaderManager
             ShaderManager* shaderManager = ShaderManager::GetGlobalInstance();
@@ -201,8 +233,12 @@ void EditorInspectorPanel::Draw(EditorState& state, WorldManager& worldManager, 
                 materialComponent->material.SetRoughness(state.roughnessBuffer);
                 materialComponent->material.SetMetallic(state.metallicBuffer);
                 materialComponent->material.SetAlphaCutoff(state.alphaCutoffBuffer);
-                materialComponent->material.AddTexture("diffuse", state.texturePathBuffer.data());
-                materialComponent->material.AddTexture("emissive", state.emissiveTexturePathBuffer.data());
+                
+                // Apply textures from the buffer
+                for (const auto& pair : state.materialTexturePathsBuffer) {
+                    materialComponent->material.AddTexture(pair.first, pair.second.data());
+                }
+
                 materialComponent->material.SetShaderProgram(state.shaderProgramBuffer.data());
 
                 // Apply new or existing material asset name if it exists
@@ -231,10 +267,15 @@ void EditorInspectorPanel::Draw(EditorState& state, WorldManager& worldManager, 
             }
             ImGui::SameLine();
             if (ImGui::Button("Clear Textures")) {
-                materialComponent->material.RemoveTexture("diffuse");
-                materialComponent->material.RemoveTexture("emissive");
-                state.texturePathBuffer.fill('\0');
-                state.emissiveTexturePathBuffer.fill('\0');
+                const auto& texturePaths = materialComponent->material.GetTexturePaths();
+                std::vector<std::string> slotNames;
+                for (const auto& pair : texturePaths) {
+                    slotNames.push_back(pair.first);
+                }
+                for (const auto& slotName : slotNames) {
+                    materialComponent->material.RemoveTexture(slotName);
+                }
+                state.materialTexturePathsBuffer.clear();
             }
 
             ImGui::InputText("Material Library Path", state.assetsPathBuffer.data(), state.assetsPathBuffer.size());
@@ -245,18 +286,6 @@ void EditorInspectorPanel::Draw(EditorState& state, WorldManager& worldManager, 
             ImGui::SameLine();
             if (ImGui::Button("Load Materials")) {
                 OGLE::MaterialLibrary::Instance().LoadFromFile(state.assetsPathBuffer.data());
-            }
-
-            if (ImGui::BeginDragDropTarget()) {
-                if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(GetContentBrowserAssetPayload())) {
-                    const char* assetPath = static_cast<const char*>(payload->Data);
-                    if (assetPath && IsEditorTextureAssetPath(assetPath)) {
-                        materialComponent->material.AddTexture("diffuse", assetPath);
-                        state.texturePathBuffer.fill('\0');
-                        std::strncpy(state.texturePathBuffer.data(), assetPath, state.texturePathBuffer.size() - 1);
-                    }
-                }
-                ImGui::EndDragDropTarget();
             }
         }
     }

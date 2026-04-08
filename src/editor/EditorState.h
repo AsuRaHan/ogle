@@ -28,8 +28,7 @@ struct EditorState
     OGLE::Entity selectedEntity = entt::null;
     OGLE::Entity bufferedEntity = entt::null;
     OGLE::Entity textureEditingEntity = entt::null;
-    std::array<char, 512> texturePathBuffer{};
-    std::array<char, 512> emissiveTexturePathBuffer{};
+    std::map<std::string, std::array<char, 512>> materialTexturePathsBuffer;
     std::array<char, 256> worldPathBuffer{};
     std::array<char, 256> assetsPathBuffer{};
     std::array<char, 256> selectedNameBuffer{};

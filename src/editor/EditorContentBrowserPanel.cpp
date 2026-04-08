@@ -387,9 +387,7 @@ void EditorContentBrowserPanel::HandleFileSelected(
 
     if (IsEditorTextureAssetPath(filePath.generic_string())) {
         state.createTexturePathBuffer.fill('\0');
-        state.texturePathBuffer.fill('\0');
         std::strncpy(state.createTexturePathBuffer.data(), usePathString.c_str(), state.createTexturePathBuffer.size() - 1);
-        std::strncpy(state.texturePathBuffer.data(), usePathString.c_str(), state.texturePathBuffer.size() - 1);
     }
 
     if (IsEditorModelAssetPath(filePath.generic_string())) {

@@ -46,11 +46,11 @@ namespace OGLE {
     }
 
     std::shared_ptr<Texture2D> TextureGenerator::GenerateCheckerboard(
-        int width, int height, float squareSize, const glm::vec3& color1, const glm::vec3& color2, unsigned int seed)
+        int width, int height, float checkerCount, const glm::vec3& color1, const glm::vec3& color2, unsigned int seed)
     {
         return ProceduralTexture::Generate(
             ProceduralTextureType::Checkerboard,
-            width, height, 1.0f / squareSize * 32.0f, 1, 0.5f, 2.0f,
+            width, height, checkerCount, 1, 0.5f, 2.0f,
             color1, color2, seed
         );
     }

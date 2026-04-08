@@ -35,8 +35,6 @@ bool Editor::Initialize()
     m_state.skeletonSourcePathBuffer.fill('\0');
     m_state.animationClipBuffer.fill('\0');
     m_state.scriptPathBuffer.fill('\0');
-    m_state.texturePathBuffer.fill('\0');
-    m_state.emissiveTexturePathBuffer.fill('\0');
     strncpy(m_state.createNameBuffer.data(), "NewObject", m_state.createNameBuffer.size() - 1);
     strncpy(m_state.worldPathBuffer.data(), "assets/worlds/default_world.json", m_state.worldPathBuffer.size() - 1);
     strncpy(m_state.assetsPathBuffer.data(), "assets", m_state.assetsPathBuffer.size() - 1);
@@ -320,17 +318,14 @@ void Editor::SyncSelectedBuffers(WorldManager& worldManager)
         if (OGLE::MaterialComponent* materialComponent = worldManager.GetActiveWorld().GetComponent<OGLE::MaterialComponent>(m_state.selectedEntity)) {
             m_state.textureEditingEntity = m_state.selectedEntity;
             const OGLE::Material& material = materialComponent->material;
-            m_state.texturePathBuffer.fill('\0');
-            m_state.emissiveTexturePathBuffer.fill('\0');
+
+            m_state.materialTexturePathsBuffer.clear();
             const auto& texturePaths = material.GetTexturePaths();
-            auto diffuseIt = texturePaths.find("diffuse");
-            if (diffuseIt != texturePaths.end()) {
-                strncpy(m_state.texturePathBuffer.data(), diffuseIt->second.c_str(), m_state.texturePathBuffer.size() - 1);
+            for (const auto& pair : texturePaths) {
+                m_state.materialTexturePathsBuffer[pair.first].fill('\0');
+                strncpy(m_state.materialTexturePathsBuffer[pair.first].data(), pair.second.c_str(), m_state.materialTexturePathsBuffer[pair.first].size() - 1);
             }
-            auto emissiveIt = texturePaths.find("emissive");
-            if (emissiveIt != texturePaths.end()) {
-                strncpy(m_state.emissiveTexturePathBuffer.data(), emissiveIt->second.c_str(), m_state.emissiveTexturePathBuffer.size() - 1);
-            }
+
             m_state.baseColorBuffer = material.GetBaseColor();
             m_state.emissiveColorBuffer = material.GetEmissiveColor();
             m_state.uvTilingBuffer = material.GetUvTiling();
@@ -343,17 +338,14 @@ void Editor::SyncSelectedBuffers(WorldManager& worldManager)
         } else if (OGLE::ModelEntity* model = selectedObject.GetModel()) {
             m_state.textureEditingEntity = m_state.selectedEntity;
             const OGLE::Material& material = model->GetMaterial();
-            m_state.texturePathBuffer.fill('\0');
-            m_state.emissiveTexturePathBuffer.fill('\0');
+
+            m_state.materialTexturePathsBuffer.clear();
             const auto& texturePaths = material.GetTexturePaths();
-            auto diffuseIt = texturePaths.find("diffuse");
-            if (diffuseIt != texturePaths.end()) {
-                strncpy(m_state.texturePathBuffer.data(), diffuseIt->second.c_str(), m_state.texturePathBuffer.size() - 1);
+            for (const auto& pair : texturePaths) {
+                m_state.materialTexturePathsBuffer[pair.first].fill('\0');
+                strncpy(m_state.materialTexturePathsBuffer[pair.first].data(), pair.second.c_str(), m_state.materialTexturePathsBuffer[pair.first].size() - 1);
             }
-            auto emissiveIt = texturePaths.find("emissive");
-            if (emissiveIt != texturePaths.end()) {
-                strncpy(m_state.emissiveTexturePathBuffer.data(), emissiveIt->second.c_str(), m_state.emissiveTexturePathBuffer.size() - 1);
-            }
+
             m_state.baseColorBuffer = material.GetBaseColor();
             m_state.emissiveColorBuffer = material.GetEmissiveColor();
             m_state.uvTilingBuffer = material.GetUvTiling();
@@ -365,8 +357,7 @@ void Editor::SyncSelectedBuffers(WorldManager& worldManager)
             strncpy(m_state.shaderProgramBuffer.data(), material.GetShaderProgram().c_str(), m_state.shaderProgramBuffer.size() - 1);
         } else {
             m_state.textureEditingEntity = entt::null;
-            m_state.texturePathBuffer.fill('\0');
-            m_state.emissiveTexturePathBuffer.fill('\0');
+            m_state.materialTexturePathsBuffer.clear();
             m_state.shaderProgramBuffer.fill('\0');
         }
     }
