@@ -5,6 +5,7 @@
 #include "../Logger.h"
 #include "../render/ProceduralTexture.h"
 
+#include <algorithm>
 #include <array>
 #include <chrono>
 #include <glm/gtc/matrix_transform.hpp>
@@ -27,9 +28,22 @@ void OpenGLRenderer::SetHighlightedEntity(OGLE::Entity entity)
     m_highlightedEntity = entity;
 }
 
+void OpenGLRenderer::SetSceneViewport(const glm::vec2& origin, const glm::vec2& size)
+{
+    // Метод оставлен для совместимости, но больше не влияет на рендеринг
+    // Рендеринг теперь всегда происходит на весь экран
+    UpdateSceneViewportState();
+}
+
 OpenGLRenderer::~OpenGLRenderer()
 {
     DestroyShadowResources();
+
+    if (m_gridVAO != 0) { glDeleteVertexArrays(1, &m_gridVAO); m_gridVAO = 0; }
+    if (m_gridVBO != 0) { glDeleteBuffers(1, &m_gridVBO); m_gridVBO = 0; }
+    if (m_gridIBO != 0) { glDeleteBuffers(1, &m_gridIBO); m_gridIBO = 0; }
+    if (m_gizmoVAO != 0) { glDeleteVertexArrays(1, &m_gizmoVAO); m_gizmoVAO = 0; }
+    if (m_gizmoVBO != 0) { glDeleteBuffers(1, &m_gizmoVBO); m_gizmoVBO = 0; }
 }
 
 bool OpenGLRenderer::Initialize()
@@ -93,6 +107,17 @@ bool OpenGLRenderer::Initialize()
         return false;
     }
 
+    if (!InitializeGrid()) {
+        LOG_ERROR("OpenGLRenderer: failed to initialize grid");
+        return false;
+    }
+
+    if (!InitializeGizmo()) {
+        LOG_ERROR("OpenGLRenderer: failed to initialize axis gizmo");
+        return false;
+    }
+
+    m_gridInitialized = true;
     return true;
 }
 
@@ -105,8 +130,183 @@ void OpenGLRenderer::Resize(int width, int height)
     m_width = width;
     m_height = height;
     glViewport(0, 0, m_width, m_height);
-    m_camera.SetAspectRatio(static_cast<float>(m_width) / m_height);
+    UpdateSceneViewportState();
     LOG_DEBUG("OpenGLRenderer::Resize set viewport " + std::to_string(m_width) + "x" + std::to_string(m_height));
+}
+
+void OpenGLRenderer::UpdateSceneViewportState()
+{
+    float aspectRatio = 1.0f;
+    if (m_height > 0) {
+        aspectRatio = static_cast<float>(m_width) / static_cast<float>(m_height);
+    }
+
+    m_camera.SetAspectRatio(aspectRatio);
+}
+
+bool OpenGLRenderer::InitializeGrid()
+{
+    const float size = 500.0f;
+    const float y = 0.0f;
+    const float vertices[] = {
+        -size, y, -size,
+         size, y, -size,
+         size, y,  size,
+        -size, y,  size,
+    };
+    const unsigned int indices[] = { 0, 1, 2, 0, 2, 3 };
+
+    glGenVertexArrays(1, &m_gridVAO);
+    glGenBuffers(1, &m_gridVBO);
+    glGenBuffers(1, &m_gridIBO);
+
+    glBindVertexArray(m_gridVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, m_gridVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), reinterpret_cast<void*>(0));
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_gridIBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+    glBindVertexArray(0);
+
+    const std::string gridVsSrc = m_shaderManager.LoadShaderSource("assets/shaders/grid.vs");
+    const std::string gridFsSrc = m_shaderManager.LoadShaderSource("assets/shaders/grid.fs");
+    if (gridVsSrc.empty() || gridFsSrc.empty()) {
+        LOG_ERROR("OpenGLRenderer: failed to load grid shader sources");
+        return false;
+    }
+
+    if (!m_shaderManager.loadVertexShader("grid_vs", gridVsSrc.c_str())) {
+        LOG_ERROR("OpenGLRenderer: failed to compile grid vertex shader");
+        return false;
+    }
+    if (!m_shaderManager.loadFragmentShader("grid_fs", gridFsSrc.c_str())) {
+        LOG_ERROR("OpenGLRenderer: failed to compile grid fragment shader");
+        return false;
+    }
+    if (!m_shaderManager.linkProgram("grid", "grid_vs", "grid_fs")) {
+        LOG_ERROR("OpenGLRenderer: failed to link grid program");
+        return false;
+    }
+
+    m_gridProgram = m_shaderManager.getProgram("grid");
+    LOG_INFO("OpenGLRenderer: grid initialized");
+    return true;
+}
+
+bool OpenGLRenderer::InitializeGizmo()
+{
+    const float length = 5.0f;
+    const float vertices[] = {
+        0.0f, 0.0f, 0.0f, length, 0.0f, 0.0f,
+        0.0f, 0.0f, 0.0f, 0.0f, length, 0.0f,
+        0.0f, 0.0f, 0.0f, 0.0f, 0.0f, length,
+    };
+
+    glGenVertexArrays(1, &m_gizmoVAO);
+    glGenBuffers(1, &m_gizmoVBO);
+
+    glBindVertexArray(m_gizmoVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, m_gizmoVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), reinterpret_cast<void*>(0));
+    glBindVertexArray(0);
+
+    const std::string lineVsSrc = m_shaderManager.LoadShaderSource("assets/shaders/debug_line.vs");
+    const std::string lineFsSrc = m_shaderManager.LoadShaderSource("assets/shaders/debug_line.fs");
+    if (lineVsSrc.empty() || lineFsSrc.empty()) {
+        LOG_ERROR("OpenGLRenderer: failed to load debug line shader sources");
+        return false;
+    }
+
+    if (!m_shaderManager.loadVertexShader("debug_line_vs", lineVsSrc.c_str())) {
+        LOG_ERROR("OpenGLRenderer: failed to compile debug line vertex shader");
+        return false;
+    }
+    if (!m_shaderManager.loadFragmentShader("debug_line_fs", lineFsSrc.c_str())) {
+        LOG_ERROR("OpenGLRenderer: failed to compile debug line fragment shader");
+        return false;
+    }
+    if (!m_shaderManager.linkProgram("debug_line", "debug_line_vs", "debug_line_fs")) {
+        LOG_ERROR("OpenGLRenderer: failed to link debug line program");
+        return false;
+    }
+
+    m_gizmoProgram = m_shaderManager.getProgram("debug_line");
+    LOG_INFO("OpenGLRenderer: gizmo initialized");
+    return true;
+}
+
+void OpenGLRenderer::RenderGrid()
+{
+    if (!m_gridInitialized || m_gridProgram == 0) {
+        return;
+    }
+
+    const glm::mat4 viewProjection = m_camera.GetProjectionMatrix() * m_camera.GetViewMatrix();
+    const glm::vec3 cameraPosition = m_camera.GetPosition();
+
+    glUseProgram(m_gridProgram);
+
+    const GLint vpLocation = glGetUniformLocation(m_gridProgram, "uViewProjection");
+    if (vpLocation >= 0) {
+        glUniformMatrix4fv(vpLocation, 1, GL_FALSE, glm::value_ptr(viewProjection));
+    }
+
+    const GLint cameraLocation = glGetUniformLocation(m_gridProgram, "uCameraPosition");
+    if (cameraLocation >= 0) {
+        glUniform3f(cameraLocation, cameraPosition.x, cameraPosition.y, cameraPosition.z);
+    }
+
+    const GLint fadeLocation = glGetUniformLocation(m_gridProgram, "uFadeDistance");
+    if (fadeLocation >= 0) {
+        glUniform1f(fadeLocation, 80.0f);
+    }
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glDepthMask(GL_FALSE);
+
+    glBindVertexArray(m_gridVAO);
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
+    glBindVertexArray(0);
+
+    glDepthMask(GL_TRUE);
+    glDisable(GL_BLEND);
+}
+
+void OpenGLRenderer::RenderGizmo()
+{
+    if (!m_gridInitialized || m_gizmoProgram == 0) {
+        return;
+    }
+
+    const glm::mat4 viewProjection = m_camera.GetProjectionMatrix() * m_camera.GetViewMatrix();
+    glUseProgram(m_gizmoProgram);
+
+    const GLint vpLocation = glGetUniformLocation(m_gizmoProgram, "uViewProjection");
+    const GLint colorLocation = glGetUniformLocation(m_gizmoProgram, "uColor");
+    if (vpLocation >= 0) {
+        glUniformMatrix4fv(vpLocation, 1, GL_FALSE, glm::value_ptr(viewProjection));
+    }
+
+    glDisable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glBindVertexArray(m_gizmoVAO);
+
+    if (colorLocation >= 0) { glUniform4f(colorLocation, 1.0f, 0.3f, 0.3f, 1.0f); }
+    glDrawArrays(GL_LINES, 0, 2);
+    if (colorLocation >= 0) { glUniform4f(colorLocation, 0.3f, 1.0f, 0.3f, 1.0f); }
+    glDrawArrays(GL_LINES, 2, 2);
+    if (colorLocation >= 0) { glUniform4f(colorLocation, 0.3f, 0.3f, 1.0f, 1.0f); }
+    glDrawArrays(GL_LINES, 4, 2);
+
+    glBindVertexArray(0);
+    glEnable(GL_DEPTH_TEST);
+    glDisable(GL_BLEND);
 }
 
 void OpenGLRenderer::Render()
@@ -121,17 +321,19 @@ void OpenGLRenderer::Render()
         RenderShadowPass(lightingState);
     }
 
+    // Упрощенный рендеринг на весь экран
     glViewport(0, 0, m_width, m_height);
     glClearColor(0.1f, 0.2f, 0.3f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    if (m_showGrid) {
+        RenderGrid();
+    }
 
     if (!m_shaderManager.useProgram("default")) {
         return;
     }
 
-    const GLuint program = m_shaderManager.getProgram("default");
-    const GLint mvpLocation = m_shaderManager.getUniformLocation("default", "uMVP");
-    const GLint modelLocation = m_shaderManager.getUniformLocation("default", "uModel");
     const GLint lightSpaceMatrixLocation = m_shaderManager.getUniformLocation("default", "uLightSpaceMatrix");
     const GLint viewPositionLocation = m_shaderManager.getUniformLocation("default", "uViewPosition");
     const GLint hasDirectionalLightLocation = m_shaderManager.getUniformLocation("default", "uHasDirectionalLight");
@@ -146,7 +348,6 @@ void OpenGLRenderer::Render()
     const GLint pointLightRangesLocation = m_shaderManager.getUniformLocation("default", "uPointLightRanges[0]");
     const GLint shadowMapLocation = m_shaderManager.getUniformLocation("default", "uShadowMap");
     const GLint selectionTintLocation = m_shaderManager.getUniformLocation("default", "uSelectionTint");
-    const GLint selectionMixLocation = m_shaderManager.getUniformLocation("default", "uSelectionMix");
     const glm::mat4 viewProjection = m_camera.GetProjectionMatrix() * m_camera.GetViewMatrix();
 
     if (lightSpaceMatrixLocation >= 0) {
@@ -331,7 +532,6 @@ void OpenGLRenderer::Render()
             SetProgramGlobalUniforms(currentProgramName);
         }
 
-        const GLuint programHandle = m_shaderManager.getProgram(currentProgramName);
         const GLint locationMVP = m_shaderManager.getUniformLocation(currentProgramName, "uMVP");
         const GLint locationModel = m_shaderManager.getUniformLocation(currentProgramName, "uModel");
         const GLint locationSelectionMix = m_shaderManager.getUniformLocation(currentProgramName, "uSelectionMix");
@@ -353,6 +553,12 @@ void OpenGLRenderer::Render()
 
         modelComponent.model->Draw();
     }
+
+    if (m_showGrid) {
+        RenderGizmo();
+    }
+
+    // Viewport уже установлен в начале метода Render
 
     if (glGetError() != GL_NO_ERROR) {
         LOG_ERROR("Post-draw error");

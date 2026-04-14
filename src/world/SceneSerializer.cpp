@@ -9,18 +9,17 @@ namespace OGLE {
     namespace {
         nlohmann::json MaterialToJson(const Material& material)
         {
-            return {
-                {"baseColor", {material.GetBaseColor().x, material.GetBaseColor().y, material.GetBaseColor().z}},
-                {"emissiveColor", {material.GetEmissiveColor().x, material.GetEmissiveColor().y, material.GetEmissiveColor().z}},
-                {"uvTiling", {material.GetUvTiling().x, material.GetUvTiling().y}},
-                {"uvOffset", {material.GetUvOffset().x, material.GetUvOffset().y}},
-                {"roughness", material.GetRoughness()},
-                {"metallic", material.GetMetallic()},
-                {"alphaCutoff", material.GetAlphaCutoff()},
-                // {"diffuseTexturePath", material.GetDiffuseTexturePath()},
-                // {"emissiveTexturePath", material.GetEmissiveTexturePath()},
-                {"shaderProgram", material.GetShaderProgram()}
-            };
+            nlohmann::json j;
+            j["baseColor"] = {material.GetBaseColor().x, material.GetBaseColor().y, material.GetBaseColor().z};
+            j["emissiveColor"] = {material.GetEmissiveColor().x, material.GetEmissiveColor().y, material.GetEmissiveColor().z};
+            j["uvTiling"] = {material.GetUvTiling().x, material.GetUvTiling().y};
+            j["uvOffset"] = {material.GetUvOffset().x, material.GetUvOffset().y};
+            j["roughness"] = material.GetRoughness();
+            j["metallic"] = material.GetMetallic();
+            j["alphaCutoff"] = material.GetAlphaCutoff();
+            j["shaderProgram"] = material.GetShaderProgram();
+            j["textureSlots"] = material.GetTexturePaths();
+            return j;
         }
 
         void MaterialFromJson(const nlohmann::json& materialJson, Material& material)
@@ -50,12 +49,12 @@ namespace OGLE {
             if (materialJson.contains("alphaCutoff")) {
                 material.SetAlphaCutoff(materialJson.at("alphaCutoff").get<float>());
             }
-            // if (materialJson.contains("diffuseTexturePath")) {
-            //     material.SetDiffuseTexturePath(materialJson.at("diffuseTexturePath").get<std::string>());
-            // }
-            // if (materialJson.contains("emissiveTexturePath")) {
-            //     material.SetEmissiveTexturePath(materialJson.at("emissiveTexturePath").get<std::string>());
-            // }
+            if (materialJson.contains("textureSlots")) {
+                const auto& textureSlotsJson = materialJson.at("textureSlots");
+                for (auto it = textureSlotsJson.begin(); it != textureSlotsJson.end(); ++it) {
+                    material.AddTexture(it.key(), it.value().get<std::string>());
+                }
+            }
             if (materialJson.contains("shaderProgram")) {
                 material.SetShaderProgram(materialJson.at("shaderProgram").get<std::string>());
             }

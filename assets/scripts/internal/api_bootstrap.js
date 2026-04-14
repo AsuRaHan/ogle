@@ -1,6 +1,11 @@
 (function () {
-    var native = this.__ogleNative;
+    // C++ bindings (world, entity, physics, input, log, Player) are now global.
+    // This script creates a more convenient 'ogle' object that wraps them.
 
+    // Reference to global 'this' which holds the C++ bindings
+    var global = this;
+
+    // Helper to unpack vec3 from object or individual components
     function unpackVec3(a, b, c) {
         if (typeof a === 'object' && a !== null) {
             return [Number(a.x) || 0, Number(a.y) || 0, Number(a.z) || 0];
@@ -9,128 +14,78 @@
     }
 
     var ogle = {
-        log: native.log,
+        log: global.log.log.bind(global.log),
+
         world: {
-            clear: native.clearWorld,
-            save: native.saveWorld,
-            load: native.loadWorld,
-            count: native.getEntityCount,
-            getEntities: native.getAllEntities,
-            getEntitiesByKind: native.getEntitiesByKind,
-            findByName: native.findEntityByName,
-            createEmpty: function (name) { return native.createEmpty(name || 'Entity'); },
+            clear: global.world.clear.bind(global.world),
             createCube: function (options) {
                 options = options || {};
-                var p = unpackVec3(options.position || { x: 0, y: 0, z: 0 });
-                var s = unpackVec3(options.scale || { x: 1, y: 1, z: 1 });
-                return native.createCube(options.name || 'Cube', p[0], p[1], p[2], s[0], s[1], s[2], options.texture || '');
+                var pos = options.position ? unpackVec3(options.position) : [0, 0, 0];
+                var scale = options.scale ? unpackVec3(options.scale) : [1, 1, 1];
+                return global.world.createCube(options.name || 'Cube', pos, scale);
             },
-            createModel: function (options) {
+            createSphere: function (options) {
                 options = options || {};
-                return native.createModel(options.path || '', options.name || 'Model');
+                var pos = options.position ? unpackVec3(options.position) : [0, 0, 0];
+                var radius = Number(options.radius) || 0.5;
+                return global.world.createSphere(options.name || 'Sphere', pos, radius);
             },
             createDirectionalLight: function (options) {
                 options = options || {};
-                var r = unpackVec3(options.rotation || { x: -50, y: 45, z: 0 });
-                var c = unpackVec3(options.color || { x: 1, y: 1, z: 1 });
-                return native.createDirectionalLight(options.name || 'DirectionalLight', r[0], r[1], r[2], c[0], c[1], c[2], Number(options.intensity == null ? 1 : options.intensity), options.castShadows !== false, options.primary !== false);
+                var rot = options.rotation ? unpackVec3(options.rotation) : [-50, 45, 0];
+                var col = options.color ? unpackVec3(options.color) : [1, 1, 1];
+                var intensity = Number(options.intensity == null ? 1.0 : options.intensity);
+                var castShadows = options.castShadows !== false;
+                var primary = options.primary !== false;
+                return global.world.createDirectionalLight(options.name || 'DirectionalLight', rot, col, intensity, castShadows, primary);
             },
             createPointLight: function (options) {
                 options = options || {};
-                var p = unpackVec3(options.position || { x: 0, y: 1.5, z: 0 });
-                var c = unpackVec3(options.color || { x: 1, y: 1, z: 1 });
-                return native.createPointLight(options.name || 'PointLight', p[0], p[1], p[2], c[0], c[1], c[2], Number(options.intensity == null ? 2 : options.intensity), Number(options.range == null ? 8 : options.range));
-            },
-            destroyEntity: native.destroyEntity
+                var pos = options.position ? unpackVec3(options.position) : [0, 1.5, 0];
+                var col = options.color ? unpackVec3(options.color) : [1, 1, 1];
+                var intensity = Number(options.intensity == null ? 2.0 : options.intensity);
+                var range = Number(options.range == null ? 8.0 : options.range);
+                return global.world.createPointLight(options.name || 'PointLight', pos, col, intensity, range);
+            }
         },
         entity: {
-            exists: native.entityExists,
-            destroy: native.destroyEntity,
-            getName: native.getName,
-            setName: native.setName,
-            getKind: native.getKind,
-            getPosition: native.getPosition,
-            getRotation: native.getRotation,
-            getScale: native.getScale,
-            getEnabled: native.getEnabled,
-            setEnabled: native.setEnabled,
-            getVisible: native.getVisible,
-            setVisible: native.setVisible,
-            setPosition: function (entity, a, b, c) { var v = unpackVec3(a, b, c); return native.setPosition(entity, v[0], v[1], v[2]); },
-            setRotation: function (entity, a, b, c) { var v = unpackVec3(a, b, c); return native.setRotation(entity, v[0], v[1], v[2]); },
-            setScale: function (entity, a, b, c) { var v = unpackVec3(a, b, c); return native.setScale(entity, v[0], v[1], v[2]); }
-        },
-        material: {
-            getTexture: native.getTexture,
-            setTexture: native.setTexture,
-            getShaderProgram: native.getShaderProgram,
-            setShaderProgram: native.setShaderProgram,
-            createAsset: native.createMaterialAsset,
-            applyAsset: native.applyMaterialAsset,
-            saveLibrary: native.saveMaterialLibrary,
-            loadLibrary: native.loadMaterialLibrary,
-            getBaseColor: native.getMaterialBaseColor,
-            setBaseColor: function (entity, a, b, c) { var v = unpackVec3(a, b, c); return native.setMaterialBaseColor(entity, v[0], v[1], v[2]); },
-            getEmissiveColor: native.getMaterialEmissiveColor,
-            setEmissiveColor: function (entity, a, b, c) { var v = unpackVec3(a, b, c); return native.setMaterialEmissiveColor(entity, v[0], v[1], v[2]); },
-            getUvTiling: native.getMaterialUvTiling,
-            setUvTiling: function (entity, x, y) {
-                if (typeof x === 'object' && x !== null) {
-                    return native.setMaterialUvTiling(entity, Number(x.x) || 0, Number(x.y) || 0);
-                }
-                return native.setMaterialUvTiling(entity, Number(x) || 0, Number(y) || 0);
+            exists: global.entity.exists.bind(global.entity),
+            getName: global.entity.getName.bind(global.entity),
+            getPosition: global.entity.getPosition.bind(global.entity),
+            getRotation: global.entity.getRotation.bind(global.entity),
+            setPosition: function (entityId, a, b, c) {
+                var v = unpackVec3(a, b, c);
+                return global.entity.setPosition(entityId, v);
             },
-            getUvOffset: native.getMaterialUvOffset,
-            setUvOffset: function (entity, x, y) {
-                if (typeof x === 'object' && x !== null) {
-                    return native.setMaterialUvOffset(entity, Number(x.x) || 0, Number(x.y) || 0);
-                }
-                return native.setMaterialUvOffset(entity, Number(x) || 0, Number(y) || 0);
-            },
-            getRoughness: native.getMaterialRoughness,
-            setRoughness: native.setMaterialRoughness,
-            getMetallic: native.getMaterialMetallic,
-            setMetallic: native.setMaterialMetallic,
-            getAlphaCutoff: native.getMaterialAlphaCutoff,
-            setAlphaCutoff: native.setMaterialAlphaCutoff,
-            getEmissiveTexture: native.getEmissiveTexture,
-            setEmissiveTexture: native.setEmissiveTexture
+            setRotation: function (entityId, a, b, c) {
+                var v = unpackVec3(a, b, c);
+                return global.entity.setRotation(entityId, v);
+            }
         },
-        animation: {
-            createAsset: native.createAnimationAsset,
-            applyAsset: native.applyAnimationAsset,
-            saveLibrary: native.saveAnimationLibrary,
-            loadLibrary: native.loadAnimationLibrary
-        },
-        light: {
-            getColor: native.getLightColor,
-            setColor: function (entity, a, b, c) { var v = unpackVec3(a, b, c); return native.setLightColor(entity, v[0], v[1], v[2]); },
-            getIntensity: native.getLightIntensity,
-            setIntensity: native.setLightIntensity,
-            getRange: native.getLightRange,
-            setRange: native.setLightRange,
-            getCastShadows: native.getLightCastShadows,
-            setCastShadows: native.setLightCastShadows,
-            getPrimary: native.getLightPrimary,
-            setPrimary: native.setLightPrimary,
-            getType: native.getLightType,
-            setType: native.setLightType
-        },
+
+        input: global.input,
+
         physics: {
-            addBox: function (entity, halfExtents, bodyType, mass) {
-                halfExtents = halfExtents || { x: 0.5, y: 0.5, z: 0.5 };
-                return native.physicsAddBox(entity, halfExtents.x, halfExtents.y, halfExtents.z, bodyType || 'Dynamic', mass || 1.0);
-            },
-            addSphere: function (entity, radius, bodyType, mass) {
-                return native.physicsAddSphere(entity, radius || 0.5, bodyType || 'Dynamic', mass || 1.0);
-            },
-            addCapsule: function (entity, radius, height, bodyType, mass) {
-                return native.physicsAddCapsule(entity, radius || 0.5, height || 1.0, bodyType || 'Dynamic', mass || 1.0);
-            },
-            removeBody: native.physicsRemoveBody,
-            setCollisionCallback: native.physicsSetCollisionCallback
-        }
+            addBox: function (entityId, options) {
+                options = options || {};
+                var halfExtents = options.halfExtents ? unpackVec3(options.halfExtents) : [0.5, 0.5, 0.5];
+                var bodyType = options.bodyType || 'Dynamic';
+                var mass = Number(options.mass == null ? 1.0 : options.mass);
+                return global.physics.addBox(entityId, halfExtents, bodyType, mass);
+            }
+        },
+
+        Player: global.Player
     };
 
-    this.ogle = ogle;
+    // Expose the new API wrapper as 'ogle' (lowercase) for scripts to use.
+    global.ogle = ogle;
+    
+    // The original C++ binding creates a global 'OGLE' (uppercase).
+    // The old_startup script uses 'ogle' (lowercase).
+    // The bootstrap script originally created 'ogle'.
+    // To maintain compatibility and avoid confusion, we can check if OGLE exists
+    // and if it's different from our new 'ogle' object, and decide on a strategy.
+    // For now, we'll just create 'ogle' as that seems to be the convention in scripts.
+    // If 'OGLE' is needed, scripts can refer to it directly.
 })();

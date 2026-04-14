@@ -93,3 +93,17 @@ void RenderManager::SetHighlightedEntity(OGLE::Entity entity)
         m_renderer->SetHighlightedEntity(entity);
     }
 }
+
+void RenderManager::SetShowGrid(bool show)
+{
+    if (m_renderer) {
+        m_renderer->SetShowGrid(show);
+    }
+}
+
+void RenderManager::SetSceneViewport(const glm::vec2& origin, const glm::vec2& size)
+{
+    if (m_renderer) {
+        m_renderer->SetSceneViewport(origin, size);
+    }
+}

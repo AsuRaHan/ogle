@@ -3,7 +3,7 @@
 #include "config/ConfigManager.h"
 #include "core/EventBus.h"
 #include "core/LayerStack.h"
-#include "editor/Editor.h"
+// #include "Old_editor/Old_Editor.h"
 #include "managers/CameraManager.h"
 #include "managers/ImGuiManager.h"
 #include "managers/InputActionsManager.h"
@@ -32,8 +32,8 @@ public:
     const IWindow& GetWindow() const { return *m_window; }
     ConfigManager& GetConfigManager() { return m_configManager; }
     const ConfigManager& GetConfigManager() const { return m_configManager; }
-    Editor& GetEditor() { return m_editor; }
-    const Editor& GetEditor() const { return m_editor; }
+    // Old_Editor& GetEditor() { return m_editor; }
+    // const Old_Editor& GetEditor() const { return m_editor; }
     CameraManager& GetCameraManager() { return m_cameraManager; }
     const CameraManager& GetCameraManager() const { return m_cameraManager; }
     ImGuiManager& GetImGuiManager() { return m_imguiManager; }
@@ -68,7 +68,7 @@ private:
     LayerStack m_layerStack;
     std::unique_ptr<IWindow> m_window;
     ConfigManager m_configManager;
-    Editor m_editor;
+    // Old_Editor m_editor;
     CameraManager m_cameraManager;
     ImGuiManager m_imguiManager;
     InputActionsManager m_inputActionsManager;

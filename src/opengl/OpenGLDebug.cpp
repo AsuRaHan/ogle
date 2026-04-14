@@ -130,12 +130,12 @@ void APIENTRY OpenGLDebug::DebugCallback(GLenum source, GLenum type, GLuint id, 
         LOG_ERROR(log.str());
     }
 
-    // Если ошибка критическая, вызываем MessageBox и завершаем программу
+    // High-severity messages should stay visible in logs, but they should not
+    // immediately kill the editor. When a debugger is attached we break there
+    // so the issue is still easy to inspect locally.
     if (severity == GL_DEBUG_SEVERITY_HIGH) {
-        WCHAR wMessage[1024];
-        swprintf_s(wMessage, L"[OpenGLDebug] OpenGL Error:\nSource: %S\nType: %S\nID: %u\nSeverity: %S\nMessage: %S",
-            sourceStr, typeStr, id, severityStr, message);
-        MessageBoxW(NULL, wMessage, L"[OpenGLDebug::MessageBox] OpenGL Critical Error", MB_OK | MB_ICONERROR);
-        exit(EXIT_FAILURE);
+        if (IsDebuggerPresent()) {
+            DebugBreak();
+        }
     }
 }

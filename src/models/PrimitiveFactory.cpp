@@ -1,6 +1,7 @@
 #include "models/PrimitiveFactory.h"
 
 #include "models/ModelEntity.h"
+#include "../render/Material.h"
 
 #include <cmath>
 #include <vector>
@@ -9,17 +10,17 @@ namespace {
     std::shared_ptr<OGLE::ModelEntity> MakeStaticModel(
         const std::vector<float>& vertices,
         const std::vector<unsigned int>& indices,
-        const std::string& diffuseTexturePath)
+        const OGLE::Material* material)
     {
         auto model = std::make_shared<OGLE::ModelEntity>(OGLE::ModelType::STATIC);
         model->SetMeshData(vertices, indices);
-        // if (!diffuseTexturePath.empty()) {
-        //     model->SetDiffuseTexturePath(diffuseTexturePath);
-        // }
+        if (material) {
+            model->GetMaterial() = *material;
+        }
         return model;
     }
 
-    std::shared_ptr<OGLE::ModelEntity> CreateCube(const std::string& diffuseTexturePath)
+    std::shared_ptr<OGLE::ModelEntity> CreateCube(const OGLE::Material* material)
     {
         static const std::vector<float> vertices = {
             -0.5f, -0.5f,  0.5f,   0.0f,  0.0f,  1.0f,   0.0f, 0.0f,
@@ -62,10 +63,10 @@ namespace {
             20, 22, 21,  22, 20, 23
         };
 
-        return MakeStaticModel(vertices, indices, diffuseTexturePath);
+        return MakeStaticModel(vertices, indices, material);
     }
 
-    std::shared_ptr<OGLE::ModelEntity> CreatePlane(const std::string& diffuseTexturePath)
+    std::shared_ptr<OGLE::ModelEntity> CreatePlane(const OGLE::Material* material)
     {
         static const std::vector<float> vertices = {
             -0.5f, 0.0f, -0.5f,   0.0f, 1.0f, 0.0f,    0.0f, 0.0f,
@@ -79,10 +80,10 @@ namespace {
             2, 3, 0
         };
 
-        return MakeStaticModel(vertices, indices, diffuseTexturePath);
+        return MakeStaticModel(vertices, indices, material);
     }
 
-    std::shared_ptr<OGLE::ModelEntity> CreateSphere(const std::string& diffuseTexturePath)
+    std::shared_ptr<OGLE::ModelEntity> CreateSphere(const OGLE::Material* material)
     {
         constexpr unsigned int rings = 16;
         constexpr unsigned int sectors = 32;
@@ -138,21 +139,21 @@ namespace {
             }
         }
 
-        return MakeStaticModel(vertices, indices, diffuseTexturePath);
+        return MakeStaticModel(vertices, indices, material);
     }
 }
 
 std::shared_ptr<OGLE::ModelEntity> PrimitiveFactory::CreatePrimitiveModel(
     OGLE::PrimitiveType type,
-    const std::string& diffuseTexturePath)
+    const OGLE::Material* material)
 {
     switch (type) {
     case OGLE::PrimitiveType::Cube:
-        return CreateCube(diffuseTexturePath);
+        return CreateCube(material);
     case OGLE::PrimitiveType::Sphere:
-        return CreateSphere(diffuseTexturePath);
+        return CreateSphere(material);
     case OGLE::PrimitiveType::Plane:
-        return CreatePlane(diffuseTexturePath);
+        return CreatePlane(material);
     default:
         return nullptr;
     }

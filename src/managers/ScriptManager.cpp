@@ -30,6 +30,22 @@ bool ScriptManager::Initialize(IWorldAccess& worldAccess, PhysicsManager& physic
 
     OGLE::ScriptBindings::Register(*m_engine, *m_worldAccess, physicsManager);
 
+    if (!apiBootstrapPath.empty())
+    {
+        const std::string resolvedPath = ResolveScriptPath(apiBootstrapPath);
+        if (resolvedPath.empty()) {
+            LOG_ERROR("Bootstrap script file not found: " + apiBootstrapPath);
+            return false;
+        }
+
+        if (!m_engine->ExecuteFile(resolvedPath)) {
+            LOG_ERROR("Failed to execute bootstrap script: " + resolvedPath);
+            LOG_ERROR("Script execution details: " + m_engine->GetLastErrorDetails());
+            return false;
+        }
+        LOG_INFO("Executed bootstrap script: " + resolvedPath);
+    }
+
     LOG_INFO("ScriptManager initialized");
     return true;
 }

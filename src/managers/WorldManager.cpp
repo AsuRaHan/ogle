@@ -2,6 +2,7 @@
 #include "WorldGenerator.h"
 
 #include "core/FileSystem.h"
+#include "../render/Material.h"
 #include "../models/PrimitiveFactory.h"
 
 #include <glm/vec3.hpp>
@@ -152,10 +153,18 @@ OGLE::Entity WorldManager::CreateModelFromFile(const std::string& filePath, OGLE
 // CreatePrimitive
 OGLE::Entity WorldManager::CreatePrimitive(const std::string& name, OGLE::PrimitiveType type, const glm::vec3& position, const glm::vec3& scale, const std::string& diffuseTexturePath)
 {
-    auto model = PrimitiveFactory::CreatePrimitiveModel(type, diffuseTexturePath);
+    std::unique_ptr<OGLE::Material> material;
+    if (!diffuseTexturePath.empty()) {
+        material = std::make_unique<OGLE::Material>();
+        material->AddTexture("diffuse", diffuseTexturePath);
+        material->SetShaderProgram("default");
+    }
+
+    auto model = PrimitiveFactory::CreatePrimitiveModel(type, material.get());
     if (!model) {
         return entt::null;
     }
+
     const OGLE::Entity entity = AddModel(std::move(model), name);
     GetActiveWorld().SetTransform(entity, position, glm::vec3(0.0f, 0.0f, 0.0f), scale);
     if (auto* primitive = GetActiveWorld().GetPrimitive(entity)) {

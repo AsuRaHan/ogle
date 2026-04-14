@@ -4,7 +4,7 @@
 
 class CameraManager;
 class WorldManager;
-class Editor;
+// class Editor;
 
 class ExampleLayer : public Layer
 {

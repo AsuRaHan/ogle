@@ -7,6 +7,7 @@
 
 namespace OGLE {
     class ModelEntity;
+    class Material;
 }
 
 class PrimitiveFactory
@@ -14,6 +15,5 @@ class PrimitiveFactory
 public:
     static std::shared_ptr<OGLE::ModelEntity> CreatePrimitiveModel(
         OGLE::PrimitiveType type,
-        const std::string& diffuseTexturePath = "");
+        const OGLE::Material* material = nullptr);
 };
-

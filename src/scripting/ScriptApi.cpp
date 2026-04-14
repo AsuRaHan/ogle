@@ -52,11 +52,16 @@ namespace OGLE
                 return 0;
             }
 
-            auto model = PrimitiveFactory::CreatePrimitiveModel(PrimitiveType::Cube, "");
+            // 创建默认材质
+            OGLE::Material material;
+            material.SetShaderProgram("default");
+            
+            auto model = PrimitiveFactory::CreatePrimitiveModel(PrimitiveType::Cube, &material);
             const auto entity = m_worldAccess->GetActiveWorld().AddModel(std::move(model), name);
             m_worldAccess->GetActiveWorld().SetTransform(entity, ToGlm(position), glm::vec3(0.0f), ToGlm(scale));
             return static_cast<unsigned int>(entt::to_integral(entity));
         }
+
 
         unsigned int WorldApi::createSphere(const std::string& name, const std::vector<float>& position, float radius)
         {
@@ -64,11 +69,16 @@ namespace OGLE
                 return 0;
             }
 
-            auto model = PrimitiveFactory::CreatePrimitiveModel(PrimitiveType::Sphere, "");
+            // 创建默认材质
+            OGLE::Material material;
+            material.SetShaderProgram("default");
+            
+            auto model = PrimitiveFactory::CreatePrimitiveModel(PrimitiveType::Sphere, &material);
             const auto entity = m_worldAccess->GetActiveWorld().AddModel(std::move(model), name);
             m_worldAccess->GetActiveWorld().SetTransform(entity, ToGlm(position), glm::vec3(0.0f), glm::vec3(radius * 2.0f));
             return static_cast<unsigned int>(entt::to_integral(entity));
         }
+
 
         unsigned int WorldApi::createDirectionalLight(const std::string& name, const std::vector<float>& rotation, const std::vector<float>& color, float intensity, bool castShadows, bool primary)
         {

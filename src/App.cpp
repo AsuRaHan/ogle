@@ -5,10 +5,11 @@
 #include "core/FileSystem.h"
 #include "core/Layer.h"
 #include "core/ExampleLayer.h"
-#include "editor/EditorAssetHelpers.h"
+#include "opengl/Camera.h"
 #include "ui/IWindow.h"
 #include <glm/vec3.hpp>
 #include <entt/entt.hpp>
+#include <imgui.h>
 #include <string>
 
 // Initialize singleton instance
@@ -29,46 +30,33 @@ public:
 
     void OnUpdate(float deltaTime) override
     {
-        auto& editor = m_app.GetEditor();
         auto& imguiManager = m_app.GetImGuiManager();
         auto& inputActionsManager = m_app.GetInputActionsManager();
         auto& cameraManager = m_app.GetCameraManager();
         auto& scriptManager = m_app.GetScriptManager();
         auto& physicsManager = m_app.GetPhysicsManager();
-        auto& worldManager = m_app.GetWorldManager();
-        
-        if (!imguiManager.WantsKeyboardCapture() && !imguiManager.WantsMouseCapture()) {
-            inputActionsManager.UpdateCameraControls(cameraManager, deltaTime);
-        }
+        auto& worldManager = m_app.GetWorldManager();    
+        inputActionsManager.UpdateCameraControls(cameraManager, deltaTime);
+        scriptManager.Update(deltaTime);
+        physicsManager.Update(deltaTime);
+        worldManager.Update(deltaTime);
 
-        const bool runSimulation = editor.GetSimulationState() == Editor::SimulationState::Playing;
-        const bool stepSimulation = editor.ConsumeSimulationStepRequest();
-        if (runSimulation || stepSimulation) {
-            const float simulationDeltaTime = stepSimulation ? (1.0f / 60.0f) : deltaTime;
-            scriptManager.Update(simulationDeltaTime);
-            physicsManager.Update(simulationDeltaTime);
-            worldManager.Update(simulationDeltaTime);
-        }
         cameraManager.Update(deltaTime);
     }
 
     void OnImGuiRender() override
     {
         auto& eventBus = m_app.GetEventBus();
-        m_app.GetEditor().GetState().eventBus = &eventBus;
-
         auto& cameraManager = m_app.GetCameraManager();
         auto& worldManager = m_app.GetWorldManager();
         auto& timeManager = m_app.GetTimeManager();
         auto& imguiManager = m_app.GetImGuiManager();
-        auto& editor = m_app.GetEditor();
         auto& physicsManager = m_app.GetPhysicsManager();
         auto& configManager = m_app.GetConfigManager();
         auto& renderManager = m_app.GetRenderManager();
 
         imguiManager.BuildDefaultUi(cameraManager, worldManager, timeManager.GetDeltaTime());
-        editor.BuildUi(cameraManager, worldManager, physicsManager, configManager);
-        renderManager.SetHighlightedEntity(editor.GetSelectedEntity());
+
     }
 
 private:
@@ -89,11 +77,11 @@ void App::InitializeWorldFromConfig()
     const AppConfig& config = m_configManager.GetConfig();
     const std::filesystem::path worldPath = FileSystem::ResolvePath(config.world.path);
 
-    if (config.world.loadOnStartup && FileSystem::Exists(worldPath)) {
-        m_worldManager.LoadActiveWorld(worldPath.string());
-        LOG_INFO("Loaded world from config: " + worldPath.string());
-        return;
-    }
+    // if (config.world.loadOnStartup && FileSystem::Exists(worldPath)) {
+    //     m_worldManager.LoadActiveWorld(worldPath.string());
+    //     LOG_INFO("Loaded world from config: " + worldPath.string());
+    //     return;
+    // }
 
     m_worldManager.CreateDefaultWorld();
     LOG_INFO("Created default world");
@@ -128,11 +116,11 @@ int App::Run(HINSTANCE hInstance, int nCmdShow)
         return -1;
     }
 
-    if (!m_editor.Initialize()) {
-        LOG_ERROR("Editor initialization failed");
-        return -1;
-    }
-    m_editor.SetEnabled(m_configManager.GetConfig().editor.enabled);
+    // if (!m_editor.Initialize()) {
+    //     LOG_ERROR("Editor initialization failed");
+    //     return -1;
+    // }
+    // m_editor.SetEnabled(m_configManager.GetConfig().editor.enabled);
 
     InitializeWorldFromConfig();
 
@@ -159,9 +147,15 @@ int App::Run(HINSTANCE hInstance, int nCmdShow)
 
     const AppConfig& config = m_configManager.GetConfig();
     if (config.scripts.runStartupScript &&
-        !config.scripts.startupScriptPath.empty() &&
-        !m_scriptManager.ExecuteFile(config.scripts.startupScriptPath)) {
-        LOG_WARN("Startup script was not executed");
+        !config.scripts.startupScriptPath.empty()) {
+        const std::filesystem::path startupScriptPath = FileSystem::ResolvePath(config.scripts.startupScriptPath);
+        if (FileSystem::Exists(startupScriptPath)) {
+            if (!m_scriptManager.ExecuteFile(startupScriptPath.string())) {
+                LOG_WARN("Startup script was not executed");
+            }
+        } else {
+            LOG_WARN("Startup script not found, skipping: " + config.scripts.startupScriptPath);
+        }
     }
 
     // Push layers onto the stack
@@ -172,7 +166,7 @@ int App::Run(HINSTANCE hInstance, int nCmdShow)
     m_window->Show(nCmdShow);
     m_timeManager.Reset();
 
-    m_editor.SubscribeToEvents(m_eventBus, m_configManager, m_worldManager, m_physicsManager, m_cameraManager);
+    // m_editor.SubscribeToEvents(m_eventBus, m_configManager, m_worldManager, m_physicsManager, m_cameraManager);
 
     // Set up event subscriptions
     m_eventBus.Subscribe<OGLE::WindowResizeEvent>([this](const OGLE::WindowResizeEvent& e) {

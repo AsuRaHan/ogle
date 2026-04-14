@@ -9,6 +9,7 @@
 #include <imgui_internal.h>
 #include <backends/imgui_impl_opengl3.h>
 #include <backends/imgui_impl_win32.h>
+#include <ImGuizmo.h>
 #include <windows.h>
 
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -116,8 +117,15 @@ void ImGuiManager::BuildDefaultUi(const CameraManager& cameraManager, const Worl
             ImGui::EndMenuBar();
         }
 
+        // Получаем ID для DockSpace до его создания
         ImGuiID dockspaceId = ImGui::GetID("OGLEMainDockSpace");
-        ImGui::DockSpace(dockspaceId, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_PassthruCentralNode);
+
+        // Проверяем, что ID не равен 0
+        if (dockspaceId != 0) {
+            ImGui::DockSpace(dockspaceId, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_PassthruCentralNode);
+        } else {
+            LOG_ERROR("Failed to get valid DockSpace ID");
+        }
     } else {
         ImGui::PopStyleVar(3);
     }
