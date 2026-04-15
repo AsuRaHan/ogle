@@ -32,9 +32,7 @@ namespace OGLE {
 
     void ModelEntity::Draw() {
         if (m_MeshBuffer) {
-            m_MeshBuffer->Bind();
-            glDrawElements(GL_TRIANGLES, m_MeshBuffer->GetIndexCount(), GL_UNSIGNED_INT, 0);
-            m_MeshBuffer->Unbind();
+            m_MeshBuffer->Draw();
         }
     }
 

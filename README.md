@@ -6,12 +6,13 @@ The project already includes:
 - a Win32 window with an OpenGL context
 - a manager‑based application architecture
 - an EnTT‑based ECS world with procedural test scene generation
-- textured mesh rendering and a lightweight material system
+- a flexible material system with support for multiple textures per object
 - camera controls and input handling via a dedicated InputManager
 - JSON world serialization (save/load) and configuration files
 - editor UI windows: world view, hierarchy, inspector, content browser
 - JavaScript runtime scripting through Duktape
-- basic rigid‑body physics using Bullet
+- physics simulation with support for static, dynamic, and kinematic rigid bodies (Box, Sphere, Capsule)
+- data structures for skeletal animation (clips, tracks, keyframes)
 
 ## Current Status
 
@@ -52,11 +53,18 @@ This is an active work-in-progress engine foundation. The project now has a usab
 - `World` uses `EnTT`
 - `WorldObject` is a lightweight handle over entities
 - currently used components include:
-  - `WorldObjectComponent`
-  - `NameComponent`
-  - `TransformComponent`
-  - `ModelComponent`
-  - `PhysicsBodyComponent`
+  - `WorldObjectComponent`: Basic state (enabled, visible).
+  - `NameComponent`: Entity name.
+  - `TransformComponent`: Position, rotation, scale.
+  - `ModelComponent`: Link to a 3D model resource.
+  - `PrimitiveComponent`: Describes how the geometry was created (e.g., Cube, Sphere, from file).
+  - `MaterialComponent`: Defines the object's appearance, can hold multiple textures.
+  - `ShaderComponent`: Specifies which shader program to use for rendering.
+  - `LightComponent`: Defines a light source (Directional or Point).
+  - `PhysicsBodyComponent`: Describes a physical body for simulation (type, shape, mass, etc.).
+  - `ScriptComponent`: Attaches a JavaScript file to an entity.
+  - `AnimationComponent`: Manages animation state (playing, looping, current time).
+  - `SkeletonComponent`: Holds skeletal data for animated models (work in progress).
 - default test world exists
 - world save/load to JSON exists
 - procedural geometry is serialized for save/load
@@ -81,6 +89,7 @@ This is an active work-in-progress engine foundation. The project now has a usab
 - `onStart()` and `onUpdate(dt)` are supported
 - scripts can spawn and manipulate world objects
 - scripts can assign textures to entities
+- expanded JavaScript API for creating lights, handling input, and responding to physics collisions (see `docs/js.md`)
 
 ### UI and Editor
 - `Dear ImGui` is integrated
@@ -113,9 +122,10 @@ This is an active work-in-progress engine foundation. The project now has a usab
 ### Physics
 - `Bullet Physics` is integrated
 - `PhysicsManager` owns the Bullet world
-- basic box rigid bodies are supported
+- supports static, dynamic, and kinematic rigid bodies with Box, Sphere, and Capsule collision shapes
 - Bullet bodies sync back into ECS transforms
 - default scene creates static and dynamic physics objects
+- collision events are dispatched and can be handled in scripts
 - editor can add, update, or remove simple box physics settings for selected objects
 
 ### Config and File System
@@ -412,28 +422,30 @@ Main methods:
 - `ExecuteFile(path)`
 - `Update(deltaTime)`
 
-Currently exposed JS functions:
-- `log(message)`
-- `clearWorld()`
-- `spawnCube(name, x, y, z, sx, sy, sz)`
-- `setPosition(entityId, x, y, z)`
-- `setRotation(entityId, x, y, z)`
-- `setScale(entityId, x, y, z)`
-- `setTexture(entityId, path)`
-- `entityExists(entityId)`
+The scripting API is exposed via the global `ogle` object in JavaScript. It allows for creating and manipulating entities, controlling physics, logging, and handling input. For a detailed API reference, see `docs/js.md`.
+
+Example API functions:
+- `ogle.world.createCube(...)`
+- `ogle.world.createPointLight(...)`
+- `ogle.entity.setPosition(...)`
+- `ogle.physics.addBox(...)`
+- `ogle.input.isKeyDown(...)`
 
 Example script:
 
 ```js
-var cube = -1;
+var cubeId = null;
 
 function onStart() {
-    cube = spawnCube("ScriptedCube", 0, 1, 0, 1, 1, 1);
+    cubeId = ogle.world.createCube("ScriptedCube", [0, 1, 0], [1, 1, 1]);
+    ogle.log("Cube created with ID: " + cubeId);
 }
 
 function onUpdate(dt) {
-    if (entityExists(cube)) {
-        setRotation(cube, 0, dt * 45.0, 0);
+    if (cubeId !== null && ogle.entity.exists(cubeId)) {
+        var rot = ogle.entity.getRotation(cubeId);
+        rot[1] += 45.0 * dt; // Rotate around Y axis
+        ogle.entity.setRotation(cubeId, rot);
     }
 }
 ```

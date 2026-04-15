@@ -1,28 +1,29 @@
 #pragma once
 
-#include "../opengl/GLFunctions.h"
 #include <vector>
+#include <glm/glm.hpp>
+#include "../opengl/GLFunctions.h" // Используем ручную загрузку функций
 
 namespace OGLE {
-    class MeshBuffer {
-    public:
-        MeshBuffer();
-        ~MeshBuffer();
 
-        void Create(const std::vector<float>& vertices, const std::vector<unsigned int>& indices);
-        void Update(const std::vector<float>& vertices); // Добавлено для обновления данных на GPU
-        void Bind() const;
-        void Unbind() const;
+// Представляет данные одного меша (вершины, индексы) и буферы OpenGL
+class MeshBuffer {
+public:
+    MeshBuffer();
+    ~MeshBuffer();
 
-        GLuint GetVAO() const { return m_VAO; }
-        GLuint GetVBO() const { return m_VBO; }
-        GLuint GetEBO() const { return m_EBO; }
-        size_t GetIndexCount() const { return m_IndexCount; }
+    // Запрещаем копирование, чтобы избежать двойного удаления ресурсов GPU
+    MeshBuffer(const MeshBuffer&) = delete;
+    MeshBuffer& operator=(const MeshBuffer&) = delete;
 
-    private:
-        GLuint m_VAO = 0;
-        GLuint m_VBO = 0;
-        GLuint m_EBO = 0;
-        size_t m_IndexCount = 0;
-    };
-}
+    void Create(const std::vector<float>& vertices, const std::vector<unsigned int>& indices);
+    void Update(const std::vector<float>& vertices);
+    void Draw() const; // Отрисовать меш
+
+private:
+    GLuint VAO = 0, VBO = 0, EBO = 0; // ID буферов OpenGL
+    GLsizei m_indexCount = 0;
+    GLsizeiptr m_vertexBufferSize = 0;
+};
+
+} // namespace OGLE

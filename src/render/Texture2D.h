@@ -1,40 +1,46 @@
 #pragma once
 
-#include "../opengl/GLFunctions.h"
-
-#include <memory>
 #include <string>
+#include <memory> // For std::shared_ptr
+#include "../opengl/GLFunctions.h" // Используем ручную загрузку функций
 
 namespace OGLE {
+
+    // Represents an OpenGL 2D texture.
     class Texture2D {
     public:
+        // Factory method for creating a Texture2D from an existing OpenGL texture ID.
+        // This is useful for procedural textures or framebuffer attachments.
+        static std::shared_ptr<Texture2D> CreateFromGLuint(GLuint textureId, int width, int height, const std::string& name);
+
+        Texture2D();
         ~Texture2D();
 
-        static std::shared_ptr<Texture2D> LoadShared(const std::string& path);
-        
-        // Создание Texture2D из существующего GLuint (для процедурно-сгенерированных текстур)
-        static std::shared_ptr<Texture2D> CreateFromGLuint(GLuint textureId, int width, int height, const std::string& name = "procedural_texture");
+        // Loads a texture from a file.
+        // This should primarily be called by TextureManager.
+        bool Load(const std::string& filePath);
 
-        // Load from file without going through the cache (used by TextureManager).
-        static std::shared_ptr<Texture2D> LoadFromFileDirect(const std::string& path);
+        // Binds the texture to a specific texture unit.
+        void Bind(unsigned int unit = 0) const;
 
-        // Create texture from raw RGBA pixel data (used for fallback/default textures).
-        static std::shared_ptr<Texture2D> CreateFromPixels(const unsigned char* pixels, int width, int height, const std::string& name);
+        // Unbinds the texture.
+        void Unbind() const;
 
-        bool IsValid() const { return m_textureId != 0; }
-        GLuint GetTextureId() const { return m_textureId; }
-        const std::string& GetPath() const { return m_path; }
+        // Checks if the texture has a valid OpenGL ID.
+        bool IsValid() const { return m_textureID != 0; }
+
+        GLuint GetTextureId() const { return m_textureID; }
+        const std::string& GetPath() const { return m_filePath; }
         int GetWidth() const { return m_width; }
         int GetHeight() const { return m_height; }
 
     private:
-        Texture2D() = default;
+        // Private constructor for use by the static factory method.
+        Texture2D(GLuint textureId, int width, int height, const std::string& name);
 
-        bool LoadFromFile(const std::string& path);
-
-        GLuint m_textureId = 0;
-        int m_width = 0;
-        int m_height = 0;
-        std::string m_path;
+        GLuint m_textureID;
+        std::string m_filePath; // Can be a file path or a generated name like "procedural_clouds"
+        int m_width, m_height, m_nrChannels;
     };
-}
+
+} // namespace OGLE

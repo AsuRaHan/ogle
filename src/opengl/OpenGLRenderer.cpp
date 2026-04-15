@@ -71,15 +71,15 @@ bool OpenGLRenderer::Initialize()
         return false;
     }
 
-    if (!m_shaderManager.loadVertexShader("default_vs", vertexShaderSrc.c_str())) {
+    if (!m_shaderManager.loadVertexShader("default_vert", vertexShaderSrc.c_str())) {
         LOG_ERROR("OpenGLRenderer: loadVertexShader failed");
         return false;
     }
-    if (!m_shaderManager.loadFragmentShader("default_fs", fragmentShaderSrc.c_str())) {
+    if (!m_shaderManager.loadFragmentShader("default_frag", fragmentShaderSrc.c_str())) {
         LOG_ERROR("OpenGLRenderer: loadFragmentShader failed");
         return false;
     }
-    if (!m_shaderManager.linkProgram("default", "default_vs", "default_fs")) {
+    if (!m_shaderManager.linkProgram("default", "default_vert", "default_frag")) {
         LOG_ERROR("OpenGLRenderer: linkProgram failed");
         return false;
     }

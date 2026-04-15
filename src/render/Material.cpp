@@ -115,7 +115,7 @@ namespace OGLE {
             return;
         }
 
-        std::shared_ptr<Texture2D> texture = TextureManager::Get().Load(texturePath);
+        std::shared_ptr<Texture2D> texture = TextureManager::Get().GetTexture(texturePath);
         if (!texture || !texture->IsValid()) {
             LOG_WARN("Failed to load texture for slot '" + slotName + "': " + texturePath);
             // Even if it fails, we store the path so it can be fixed in the editor

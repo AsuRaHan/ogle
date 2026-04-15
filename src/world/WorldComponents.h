@@ -67,7 +67,11 @@ namespace OGLE {
     // Компонент, содержащий данные о материале объекта.
     // Вынесен отдельно от модели, чтобы материалы можно было переиспользовать.
     struct MaterialComponent {
-        Material material; // Структура с параметрами материала (цвет, текстуры и т.д.)
+        // Старый вариант для обратной совместимости
+        Material material; 
+
+        // Новый, более гибкий подход: карта текстур по слотам
+        std::map<std::string, std::shared_ptr<Texture2D>> textures;
     };
 
     struct ShaderComponent {

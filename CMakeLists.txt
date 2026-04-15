@@ -76,6 +76,14 @@ if(NOT dukglue_POPULATED)
     FetchContent_MakeAvailable(dukglue)
 endif()
 
+# Подключаем библиотеку stb_image для загрузки изображений
+FetchContent_Declare(
+    stb
+    GIT_REPOSITORY https://github.com/nothings/stb.git
+    GIT_TAG master
+)
+FetchContent_MakeAvailable(stb)
+
 # Подключаем библиотеки assimp nlohmann/json и OpenMesh
 # Отключаем тесты, инструменты и лишние части Assimp
 set(ASSIMP_BUILD_TESTS OFF CACHE BOOL "" FORCE)
@@ -180,6 +188,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/src 
     ${bullet_SOURCE_DIR}/src
     ${dukglue_SOURCE_DIR}/include
+    ${stb_SOURCE_DIR}
 )
 
 
